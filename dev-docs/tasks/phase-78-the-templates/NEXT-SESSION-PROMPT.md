@@ -1,5 +1,115 @@
 # Phase 78 — next session
 
+> ### 🟢 2026-09-12 (s2) — TPL-006: **AC7's BLOCKER RE-MEASURED AND IT DOES NOT HOLD. THE DEPLOY CARRIES EVERY WIRE AND THE DEPLOYED FOLDER PLAYS.**
+>
+> The handoff below named AC7 blocked by **D44/D48** and predicted this template was the more exposed
+> one because of a `For Each`'s `itemOutput-*` ports — *"the one nothing has measured"*.
+> 🔴 **The prediction was right about the ports and wrong about who has the defect.**
+>
+> | path | authored | deployed | dropped |
+> |---|---|---|---|
+> | **`nodegx deploy`** — shipped engine | 84 | **84** | **0** |
+> | `deploy-from-disk` devtool | 84 | 81 | 3 |
+> | devtool `--sabotage` control | 85 | 81 | 4 (the planted one + the same 3) |
+>
+> The three are one `For Each`'s `itemOutput-goto`, `itemOutput-gives` and `itemOutputSignal-picked`
+> — **the entire click path of a choice** — and they are a gap in **that instrument**, filed as
+> **[D52](DEFECTS-THE-TEMPLATES-FOUND.md)**. Then the deployed folder was **driven**: real CDP mouse
+> events, **16/16 clauses, 0 console errors**. Commits **`50876627b`** and **`46f483f37`**.
+> Full record: **[TPL-006 §9](TPL-006-THE-STORY-ENGINE.md)**.
+>
+> 🔴 **THE NEGATIVE CONTROL IS THE POINT, AND IT IS THE SESSION'S ONE TRANSFERABLE FINDING.**
+> The same drive against the **devtool's** build — same project, same script, the only difference
+> being those three wires — scores **9/16 and exits 1**. The reader never leaves the first passage,
+> carries nothing ever, sees no `requires` choice and reaches no ending.
+> ⚠️ **And both builds report ZERO console errors.** Three dropped wires render perfectly, every
+> paragraph of prose on screen, every button present, and the story cannot be played.
+>
+> 🔴 **The control also caught a hole in MY OWN drive's ARM A.** *"The `requires` choice is ABSENT
+> carrying nothing"* **passed on the broken build**, because the reader never reached the gallery —
+> absent for the wrong reason. **An absence is evidence only beside a signal known to fire**, and
+> here that signal is ARM B. The pair is the reading. Pinned in the script's header.
+>
+> ### Two instruments are committed, because the census counts drops and does not name them
+>
+> - **[`scripts/devtools/deploy-connection-diff.js`](../../../scripts/devtools/deploy-connection-diff.js)**
+>   — authored vs deployed, per component, with each end's node type. The gap between *"3 dropped"*
+>   and *"which 3"* is the whole cost of D52. 🔴 The two sides spell a connection differently
+>   (`fromId`/`fromProperty` vs `sourceId`/`sourcePort`); keying one against the other reports
+>   **every** connection as dropped, which is a very convincing catastrophe that is not there.
+> - **[`scripts/devtools/drive-tpl006-story.js`](../../../scripts/devtools/drive-tpl006-story.js)**
+>   — 16 clauses, **exits 1**. 🔴 The choice rows are `Group`s with `cssClassName: "story-choice"`,
+>   **not `<button>`s**: a first drive selecting `button` reported `NOT FOUND` six times and read
+>   every screen as identical, which is indistinguishable from a template whose clicks are dead.
+>   *A drive that finds nothing has two explanations and the instrument is the likelier one.*
+>
+> ### 🔴 D52 — the devtool's probe misses a BUILT-IN, and it is TWO gates not one
+>
+> D44's correction recorded the remaining drops as `keyboard-shortcuts` — *a **module** type, and the
+> headless library holds built-ins only*. **That is not the whole cause.** `For Each` is a built-in
+> and is missed too, because:
+> 1. it subscribes to `nodeAdded.For Each` **only inside an `editorImportComplete` handler**
+>    ([`foreach.tsx:1099-1107`](../../../packages/noodl-viewer-react/src/nodes/std-library/data/foreach.tsx#L1099-L1107))
+>    which the probe never emits — so **it never appears in the census's own list of lazy types**,
+>    and *"that family never subscribed"* and *"that family found nothing"* print identically;
+> 2. its ports come from **another component's** `outputPorts`, and the probe's `graphModel` has no
+>    components in it.
+>
+> **Either gate alone reads as a fix and changes nothing.** Owner `NONE`. Blocks no template.
+>
+> ### What is now true of TPL-006, and what is not
+>
+> - 🟢 **AC1–AC6** green (62/62 gate, `typecheck:mcp` clean, re-run at HEAD this session).
+> - 🟢 **AC7's build half.** 84/84 diffed per component; the deployed folder plays 16/16.
+> - 🟡 **The zip round-trip is done and it clears the PROJECT DIRECTORY, not the environment.**
+>   31 KB / 30 files, **byte-identical** after unpack (`diff -r`), no absolute path, no
+>   `noodl_modules` — and the unpacked copy, deployed from **outside the repo**, is 84/84 and 16/16.
+>   ⬜ Another machine's Node, another OS and a different checkout are still untested.
+> - 🟡 **AC8 — the look was SENT to Richard**, and from a better instrument than last time: the
+>   earlier four came from `render-from-disk`, which serves **0 shipped default tokens** (TPL-004 §10
+>   warns that flatness is the instrument). The **four** sent are off the **deployed** artefact.
+>   ⬜ Still open until he answers.
+> - ⬜ **AC7's hosting is Richard's**, and he ruled this session: **build the production viewer,
+>   stop short of publishing.**
+>
+> 🔴 **`nodegx deploy` REFUSES this checkout's development viewer BY NAME, and that is EXP-017
+> working, not a blocker:** *"9.43 MB inline source map, 66% of the file… uploading the folder puts
+> that source on your host"*. Every deploy reading above used `--allow-development-engine`, which is
+> honest for a census and **wrong for a publish**.
+>
+> ⚠️ **`deploy-from-disk.cjs` throws `ENOENT … /src/external/deploy/index.json` from anywhere but
+> `packages/noodl-editor`** — `getAppPath()` resolves to `process.cwd()`. That is a fact about the
+> working directory and **not** about the project, and it reads exactly like a broken template.
+>
+> ### 🟢 THE PRODUCTION VIEWER IS BUILT, AND THE ENGINE ACCEPTS IT WITH NO OVERRIDE
+>
+> Richard ruled it this session: **build it, stop short of publishing.** `npm run build:editor:_viewer`
+> exit 0 — **14 MB / 110,799 lines → 1.5 MB / 1 line**, a `.LICENSE.txt` sibling appears, and the
+> shipped engine goes from **refusing by name** to `ok: true`. On that runtime, with no flag:
+> **84/84 connections and 16/16 clauses, 0 console errors**, whole site **1.7 MB in 8 files**, and
+> the screenshot is pixel-identical to the development-viewer one. **AC7's build half is finished.**
+>
+> 🔴 **THAT BUILD OVERWROTE THIS SHARED CHECKOUT'S VIEWERS AND `git status` SAYS NOTHING.**
+> `build-viewer.ts` rewrote **all three** of `packages/noodl-editor/src/external/{deploy,viewer,ssr}`;
+> they are gitignored. The editor's preview now runs a **minified** viewer — **no readable stack
+> traces in the renderer console**, which matters before anyone reads frames off a drive.
+> ✅ **`npm run dev` restores a development build** (`scripts/start.ts:202` runs the viewer's `start`,
+> not `build`). The old 14 MB development bundle was backed up **to a session scratchpad only**,
+> which is gone with the session — `npm run dev` is the recovery, not that copy.
+>
+> ⚠️ **Never carry `--allow-development-engine` into a publish.** Every census in §9a used it,
+> honestly, because a census does not care what it measures. A publish does: the flag is what puts
+> 9.43 MB of base64 viewer source on a host.
+>
+> ### 🔴 THE FIRST JOB IS UNCHANGED FROM THE ENTRY BELOW, AND IT IS STILL UNMEASURED
+>
+> **D49's two-word fix on TPL-005 and TPL-004**, and **TPL-004's AC8 click-drive**. This session did
+> not touch either. 🔴 **And §9b-i is the argument for doing the drive rather than reading the
+> graph**: a build with three dead wires renders perfectly, reports **0 console errors**, and cannot
+> be played. TPL-004's pages are wired, statically valid, and **nobody has clicked any of them**.
+> ⬜ Also still unmeasured: **a `to-<state>` SIGNAL with transitions on** — one `to-` wire and one
+> colour value. Do not read D49 as having tested it.
+
 > ### 🟢 2026-09-12 — TPL-006, THE STORY ENGINE: **BUILT, GATED, DRIVEN AND COMMITTED.**
 >
 > `templates/story-engine/` — 9 components, 88 nodes, 84 connections, **zero `noodl_modules`**, no

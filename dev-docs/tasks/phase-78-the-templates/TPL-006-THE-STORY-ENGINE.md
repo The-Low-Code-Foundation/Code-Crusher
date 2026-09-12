@@ -242,7 +242,7 @@ sufficient**, and the §7 record says which is which.
 - 🟡 **AC8 — Richard's look. SENT 2026-09-12, and from a better instrument than last time.** Four
   screenshots at 1100×1400 were taken on 09-12 and one of them changed the build (see §7), but they
   came from `render-from-disk`, which serves **0 shipped default tokens** — the same path whose
-  flatness TPL-004 §10 warns is an artefact of the instrument, not the look. The seven sent to him
+  flatness TPL-004 §10 warns is an artefact of the instrument, not the look. The **four** sent to him
   are of the **deployed** artefact, which carries the real stylesheet. Still ⬜ until he answers.
 
 ## 6. Rulings, and the one that was disproved
@@ -455,7 +455,44 @@ script's own header so the next reader cannot take one half of it.
   directory outside the repo entirely — is **84/84 connections and 16/16 clauses**. What that does
   not cover is another machine's Node, another OS, and a checkout that is not this one; it removes
   the project directory as a suspect, not the environment.
-- ⬜ **Not published.** The publish needs a production viewer build first — the shipped engine
-  refused this checkout's development build **by name**, with the reason (`9.43 MB inline source
-  map, 66% of the file`) and the fix (`npm run build:editor:_viewer`), which is EXP-017 working
-  rather than a blocker. The hosting itself is outward-facing and Richard's.
+- 🟢 **The production viewer is built and the engine ACCEPTS it — §9d.** The publish itself is
+  outward-facing and Richard's; he ruled *build it, stop short of publishing*.
+### 9d. The production viewer, and a publishable bundle that was not published
+
+**Richard's ruling this session: build the production viewer, stop short of publishing.** Done, and
+it retires the last technical unknown on AC7's build half — **nobody had ever deployed this template
+on a production runtime.**
+
+`npm run build:editor:_viewer`, exit 0:
+
+| | development build | production build |
+|---|---|---|
+| `noodl.deploy.js` | 14 MB, **110,799 lines** | **1.5 MB, 1 line** |
+| inline source map | 9.43 MB, 66% of the file | — |
+| `.LICENSE.txt` sibling | absent | **present** |
+| the shipped engine's verdict | 🔴 **REFUSED by name** | ✅ **`ok: true`, no override** |
+
+Then the same two readings, on the production runtime and with **no `--allow-development-engine`**:
+**84 of 84 connections**, and the drive gate **16/16 with 0 console errors**. The whole deployable
+site is **1.7 MB in 8 files**. The screenshot is pixel-identical to the development-viewer one, so
+minification cost the look nothing.
+
+🔴 **EXP-017's refusal was never a blocker — it is the guard doing its job**, and the only reason
+this session's earlier deploys needed `--allow-development-engine` is that a census does not care
+what it measures and a publish does. **Never carry that flag into a publish**: it is what puts
+9.43 MB of base64 viewer source on a host.
+
+⚠️ **THE BUILD OVERWROTE THIS CHECKOUT'S VIEWERS, AND THE CHECKOUT IS SHARED.**
+`build-viewer.ts` writes `packages/noodl-editor/src/external/`, and it rewrote **all three** —
+`deploy/`, `viewer/` and `ssr/`. They are gitignored, so **`git status` says nothing about it**. The
+editor's own preview now runs a minified viewer, which means **no readable stack traces in the
+renderer console** — worth knowing before anyone reads a console error off a drive and believes its
+frames. ✅ **`npm run dev` restores a development build**: `scripts/start.ts:202` runs the viewer's
+`start` (webpack watch) rather than `build` unless `--build-viewer` is passed.
+
+⬜ **The bundle itself is not committed and not published.** It is gitignored build output and a
+1.7 MB artefact; what is durable is the expensive half — the viewer build now in the tree — and the
+two commands:
+
+    node packages/noodl-preview/dist/nodegx-deploy.cjs templates/story-engine <out>
+    node scripts/devtools/drive-tpl006-story.js <out>
