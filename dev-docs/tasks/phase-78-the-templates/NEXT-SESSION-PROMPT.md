@@ -176,6 +176,21 @@
 > only possible if the tree moved under the measurement the message was written from.
 > **Typing credit for those 8 belongs to the peer session, not to `23c23e4a1`'s author.**
 >
+> 🔴 **`23c23e4a1`'s message contains a FALSE REASON, corrected here.** It says *"Nothing typechecks
+> `scripts/devtools/`: it is in no tsconfig's include"*. **It is included** — `scripts/tsconfig.json`
+> extends the root config and includes `./**/*.ts`. That claim came from grepping tsconfig files for
+> the string `"scripts`, which can never find a config that lives *inside* `scripts/` and uses a
+> relative include.
+> ⚠️ **But the conclusion stands for a different and worse reason: that config cannot run.**
+> `npx tsc -p scripts/tsconfig.json --noEmit` exits **134** with a V8 stack dump and **0 `error TS`
+> lines** — measured independently in two sessions, and OOMing even at an 8 GB heap. **A log like
+> that reads as green to anything counting error lines.** Gate on the exit status.
+> ✅ **To verify one file there, use a scoped config**: `extends` the root tsconfig with
+> `files: ["devtools/<file>.ts"]`. The peer session did this for the deploy entry and got 39 errors,
+> all in transitively-imported editor sources (`router.tsx`, `nodegrapheditor.ts`, `EditorPage.tsx`)
+> and **0 in the target file** — so the 8 types do compile. ⚠️ That scoped config was **not
+> committed**, so the reading is not reproducible without rebuilding it.
+>
 > ⚠️ **And `library/prefabs/form-fields/project/project.json` is still modified and uncommitted**
 > (mtime 09-11 14:50, predating both sessions). It reddens `cmp004Parts`, which asserts a
 > byte-for-byte re-export from committed prefab source. Nobody currently working owns it; somebody
