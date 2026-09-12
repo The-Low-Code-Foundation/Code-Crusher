@@ -449,6 +449,13 @@ script's own header so the next reader cannot take one half of it.
 - 🔴 **It is NOT settled that all 84 are healthy.** The shipped filter is inert (**D48**): it keeps
   every wire whatever its state, so `84 → 84` means *nothing was dropped*, never *nothing is broken*.
   The browser drive is the other half, and neither reading is sufficient alone.
-- ⬜ **Still not done: opened from a zip on a second machine**, and not published. The publish needs
-  a production viewer build first — the shipped engine refused this checkout's development build by
-  name, with the reason (`9.43 MB inline source map, 66% of the file`), which is EXP-017 working.
+- 🟡 **The zip half of "opened from a zip on a second machine" is done; the second machine is not.**
+  `templates/story-engine` zips to **31 KB / 30 files**, unpacks **byte-identical** (`diff -r` clean),
+  carries **no absolute path** and no `noodl_modules`, and the unpacked copy — deployed from a
+  directory outside the repo entirely — is **84/84 connections and 16/16 clauses**. What that does
+  not cover is another machine's Node, another OS, and a checkout that is not this one; it removes
+  the project directory as a suspect, not the environment.
+- ⬜ **Not published.** The publish needs a production viewer build first — the shipped engine
+  refused this checkout's development build **by name**, with the reason (`9.43 MB inline source
+  map, 66% of the file`) and the fix (`npm run build:editor:_viewer`), which is EXP-017 working
+  rather than a blocker. The hosting itself is outward-facing and Richard's.
