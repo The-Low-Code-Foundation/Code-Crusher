@@ -44,7 +44,15 @@
  *
  * Usage:
  *   node scripts/devtools/deploy-from-disk.cjs <project> --out /tmp/story   # or the shipped engine
- *   node scripts/devtools/drive-tpl006-story.js /tmp/story [--shots <dir>]
+ *   node scripts/devtools/drive-tpl006-story.js /tmp/story [--shots <dir>] [--path <urlPath>]
+ *   node scripts/devtools/drive-tpl006-story.js https://nodegx.io --path /templates/story-engine/
+ *
+ * 🔴 `--path` is for a deploy built with `--base-url /templates/<slug>/`, which is how
+ * nodegx.io serves its template demos. Point the directory at the SITE ROOT and the path at
+ * the sub-directory: served at `/` instead, such a build asks for
+ * `/templates/<slug>/index-<hash>.js`, gets the server's 404 page, and renders **blank** —
+ * and a blank page is the one failure this gate's clauses cannot tell apart from a bad
+ * selector. Both are covered: every clause fails together.
  *
  * Exits 0 when every clause passed, 1 when any did — it is a gate, not a
  * report, so a silent failure is not one of its outcomes.
@@ -55,6 +63,9 @@ const { withDeployedSite } = require('./drive-deployed.js');
 const DIR = process.argv[2];
 const shotsFlag = process.argv.indexOf('--shots');
 const SHOTS = shotsFlag === -1 ? null : process.argv[shotsFlag + 1];
+const pathFlag = process.argv.indexOf('--path');
+/** Where the app lives under the served root. Trailing slash, because it is a directory. */
+const BASE = pathFlag === -1 ? '/' : process.argv[pathFlag + 1].replace(/\/?$/, '/');
 
 if (!DIR) {
   console.error('usage: drive-tpl006-story.js <deploy-dir> [--shots <dir>]');
@@ -97,7 +108,9 @@ const check = (name, ok, saw) => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${ok ? '' : `\n        saw: ${saw}`}`);
 };
 
-withDeployedSite({ dir: DIR, port: 0 }, async (page) => {
+// A URL drives the LIVE host; a path drives a folder served from disk here.
+const LIVE = /^https?:\/\//.test(DIR || '');
+withDeployedSite(LIVE ? { origin: DIR } : { dir: DIR, port: 0 }, async (page) => {
   const snap = async (name) => {
     const r = await page.evaluate(READ);
     if (SHOTS) await page.screenshot(path.join(SHOTS, name + '.png'));
@@ -121,6 +134,10 @@ withDeployedSite({ dir: DIR, port: 0 }, async (page) => {
   };
 
   await page.setViewport({ width: 1100, height: 1400 });
+  if (BASE !== '/') {
+    await page.navigate(BASE);
+    await wait(400);
+  }
   await wait(800);
 
   const first = await snap('1-first-load');
@@ -134,7 +151,7 @@ withDeployedSite({ dir: DIR, port: 0 }, async (page) => {
   check('ARM A — the `requires` choice is ABSENT carrying nothing', !armA.choices.includes(REQUIRES), JSON.stringify(armA.choices));
 
   // ARM B — same passage, the gives choice the only variable. Navigate to reset the Variables.
-  await page.navigate('/');
+  await page.navigate(BASE);
   await wait(1000);
   await click(GIVES);
   const gave = await snap('3-after-the-gives-choice');
