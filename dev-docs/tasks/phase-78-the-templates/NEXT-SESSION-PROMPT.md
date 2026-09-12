@@ -1,5 +1,44 @@
 # Phase 78 — next session
 
+> ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>
+>
+> Richard played it, said *"it works, it's awesome"*, and asked for a zip and a publish to the
+> template path *"like the other templates"*. Both done. **AC7 IS GREEN** — the first AC7 closed on
+> any template in this phase. It sits beside `pixel-dungeon` and `business-landing-page` in
+> `~/vscode_projects/nodegx-web/site/templates/`, shipped by the **shipped engine on the production
+> viewer with NO `--allow-development-engine`**, and **driven against the PUBLIC URL: 16/16 clauses,
+> 0 console errors.** `ops/deploy.sh 49.12.102.195`; both neighbours 200 before and after;
+> `site/index.html` byte-identical under the deploy's own `build.py`. Commit **`92c9b1a2e`**.
+>
+> 🔴 **THE HARNESS PUBLISHED THE HOMEPAGE AS THE TEMPLATE, AND THE ABSENCE CLAUSES COVERED FOR IT.**
+> `serveFolder` fell back to the **root** `index.html` for any **directory** request, so serving
+> `site/` and asking for `/templates/story-engine/` returned **nodegx.io's homepage, with a 200**.
+> The gate scored **5/16** — and ⚠️ **every one of the five that passed was an ABSENCE clause**,
+> each true of a page with no story on it. **A blank page passes every absence a drive can make.**
+> ✅ Fixed: a directory serves its own index first, root fallback kept after it for client-side
+> routes. This is the second time in two sessions that absence assertions went green on a page that
+> had simply never loaded — see §9b-i.
+>
+> 🔴 **`--base-url /templates/<slug>/` IS NOT OPTIONAL** and the other two demos carry it: it
+> rewrites `<base href>`, `Noodl.Env['BaseUrl']` and every script src. The root-relative build would
+> have asked for `/index-<hash>.js` under the subpath and **rendered blank**.
+>
+> ✅ **`withDeployedSite` now takes `origin`** — drive a site that is already served.
+> `drive-tpl006-story.js https://nodegx.io --path /templates/story-engine/`. **A local folder that
+> plays is not evidence the deploy landed.**
+>
+> ⚠️ **`site/templates/` is UNTRACKED in `nodegx-web`, and was before this template.** All three
+> demos live only on the box and in that working copy; `git status` there does not describe what is
+> published. They regenerate from this repo in one command. **Left as found** — committing three
+> deploy folders is a decision, not a tidy-up.
+>
+> 🙋 **T3 still blocks the IN-EDITOR shelf, and this publish did not need it.**
+> `interactive-fiction` is none of the six ruled slugs. The demo page is a static path on the
+> marketing site; the shelf is the thing still waiting, for this template and `pixel-game` both.
+>
+> ⬜ **AC8 is the only thing left on TPL-006** — Richard has the four deployed-artefact shots and
+> has said the template works; he has not ruled on the look itself.
+
 > ### 🟢 2026-09-12 (s2) — TPL-006: **AC7's BLOCKER RE-MEASURED AND IT DOES NOT HOLD. THE DEPLOY CARRIES EVERY WIRE AND THE DEPLOYED FOLDER PLAYS.**
 >
 > The handoff below named AC7 blocked by **D44/D48** and predicted this template was the more exposed

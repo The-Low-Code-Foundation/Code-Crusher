@@ -8,7 +8,8 @@
 > the dungeon game you made that you can edit the static JSON file to create new levels. that's the
 > ultimate 'ok Claude built you the foundation, now you can scale it up for free' type message"*
 
-**Status: 🟢 BUILT, GATED AND DRIVEN 2026-09-12.** `templates/story-engine/` — 9 components, 88
+**Status: 🟢 BUILT, GATED, DRIVEN AND — 2026-09-12 — PUBLISHED.**
+**LIVE: <https://nodegx.io/templates/story-engine/>**, driven against the public URL at 16/16. `templates/story-engine/` — 9 components, 88
 nodes, 84 connections, **zero `noodl_modules`**, no backend, 0 validator errors, 62/62 on its gate,
 and driven in a real browser with 0 console errors. **AC1–AC6 green. AC7's build half is green too
 as of 09-12 (§9) — the shipped deploy carries every wire and the deployed folder plays; what is left
@@ -228,17 +229,11 @@ sufficient**, and the §7 record says which is which.
     different four-passage story and **every component's graph is diffed**: exactly one component
     differs, and inside it exactly one parameter of one node. *A person ships a different product by
     editing one JSON array.*
-- 🟡 **AC7 — a demo page on nodegx.io. THE BUILD HALF IS UNBLOCKED; the hosting is Richard's.**
-  **RE-MEASURED 2026-09-12 rather than inherited, and the inherited blocker does not hold for this
-  template** — see §9. The shipped deploy engine carries **84 of 84** connections on all nine
-  components, the deployed folder was **driven with real mouse events** through every AC1 clause
-  with **0 console errors and 0 network errors**, and the three wires the devtool's census reported
-  as dropped are a gap in *that instrument* — filed as **D52**, and all three demonstrably alive in
-  the artefact.
-  ⬜ **What is actually left is the hosting**, which is outward-facing and Richard's: a real publish
-  also needs `npm run build:editor:_viewer` first, because this checkout's viewer is a DEVELOPMENT
-  build and the shipped engine **refuses** it by name (EXP-017) rather than putting 9.43 MB of
-  base64 viewer source on a host.
+- 🟢 **AC7 — a demo page on nodegx.io. LIVE at <https://nodegx.io/templates/story-engine/>**,
+  published 2026-09-12 on Richard's ask (*"publish it to the template path on the nodegx homepage
+  like the other templates"*), beside `pixel-dungeon` and `business-landing-page`. Built by the
+  **shipped** engine on the **production** viewer with **no `--allow-development-engine`**, and
+  **driven against the public URL — 16/16 clauses, 0 console errors.** §9a/§9e.
 - 🟡 **AC8 — Richard's look. SENT 2026-09-12, and from a better instrument than last time.** Four
   screenshots at 1100×1400 were taken on 09-12 and one of them changed the build (see §7), but they
   came from `render-from-disk`, which serves **0 shipped default tokens** — the same path whose
@@ -496,3 +491,39 @@ two commands:
 
     node packages/noodl-preview/dist/nodegx-deploy.cjs templates/story-engine <out>
     node scripts/devtools/drive-tpl006-story.js <out>
+### 9e. The publish, and the harness defect that would have graded it wrong
+
+**2026-09-12.** `site/templates/<slug>/` in `~/vscode_projects/nodegx-web`, deployed with
+`ops/deploy.sh 49.12.102.195`. Both neighbours on that box (`nexus.digitalbricks.io`,
+`digitalbricks.io`) answered **200 before and after**, and `site/index.html` was **byte-identical**
+under the deploy's own `build.py`, so the homepage did not move.
+
+🔴 **The base URL is not optional.** The other two demos are built with
+`--base-url /templates/<slug>/`, which rewrites `<base href>`, `Noodl.Env['BaseUrl']` and every
+script src. The root-relative build driven in §9b would have asked for `/index-<hash>.js` and
+**rendered blank** under the subpath. Rebuilt with the flag; `<base href>` verified in the artefact
+before pushing.
+
+🔴 **AND THE DRIVE HARNESS PUBLISHED THE HOMEPAGE AS THE TEMPLATE.** `serveFolder` fell back to the
+**root** `index.html` for any **directory** request, so serving `site/` and asking for
+`/templates/story-engine/` returned **nodegx.io's homepage with a 200**. The gate scored **5/16** —
+and ⚠️ **every one of the five that passed was an ABSENCE clause**, each true of a page with no
+story on it: *"the `requires` choice is ABSENT"*, *"the empty-state line is gone"*, *"the ending
+offers no choices"*, and both error counts. **A blank page passes every absence a drive can make.**
+Fixed in `drive-deployed.js` (a directory serves its own index first, root fallback kept after) and
+committed.
+
+✅ **The reading that settles it is against the PUBLIC URL, not a local copy:**
+`drive-tpl006-story.js https://nodegx.io --path /templates/story-engine/` → **16/16, 0 console
+errors, 0 network errors**. `withDeployedSite` grew an `origin` option for exactly this — a local
+folder that plays is not evidence the deploy landed; the host's own rewrites, headers and cert are.
+
+⚠️ **`site/templates/` is UNTRACKED in `nodegx-web`, and was before this template** — all three
+demos live only on the box and in that working copy. They regenerate from this repo in one command,
+so nothing is lost, but **`git status` in the site repo does not describe what is published.** Left
+as found: committing three deploy folders is a decision, not a tidy-up.
+
+🙋 **The category slug is still unruled and this publish did not need it.** `interactive-fiction` is
+none of the six (`starter`, `data-app`, `dashboard`, `site`, `form`, `integration`). The demo page
+is a static path on the marketing site; **the in-editor shelf is the thing T3 still blocks**, for
+this template and `pixel-game` both.
