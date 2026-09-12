@@ -188,8 +188,19 @@
 > ✅ **To verify one file there, use a scoped config**: `extends` the root tsconfig with
 > `files: ["devtools/<file>.ts"]`. The peer session did this for the deploy entry and got 39 errors,
 > all in transitively-imported editor sources (`router.tsx`, `nodegrapheditor.ts`, `EditorPage.tsx`)
-> and **0 in the target file** — so the 8 types do compile. ⚠️ That scoped config was **not
-> committed**, so the reading is not reproducible without rebuilding it.
+> and **0 in the target file** — so the 8 types do compile.
+> 🔴 **That scoped config is DELIBERATELY NOT COMMITTED, and the reason is this section's own
+> principle.** It exits 2 with 39 errors that are artifacts of forcing `module: CommonJS` onto that
+> import graph, not defects. Committed as a `tsconfig.json` it would *read* as a gate, and the next
+> reader finds it red on arrival and either "fixes" 39 non-problems or learns that a red config is
+> normal — which is how a team stops believing its own gates. **A recipe whose output is "0 in the
+> target, 39 elsewhere, and you must check which" is a diagnostic, not a gate, and belongs in prose
+> where the caveat travels with it.** Rebuild it when you need the reading; do not enshrine it.
+>
+> ⬜ **The finding underneath is unowned and is Richard's call:** `scripts/` is *nominally* covered by
+> `scripts/tsconfig.json` and *verified by nothing*, because the only command that would check it
+> cannot complete. **Token-counting (`npm run tsfixme`) is the only thing that actually runs over that
+> tree.** Not opened as a task mid-release.
 >
 > ⚠️ **And `library/prefabs/form-fields/project/project.json` is still modified and uncommitted**
 > (mtime 09-11 14:50, predating both sessions). It reddens `cmp004Parts`, which asserts a
