@@ -84,6 +84,7 @@ failure this file's first house rule exists to prevent.
 | **D49** | 🔴 open (09-12, TPL-006 drive) — **replaces D43** | **NONE** | product (node library) | every `States` node with a colour or a number on it, which is most of them |
 | **D50** | 🔴 open (09-12, TPL-006 build) | **NONE** | product (validator) | every author who spaces a wrapped list of pills the way the design doctrine tells them to |
 | **D51** | ✅ fixed 09-12 — repo-side, found by TPL-006 | — | harness/repo | (was: `typecheck:mcp` red for a day with nobody looking) |
+| **D52** | 🔴 open (09-12, TPL-006 AC7 re-measure) — **the rest of D44's "remaining 4", and it is a BUILT-IN node type** | **NONE** | tooling (`deploy-from-disk` devtool only) | anyone who reads that census as a publication gate on a template with a `For Each` |
 
 🔴 **D18/D19/D20 are the first rows created since the sweep, and they were already unowned within a
 day of the process being put in place.** That is the argument for the column, not an argument
@@ -2377,3 +2378,65 @@ the `Record<string, unknown>` annotation and a comment saying why. **`typecheck:
 
 ⚠️ The general shape is worth more than the fix: **a green jest run is not a typecheck**, and a
 fixture file that only jest ever compiles has no gate on it at all unless somebody runs `tsc`.
+## D52 — 🔴 The deploy census reports phantom drops on any project with a `For Each`, because the probe never mints its item ports
+
+**Measured 2026-09-12**, re-measuring AC7's inherited blocker on `templates/story-engine/` rather
+than inheriting it. D44's correction recorded the devtool's remaining 4 drops as
+`keyboard-shortcuts` — *a **module** node type, and the headless library holds built-ins only*.
+**That is not the whole cause.** `For Each` is a built-in, it is in the headless library, and its
+item ports are missed too:
+
+| path | authored | deployed | dropped |
+|---|---|---|---|
+| **`nodegx deploy`** (shipped engine, `dist/nodegx-deploy.cjs`) | 84 | **84** | **0** |
+| `deploy-from-disk` devtool | 84 | 81 | **3** |
+
+The three, all on `/Pages/Read` and all from the one `For Each`:
+
+    For Each[rdChoices].itemOutput-gives        -> JavaScriptFunction[rdCarry].in-gift
+    For Each[rdChoices].itemOutputSignal-picked -> JavaScriptFunction[rdCarry].run
+    For Each[rdChoices].itemOutput-goto         -> Set Variable[rdSetAt].value
+
+🔴 **The instrument is alive on both arms, which is the only reason the reading counts.** The
+`--sabotage` arm planted a wire into a port that does not exist and the filter dropped it
+(`/Story/Source` 8 → 7); the clean arm dropped exactly these 3 and nothing else across nine
+components. **A census that drops nothing and a census that never ran are byte-identical**, and this
+one is neither.
+
+### The mechanism, and it is TWO gates rather than one
+
+`registerRuntimeDiscoveredPorts` drives the shipped `setup()` functions against a probe runtime by
+emitting `nodeAdded.<type>` on the probe's graph model. That works for the `States` /
+`Set Variable` / `Expression` family because they subscribe **at setup time** and derive their ports
+from `node.parameters` alone. `For Each` does neither:
+
+1. 🔴 **It subscribes inside an `editorImportComplete` handler**
+   ([`foreach.tsx:1099-1107`](../../../packages/noodl-viewer-react/src/nodes/std-library/data/foreach.tsx#L1099-L1107)).
+   The probe never emits that event, so `nodeAdded.For Each` is never registered — which is why
+   **`For Each` does not appear in the census's own list of lazy types at all.** The census reads
+   *"no such family subscribed"*, not *"that family found nothing"*, and the two look identical in
+   the output.
+2. 🔴 **Its ports come from ANOTHER COMPONENT, not from its own parameters.**
+   `_collectPortsInTemplateComponent` reads `graphModel.components[node.parameters.template]` and
+   returns early when it is `undefined` — and the probe's graph model has no components in it,
+   because the project is imported into the editor's `ProjectModel` and never into the probe's.
+   So even with gate 1 crossed, the pass still mints nothing.
+
+**The completion is both**: emit `editorImportComplete` on the probe, and populate
+`graphModel.components` with the project's components and their `outputPorts`. Either alone reads
+as a fix and changes nothing.
+
+### 🔴 Why this row exists rather than a note: the census is used as a publication gate
+
+TPL-006's AC7 says *"do not publish a build whose own census says it dropped wires"*. The census
+says this template dropped three, **and it did not** — the artefact a person deploys carries all 84
+and plays. Left unfiled, the next person to run it on any template with a `For Each` in it (which is
+most of them) pays the full price of this measurement again, and the likeliest reading is the wrong
+one: that the product drops the wires that make a repeated row clickable.
+
+⚠️ **And the shipped CLI's `84 → 84` is NOT evidence those 84 are healthy.** Its filter is inert
+(**D48**) — it keeps every wire whatever its state. The two readings are complementary and neither
+is sufficient: the CLI says *nothing was dropped*, and the browser drive of that same deployed
+folder says *they work*.
+
+⬜ Owner `NONE`. It blocks no template: the shipped path is unaffected.

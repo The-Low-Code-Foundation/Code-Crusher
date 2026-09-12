@@ -10,8 +10,9 @@
 
 **Status: 🟢 BUILT, GATED AND DRIVEN 2026-09-12.** `templates/story-engine/` — 9 components, 88
 nodes, 84 connections, **zero `noodl_modules`**, no backend, 0 validator errors, 62/62 on its gate,
-and driven in a real browser with 0 console errors. **AC1–AC6 green. AC7 (the demo page) is blocked
-and the blocker is the same D48/D44 pair that blocked TPL-005's. AC8 is Richard's.**
+and driven in a real browser with 0 console errors. **AC1–AC6 green. AC7's build half is green too
+as of 09-12 (§9) — the shipped deploy carries every wire and the deployed folder plays; what is left
+of it is the hosting, which is Richard's. AC8 is with Richard.**
 
 🔴 **The drive found the template's own headline defect in the product, not in the template**: a
 `States` node with `useTransitions` on — the DEFAULT — never publishes a colour. Filed as **D49**,
@@ -227,17 +228,22 @@ sufficient**, and the §7 record says which is which.
     different four-passage story and **every component's graph is diffed**: exactly one component
     differs, and inside it exactly one parameter of one node. *A person ships a different product by
     editing one JSON array.*
-- 🔴 **AC7 — a demo page on nodegx.io. BLOCKED, and the blocker is inherited, not new.** The same
-  **D44/D48** pair that blocked TPL-005's: the devtool deploy path drops every wire into a dynamic
-  port, and the shipped `nodegx deploy` CLI's health filter is inert. **This template is more
-  exposed than TPL-005**, because its engine is `Expression`, `Set Variable`, `String Format`,
-  `States` and — the one nothing has measured — a `For Each`'s `itemOutput-*` / `itemOutputSignal-*`
-  ports, all of which are minted in a `setup()` guarded on the editor connection.
-  ⬜ **Do not publish a build whose own census says it dropped wires.** Routes unchanged: Richard
-  deploys from the editor seat, or D44 lands first.
-- ⬜ **AC8 — Richard's look.** Outstanding on TPL-003, TPL-004 and TPL-005 too; not a blocker on the
-  rest. Four screenshots at 1100×1400 were taken this session and one of them changed the build —
-  see §7.
+- 🟡 **AC7 — a demo page on nodegx.io. THE BUILD HALF IS UNBLOCKED; the hosting is Richard's.**
+  **RE-MEASURED 2026-09-12 rather than inherited, and the inherited blocker does not hold for this
+  template** — see §9. The shipped deploy engine carries **84 of 84** connections on all nine
+  components, the deployed folder was **driven with real mouse events** through every AC1 clause
+  with **0 console errors and 0 network errors**, and the three wires the devtool's census reported
+  as dropped are a gap in *that instrument* — filed as **D52**, and all three demonstrably alive in
+  the artefact.
+  ⬜ **What is actually left is the hosting**, which is outward-facing and Richard's: a real publish
+  also needs `npm run build:editor:_viewer` first, because this checkout's viewer is a DEVELOPMENT
+  build and the shipped engine **refuses** it by name (EXP-017) rather than putting 9.43 MB of
+  base64 viewer source on a host.
+- 🟡 **AC8 — Richard's look. SENT 2026-09-12, and from a better instrument than last time.** Four
+  screenshots at 1100×1400 were taken on 09-12 and one of them changed the build (see §7), but they
+  came from `render-from-disk`, which serves **0 shipped default tokens** — the same path whose
+  flatness TPL-004 §10 warns is an artefact of the instrument, not the look. The seven sent to him
+  are of the **deployed** artefact, which carries the real stylesheet. Still ⬜ until he answers.
 
 ## 6. Rulings, and the one that was disproved
 
@@ -351,3 +357,98 @@ Recorded so the next reader does not re-derive the comparison:
   *behaviour*, so it needs a mini-DSL interpreter in the graph. That either looks brilliant or
   collapses into one `Function` node with a switch statement in it, and the downside is a demo that
   argues *against* the product.
+## 9. AC7 re-measured — the deploy, and a drive of the thing a person actually deploys
+
+**2026-09-12.** The handoff named AC7 blocked by D44/D48 and said this template was *more exposed
+than TPL-005* because of a `For Each`'s `itemOutput-*` ports, *"the one nothing has measured"*. It is
+measured now, and 🔴 **the prediction was right about the ports and wrong about who has the defect.**
+
+### 9a. Two deploy paths, and they disagree by exactly three wires
+
+Both run on `templates/story-engine/` at HEAD. The devtool needs `packages/noodl-editor` as its
+working directory — `getAppPath()` resolves to `process.cwd()`, so from anywhere else it throws
+`ENOENT … /src/external/deploy/index.json` and that is not a fact about the project.
+
+| path | authored | deployed | dropped |
+|---|---|---|---|
+| **`nodegx deploy`** — shipped engine, `packages/noodl-preview/dist/nodegx-deploy.cjs` | 84 | **84** | **0** |
+| `deploy-from-disk` devtool | 84 | 81 | 3 |
+| devtool, `--sabotage` control | 85 | 81 | 4 (the planted one + the same 3) |
+
+All nine components were diffed connection-by-connection in both directions, not totalled —
+[`scripts/devtools/deploy-connection-diff.js`](../../../scripts/devtools/deploy-connection-diff.js),
+committed because the census counts drops and does not name them, and that gap is the whole cost of
+D52: the
+shipped arm is `missing 0` on every one of them, and the devtool arm is `missing 0` on eight and
+`missing 3` on `/Pages/Read`. The three are the `For Each`'s `itemOutput-goto`, `itemOutput-gives`
+and `itemOutputSignal-picked` — **the entire click path of a choice**.
+
+🔴 **The `--sabotage` arm is what makes the clean arm's number mean anything.** A planted wire into a
+port that does not exist was dropped (`/Story/Source` 8 → 7), so the health filter was alive when it
+also dropped the three. Without that arm, "3 dropped" and "the filter is confused" are the same
+reading. Mechanism and the two gates behind it: **[D52](DEFECTS-THE-TEMPLATES-FOUND.md)**.
+
+### 9b. The deployed folder was driven, and it plays
+
+`scripts/devtools/drive-deployed.js` serving the **shipped engine's output** — not
+`render-from-disk`'s reconstruction — at 1100×1400, clicks dispatched as real CDP mouse events at
+each element's own centre after `elementFromPoint` confirmed nothing was on top of it:
+
+| step | read off the page |
+|---|---|
+| first load | `The lamp-room`, eyebrow `YOU ARE HERE`, 3 choices, carry *"Nothing yet."* |
+| **`requires` ABSENT** — gallery carrying nothing | 2 choices: `Light the lamp`, `Go down to the rocks` |
+| the `gives` choice | carry reads **`what Aldis wrote`**, and the empty-state line is gone |
+| **`requires` PRESENT** — same passage, carrying it | the same 2 **plus** `Light the oil lamp first, then take the north stair` |
+| the gated ending | `The north stair`, eyebrow **`AN ENDING`**, **0** choices, the note renders |
+| restart | back at `The lamp-room`, 3 choices, carry back to *"Nothing yet."* |
+| `/remix` | the box holds **3,939** characters, opening `[\n  {\n    "id": "start"` |
+| — | **0 console errors, 0 network errors** |
+
+🔴 **Both halves of the `requires` pair were read, in the same session, with the `gives` choice as
+the only variable** — the second arm reached by a full page navigation, so the app-wide `Variable`s
+reset and the run started honest. **Present-after alone would have graded nothing.**
+
+⚠️ **The choice rows are `Group`s with `cssClassName: "story-choice pressable"`, not `<button>`s.**
+A first drive selecting `button` found only *Start again* and *Write your own story*, reported
+`NOT FOUND` six times, and every screen read identically — **which looks exactly like a template
+whose clicks are dead.** The artefact was fine and the selector was wrong. *A drive that finds
+nothing has two explanations and the instrument is the likelier one.*
+
+### 9b-i. 🔴 The negative control, which is what makes 16/16 mean anything
+
+The drive is committed as [`scripts/devtools/drive-tpl006-story.js`](../../../scripts/devtools/drive-tpl006-story.js)
+and it is a **gate**: 16 clauses, exit 1 if any fails. Run against the **devtool's** build — the same
+project, the same script, the only difference being the three missing `For Each` item wires — it
+scores **9/16 and exits 1**:
+
+| | shipped engine's build | devtool's build |
+|---|---|---|
+| a choice moves passages | ✅ | ❌ never leaves the first passage |
+| a `gives` choice fills the inventory | ✅ | ❌ carries nothing, ever |
+| the `requires` choice appears | ✅ | ❌ never |
+| any ending is reachable | ✅ | ❌ none |
+| **console errors** | **0** | **0** |
+
+🔴 **Three dropped wires render perfectly and say nothing.** Not one console error, not one network
+error, every passage of prose on screen, every button present — and the story cannot be played.
+This is the defect class TPL-004's AC8 note names and it is the argument for driving an artefact
+rather than reading it.
+
+🔴 **And the control caught a hole in the drive's own ARM A.** *"The `requires` choice is ABSENT
+carrying nothing"* **passed on the broken build** — because the reader never reached the gallery, so
+the choice was absent for the wrong reason. An absence is evidence only beside a signal known to
+fire, and here that signal is ARM B. The pair is the reading; ARM A alone is not. Recorded in the
+script's own header so the next reader cannot take one half of it.
+
+### 9c. What this does and does not settle
+
+- ✅ **The three "dropped" wires are alive in the deployed artefact.** They are the three that carry
+  a clicked choice into the engine, and the story could not have been played without all three.
+- ✅ **The artefact a person deploys is complete** — 84/84, diffed per component.
+- 🔴 **It is NOT settled that all 84 are healthy.** The shipped filter is inert (**D48**): it keeps
+  every wire whatever its state, so `84 → 84` means *nothing was dropped*, never *nothing is broken*.
+  The browser drive is the other half, and neither reading is sufficient alone.
+- ⬜ **Still not done: opened from a zip on a second machine**, and not published. The publish needs
+  a production viewer build first — the shipped engine refused this checkout's development build by
+  name, with the reason (`9.43 MB inline source map, 66% of the file`), which is EXP-017 working.
