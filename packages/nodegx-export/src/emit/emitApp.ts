@@ -36,6 +36,7 @@ import { WEBSOCKET_LIB_PATH, websocketLibSource } from './websocketLib';
 import { REALTIME_LIB_PATH, realtimeLibSource } from './realtimeLib';
 import { CRYPTO_LIB_PATH, cryptoLibSource } from './cryptoLib';
 import { SCREEN_LIB_PATH, screenLibSource } from './screenLib';
+import { MEDIA_LIB_PATH, mediaLibSource } from './mediaLib';
 import { COMPONENT_OBJECT_LIB_PATH, componentObjectLibSource } from './componentObjectLib';
 import { DRAG_LIB_PATH, dragLibSource } from './dragLib';
 import { PAGE_STACK_LIB_PATH, pageStackLibSource } from './pageStackLib';
@@ -162,6 +163,8 @@ export function emitApp(ir: ExportIR, catalog: Catalog): EmittedApp {
   // EXP-011 §59.
   let cryptoLibUsed = false;
   let screenLibUsed = false;
+  // EXP-014 §14.5. The media URL helpers — earned where a component printed a wired src/srcSet/poster.
+  const mediaHelpersUsed = new Set<string>();
   // EXP-011 §60. The component-object record, its context and the parent hook; the lib raises on errors.ts.
   let componentObjectLibUsed = false;
   // EXP-011 §63.
@@ -228,6 +231,7 @@ export function emitApp(ir: ExportIR, catalog: Catalog): EmittedApp {
     if (emitted.realtimeLib) realtimeLibUsed = true;
     if (emitted.cryptoHelpers.size > 0) cryptoLibUsed = true;
     if (emitted.screenLib) screenLibUsed = true;
+    for (const helper of emitted.mediaHelpers) mediaHelpersUsed.add(helper);
     if (emitted.componentObjectLib) componentObjectLibUsed = true;
     if (emitted.dragLib) dragLibUsed = true;
     if (emitted.pageStackLib) pageStackLibUsed = true;
@@ -321,6 +325,10 @@ export function emitApp(ir: ExportIR, catalog: Catalog): EmittedApp {
   }
   if (screenLibUsed) {
     files[SCREEN_LIB_PATH] = GENERATED_MODULE_TS + screenLibSource();
+  }
+  // EXP-014 §14.5. `src/lib/media.ts` — the media URL helpers, where a component printed a wired src/srcSet/poster.
+  if (mediaHelpersUsed.size > 0) {
+    files[MEDIA_LIB_PATH] = GENERATED_MODULE_TS + mediaLibSource();
   }
   // EXP-011 §60. `src/lib/componentObject.ts` — the record hook, the context and the parent hook, where a component printed one.
   if (componentObjectLibUsed) {

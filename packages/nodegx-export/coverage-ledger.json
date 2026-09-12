@@ -231,7 +231,7 @@
     {
       "typeName": "Image",
       "status": "translated",
-      "note": "img"
+      "note": "img; src/srcSet resolved as the viewer resolves them (getAbsoluteUrl behind resolveMediaSource: project-relative made root-absolute, an empty source clears the attribute) \u2014 EXP-014 \u00a714.5"
     },
     {
       "typeName": "Inverter",
@@ -527,7 +527,7 @@
     {
       "typeName": "Video",
       "status": "translated",
-      "note": "native video element: src/poster/flags pass through, object-fit always stated (VISUALS-TARGET \u00a76)"
+      "note": "native video element: src/poster resolved as the viewer resolves them (EXP-014 \u00a714.5), flags pass through, object-fit always stated (VISUALS-TARGET \u00a76)"
     },
     {
       "typeName": "net.noodl.ActionDispatcher",

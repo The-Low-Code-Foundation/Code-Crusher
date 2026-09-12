@@ -64,6 +64,7 @@ import { SCRIPT_CODE_PREFIX } from '../analyze/script';
 import { ID_HELPERS_BY_FN, ID_LIB_PATH, IdHelper } from './idLib';
 import { CRYPTO_LIB_PATH, CryptoHelper } from './cryptoLib';
 import { SCREEN_LIB_PATH } from './screenLib';
+import { MEDIA_ATTRS, MEDIA_LIB_PATH, MediaHelper, absoluteUrl } from './mediaLib';
 import { COMPONENT_OBJECT_LIB_PATH } from './componentObjectLib';
 import { PAGE_STACK_LIB_PATH } from './pageStackLib';
 import { computeNodeStyle, computeRoleCss, CONTENT_ATTR_ORDER, CONTENT_PARAMS, Decl, iconSourceOf, RoleCss, StyleRole, WIRED_STYLE_SINKS } from './style';
@@ -273,6 +274,12 @@ export interface EmittedComponent {
   dragLib: boolean;
   /** EXP-011 §61. `src/lib/pageStack.ts` is owed when this component renders a stack, pushes, pops, or is pushed. */
   pageStackLib: boolean;
+  /**
+   * EXP-014 §14.5. Which of `src/lib/media.ts`'s helpers this component prints a WIRED src / srcSet /
+   * poster through. Filled by `contentAttrs` at the point the attribute is printed — the same
+   * dead-module rule as `dateHelpers`: the module ships exactly when a line names it.
+   */
+  mediaHelpers: Set<MediaHelper>;
 }
 
 export function emitComponent(
@@ -4098,6 +4105,9 @@ export function emitComponent(
   if (routerHooks.length > 0) externalImports.push(`import { ${routerHooks.join(', ')} } from 'react-router-dom';`);
 
   const internalImports = new Map<string, string>(); // specifier → line
+  // EXP-014 §14.5. The media helpers a wired src/srcSet/poster printed through; the import line is
+  // set AFTER the render, where the JSX lines are (the imports are joined later than that).
+  const usedMediaHelpers = new Set<MediaHelper>();
   // One import per api module, carrying the reads and the writes together — the record verbs
   // land in the same module as the query on the same class (RECORD-VERBS-TARGET §4d). Only the
   // fetch needs its item type imported; a mutation's argument type is inferred from the call.
@@ -4687,7 +4697,18 @@ export function emitComponent(
       }
       if (!role?.startsWith('attr:')) continue;
       const attr = role.slice('attr:'.length);
-      if (param.value.kind === 'literal') attrs.set(attr, jsxAttr(attr, param.value.value));
+      if (param.value.kind !== 'literal') continue;
+      // EXP-014 §14.5. A media URL is printed as the browser must be handed it — root-absolute for a
+      // project-relative path, verbatim for anything already absolute, and NO attribute for an
+      // empty one (`src=""` refetches the document) — the viewer's own port rule, resolved here at
+      // emit time because the value is a literal. `mediaLib.ts` says why the route depth matters.
+      const media = MEDIA_ATTRS[attr];
+      if (media !== undefined) {
+        const resolved = media.resolve(param.value.value);
+        if (resolved !== undefined) attrs.set(attr, jsxAttr(attr, resolved));
+        continue;
+      }
+      attrs.set(attr, jsxAttr(attr, param.value.value));
     }
     for (const [toProperty, source] of Object.entries(plan.bindings[node.id] ?? {})) {
       // The controlled attribute prints from `useState`, not from here — handled, not skipped.
@@ -4715,8 +4736,15 @@ export function emitComponent(
       if (source.kind === 'computed' && source.expr.kind === 'undefined') continue;
       const sink = ATTR_SINK[attr] ?? 'opaque';
       const expr = bindingExpr(source, sink);
-      if (expr !== null) attrs.set(attr, `${attr}={${expr}}`);
-      else {
+      if (expr !== null) {
+        // EXP-014 §14.5. A wired media URL is resolved at RUN time, as the viewer's port setter does —
+        // `src={mediaSrc(picture)}` — and the helper earns its import below the render.
+        const media = MEDIA_ATTRS[attr];
+        if (media !== undefined) {
+          usedMediaHelpers.add(media.helper);
+          attrs.set(attr, `${attr}={${media.helper}(${expr})}`);
+        } else attrs.set(attr, `${attr}={${expr}}`);
+      } else {
         notes.push(
           `${plan.path}: wire into ${node.id}.${toProperty} ${noSourceReason(source, sink)} — dropped, reported`
         );
@@ -5512,7 +5540,10 @@ export function emitComponent(
   const renderIcon = (node: NodeIR, attrs: string[], className: string | undefined, indent: number): string[] => {
     const source = iconSourceOf(node, catalog);
     if (source.kind === 'image') {
-      return element('img', [...attrs, jsxAttr('src', source.src), 'alt=""'], null, indent, false);
+      // EXP-014 §14.5. The runtime's `iconImageSource` setter is `getAbsoluteUrl` with NO empty gate in
+      // front of it (unlike Image and Video), so this is `absoluteUrl`, not `mediaSrc`: an empty icon
+      // source stays `src=""` there and here — transcribed, not repaired (`mediaLib.ts`).
+      return element('img', [...attrs, jsxAttr('src', absoluteUrl(source.src)), 'alt=""'], null, indent, false);
     }
     if (source.kind === 'sprite') {
       const use = [`${pad(indent + 2)}<use href="${source.url}#${source.symbolId}" />`];
@@ -6223,6 +6254,13 @@ export function emitComponent(
   const hasCss = classNames.length > 0 || popupLayerClass !== undefined || hiddenKeepSpaceClass !== undefined;
   if (hasCss) {
     internalImports.set(`./${plan.file.fileBase}.module.css`, `import styles from './${plan.file.fileBase}.module.css';`);
+  }
+
+  // EXP-014 §14.5. `src/lib/media.ts`, earned where a wired src/srcSet/poster printed through a helper —
+  // set here, after the render that fills the set, and before the imports are joined.
+  if (usedMediaHelpers.size > 0) {
+    const specifier = `${relRoot}/${MEDIA_LIB_PATH.replace(/^src\//, '').replace(/\.ts$/, '')}`;
+    internalImports.set(specifier, `import { ${[...usedMediaHelpers].sort().join(', ')} } from '${specifier}';`);
   }
 
   const importLines: string[] = [];
@@ -7009,7 +7047,8 @@ export function emitComponent(
     componentObjectLib: printsRecord || printsParent,
     dragLib: plan.drags.length > 0,
     // EXP-011 §61.
-    pageStackLib: usedPageStackNames.size > 0
+    pageStackLib: usedPageStackNames.size > 0,
+    mediaHelpers: usedMediaHelpers
   };
 }
 

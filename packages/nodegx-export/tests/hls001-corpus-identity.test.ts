@@ -133,7 +133,19 @@ describe('HLS-001 AC3 — emitApp over the corpus is byte-identical', () => {
     // said: one project added, none removed, **zero existing hashes changed**. That is what says
     // FLD-015's widening of `bindable` and of `Static Data.items` emits nothing new for a project
     // that had neither.
-    expect(corpusProjects().length).toBe(45);
+    //
+    // 45 → 46 on 2026-09-12 (EXP-014 §14.5), counted the same way: `picture-desk` is the first
+    // project in the corpus with a route two segments deep (`gallery/team`), which is the depth at
+    // which a project-relative `<img src>` resolves under the route and 404s.
+    //
+    // 🔴 **This regenerate was NOT purely additive, and that was counted before the golden was
+    // touched**: 9 existing hashes changed and 3 files were added, in exactly the three projects
+    // with a WIRED picture — `gallery-desk` and `photo-desk` (`src={mediaSrc(…?.url)}` off a Cloud
+    // File) and `puppy-test-3` (`src={mediaSrc(photo)}` in PuppyCard) — each moving `Home.tsx` /
+    // `PuppyCard.tsx`, `EXPORT-REPORT.md` (its file count, `src/lib/media.ts` joined) and `@report`.
+    // Zero hashes changed in the other 42, which have no wired media URL. `tests/the-picture-path.test.ts`
+    // grades the rule; the hand-written PuppyCard golden in `visual.test.ts` moved by the same two lines.
+    expect(corpusProjects().length).toBe(46);
     expect(Object.keys(golden).sort()).toEqual(corpusProjects());
   });
 
