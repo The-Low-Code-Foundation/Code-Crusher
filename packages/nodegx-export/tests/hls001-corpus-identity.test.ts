@@ -60,6 +60,22 @@
  *    **all 840**, where they disagreed about 3 before. The convergence is the evidence that what
  *    was fixed was the realm sensitivity rather than the wording.
  *
+ * ✅ **Regenerated a FOURTH time by GAM-006 (P88), and the red run was counted before the golden was touched.**
+ *
+ * GAM-006 (b) makes a States colour transition end on the value its state names instead of the
+ * tween's parsed hex, because a `var(--token)` came out as `#0aNaNNaNNaN` (P78 D49). The emitted
+ * `statesLib` changed in step, so it *is* allowed to move bytes.
+ *
+ *  - The full suite's red run named **1** differing file, `glow-desk/src/lib/states.ts`. `glow-desk`
+ *    is the only one of the 46 fixture projects with a `States` node (`grep -rl '"States"'
+ *    tests/fixtures`), and no other project emits `states.ts`.
+ *  - With GAM-006's two source hunks reverse-applied, this gate was green again, so the move was
+ *    that change and nothing else in the tree.
+ *  - Regenerating moved **1** hash line in the golden, the same file.
+ *  - 🔴 As with CMP-005, the parity that makes this safe is graded elsewhere: `animation-pair.test.ts`
+ *    A5 boots the runtime's real `states.ts` and compares it frame by frame with the emitted
+ *    `statesLib`. It went 7 red with the export half reverted and is 57/57 with both halves in.
+ *
  * ✅ **Regenerated a THIRD time by CMP-005 (P85), and the count was predicted before it was taken.**
  *
  * CMP-005 gave `Date To String` the tokens an app actually needs (weekday, full month name,

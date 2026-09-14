@@ -550,7 +550,10 @@ describe('§A States against states.ts, the whole node, frame by frame', () => {
     expect(at(150).tint).not.toBe('#334455ff');
     expect(at(400).opacity).toBeGreaterThan(0.2);
     expect(at(400).opacity).toBeLessThan(1);
-    expect(at(700)).toMatchObject({ opacity: 1, tint: '#ffcc00ff' });
+    // GAM-006 (b): a colour ends on the value its state names (`#ffcc00`), where it used to end on the
+    // tween's own 8-digit hex (`#ffcc00ff`). The interpreter ends in the same place, which the parity
+    // rows above compare frame by frame.
+    expect(at(700)).toMatchObject({ opacity: 1, tint: '#ffcc00' });
     expect(trace.events).toEqual([
       ['stateChanged', 0],
       ['done', 0],
@@ -597,7 +600,7 @@ describe('§A States against states.ts, the whole node, frame by frame', () => {
     expect(want.frames[0][1].error).toBe('Cannot go to state "Bright" — this node has no such state. Its states are: dim, bright. Did you mean "bright"?');
   });
 
-  test('A5 MEASURED — a var(--token) colour: the interpreter tweens through a NaN hex, and with no document the export answers the same', () => {
+  test('A5 MEASURED — a var(--token) colour: the interpreter tweens through a NaN hex and LANDS on the token (GAM-006 (b)), and with no document the export answers the same', () => {
     const params = { ...PANEL_PARAMS, 'value-bright-tint': 'var(--primary)' };
     const def = { ...PANEL_DEF, values: { ...PANEL_DEF.values, tint: { type: 'color', byState: { dim: '#334455', bright: 'var(--primary)' } } } };
     const script = passes({ 0: { pulses: ['to-bright'] } }, 700);
@@ -607,10 +610,12 @@ describe('§A States against states.ts, the whole node, frame by frame', () => {
     // first channel is `parseInt('ar', 16)` = 10 and tweens to a real byte; the other three are NaN.
     expect(want.frames.find(([now]) => now === 300)![1].tint).toMatch(/^#[0-9a-f]{2}NaNNaNNaN$/);
     expect(got.frames).toEqual(want.frames);
-    // 🔴 Measured: the tween ENDS on `rgbaToHex(targetValues)` — the parsed garbage, not the authored
-    // string — so a token-coloured value never reaches its colour in the interpreter while
-    // transitions are on. Registered in EXP-011 §49.3. The export resolves the token in a browser.
-    expect(want.frames[want.frames.length - 1][1].tint).toBe('#0aNaNNaNNaN');
+    // 🔴 Measured before GAM-006: the tween ENDED on `rgbaToHex(targetValues)`, `#0aNaNNaNNaN`, so a
+    // token-coloured value never reached its colour in the interpreter while transitions were on
+    // (EXP-011 §49.3, P78 D49). GAM-006 (b) lands a colour on the value its state names, in
+    // `states.ts` and in the emitted `statesLib` alike, so both end on the token. The frames in
+    // between are still the NaN hex until GAM-006 (a) reads the token before the tween.
+    expect(want.frames[want.frames.length - 1][1].tint).toBe('var(--primary)');
   });
 
   test('A5 CONTROL — a machine that animates every queued state rather than settling the intermediates disagrees on the one-pass script', () => {

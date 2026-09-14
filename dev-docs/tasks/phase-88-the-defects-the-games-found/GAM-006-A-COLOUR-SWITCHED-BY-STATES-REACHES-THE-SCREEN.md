@@ -1,6 +1,6 @@
 # GAM-006 — A colour switched by a States node reaches the screen, with transitions on
 
-**Status: ⬜ not started.** **Source:** [P78 D49](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) (replaces D43) · found by TPL-006 story engine, 2026-09-12 (TPL-005 pixel game, 2026-09-11, first) · **Side:** product (runtime, `States`)
+**Status: 🟡 AC1 RED recorded; (b) built with AC2's runtime half and AC8 graded by reverted arms (2026-09-14, session 3, uncommitted). A delayed colour publishing an RGBA array was found and is owed. (a)/AC3–AC7 not started (§8).** **Source:** [P78 D49](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) (replaces D43) · found by TPL-006 story engine, 2026-09-12 (TPL-005 pixel game, 2026-09-11, first) · **Side:** product (runtime, `States`)
 
 A States node flips its text and leaves its colour behind: the eyebrow reads "An ending" and the ink stays the
 reading colour, at every sample for 1.5 s. This happens with transitions on, which is the default.
@@ -91,4 +91,84 @@ string beside it changes, and the colour does not. The idiom is [CMP-001 §4](..
 
 ## 8. Record
 
-Not started.
+### Session 3 (2026-09-14, HEAD `bb27086de`) — AC1: RED at HEAD, and the register's "or a number" is wrong
+
+**The spec:** [`noodl-viewer-react/tests/gam-006-states-token-colour.test.ts`](../../../packages/noodl-viewer-react/tests/gam-006-states-token-colour.test.ts).
+A real `States` node in `createCorpusGraph`, with the **viewer's own `Styles`** on `context.styles` (`viewer.jsx:144`),
+where P18's A5 used a stub, carrying two legacy colour styles (`Grey`, `Primary`). One node carries every arm, so the
+known-firing string sits beside the colour that does not arrive. The node settles into A (the first state jumps,
+`jumpToState`), then `to-B` is pulsed and the clock runs at `graph.frame(16)`. The default transition is 300 ms. Log:
+session `04c88900…` scratchpad, `gam006/ac1-run1.log` (`GAM006_AC1_EXIT=1`, 3 failed of 7 as predicted).
+
+| value | A → B | transitions **on** (the default), 0 / 64 / 160 / 320 / 704 / 1504 ms | transitions **off** |
+|---|---|---|---|
+| `label` (string, known-firing) | `calm` → `hit` | `hit` at 0 ms, and after | `hit` |
+| 🔴 **`tint`** (colour) | `var(--muted)` → `var(--primary)` | **`#0aNaNNaNNaN` at every sample, from 0 ms** | `var(--primary)` |
+| `hex` (colour) | `#334455` → `#8a4f16` | `#334455ff`, `#4f4740ff`, `#714b27ff`, then `#8a4f16ff` from 320 ms | `#8a4f16` |
+| `named` (colour style) | `Grey` → `Primary` | `#777777ff`, `#555b60ff`, `#2d3946ff`, then `#112233ff` from 320 ms | `Primary` |
+| `size` (number) | `10` → `40` | `10`, `19.8…`, `31.6…`, then `40` from 320 ms | `40` |
+
+**What it settles.**
+- **The defect is a token colour, not colours and not numbers.** A `#rrggbb` colour and a named colour style both glide
+  and arrive. A number glides and arrives. This confirms §2's ⚠️ and corrects D49's title and the register's "or a number".
+- 🔴 **It is worse than D49 recorded.** Both endpoints are tokens in a real template (`var(--muted)` → `var(--primary)`),
+  so the start value parses to garbage too. The output is an invalid colour **from the first frame**, not only at the
+  end. A browser rejects every frame and keeps whatever it drew last, which is D49's "the ink stays the reading colour".
+- **Transitions off lands every value**, the author's strings included. With transitions on, a colour that arrives ends
+  as the tween's own 8-digit hex (`#8a4f16ff`), not the authored string. Design (b) makes both end in the same place.
+- The three red rows are `tint`, `hex` and `named`. `hex` and `named` fail on the string's form, not its colour, and (b)
+  turns them green along with `tint`.
+
+### Session 3, continued — (b) built, AC2's runtime half graded, AC8 kept in step (uncommitted)
+
+**The change.** `states.ts` `onRunning`, the end-of-transition branch: a colour ends on
+`stateParameters['value-<state>-<value>']`, the value its state names, instead of `rgbaToHex(targetValues)`. When the
+state names no colour, it still ends on the tween's hex. Nothing else moves: numbers, strings, booleans and the frames in
+between are as they were.
+
+| reading | result | log (`gam006/`) |
+|---|---|---|
+| GAM-006 spec with (b) | **7/7**. `tint` ends on `var(--primary)`, `hex` on `#8a4f16`, `named` on `Primary`, which is where transitions off has always landed | `ac2-b-green.log`, `GAM006_B_EXIT=0` |
+| 🔴 **Reverted arm:** only my hunk reverse-applied, which is `states.ts` at HEAD | **exactly `tint`, `hex` and `named` red**. `label`, `size` and transitions-off stay green. Restored, sha `0ff3a144…` before and after | `ac2-b-reverted.log`, `GAM006_B_REVERTED_EXIT=1` |
+| The viewer's existing States specs (`nda-001-states-reactivity`, `nda-004-states-unknown-state`, `erg-001-states-outcomes`) | 3 suites, **42/42** | `states-regression.log`, `STATES_REGRESSION_EXIT=0` |
+
+**AC8, in the same change (§4's collision).** `animation-pair.test.ts` boots the real `states.ts` as its interpreter and
+compares it frame by frame with the emitted `statesLib`. After (b) alone, **7 A5 parity rows went red**, not just the token
+row: every colour transition now ended on its authored string (`#334455`), while the export still ended on `#334455ff`.
+So the export got the same change (`nodegx-export/src/emit/statesLib.ts`, `onTweenRunning`'s end branch lands on
+`def.values[v].byState[m.state]`), and two literals that pinned the old end string moved with it: the token row now
+expects `var(--primary)`, and the per-value-delay row expects `#ffcc00`. Its NaN mid-frame `toMatch` stays, because (a) is
+not built.
+
+| reading | result | log |
+|---|---|---|
+| HEAD baseline: both source files reverse-applied, test file as edited | 56/57. The one red is the token row, whose expectation I changed, so the test file edit is the only difference at HEAD | `a5-head-baseline.log`, `A5_HEAD_EXIT=1` |
+| Both halves of (b) | **57/57** | `ac8-green2.log`, `AC8_GREEN2_EXIT=0` |
+| 🔴 **Reverted arm on the export half only** (`states.ts` keeps (b)) | **7 A5 parity rows red**. Restored, sha `35209b8c…` | `ac8-reverted.log`, `AC8_REVERTED_EXIT=1` |
+
+**The whole `nodegx-export` suite, with both halves in.** 100 of 101 suites, 3,490 tests passed
+(`export-full.log`, `EXPORT_FULL_EXIT=1`). The one red was HLS-001's byte-identity gate
+(`hls001-corpus-identity.test.ts`). It named exactly **1** differing file, `glow-desk/src/lib/states.ts`, and `glow-desk`
+is the only one of the 46 fixture projects with a `States` node.
+- **Attributed by a reverted arm:** with both source hunks reverse-applied, the gate is 4/4 (`hls001-head.log`,
+  `HLS001_HEAD_EXIT=0`). Restored by hash.
+- **Answered by counting, then regenerating** (the gate's own rule): `HLS001_REGENERATE=1` moved **1** hash line in
+  `goldens/hls001-corpus.sha256.json` (`a5b628f8…` → `795c6bf2…`, the same file), and the gate is 4/4 after
+  (`HLS001_AFTER_REGEN_EXIT=0`). The regeneration is recorded in that test's header, beside HLS-004's and CMP-005's.
+
+**🔴 A second invalid colour, found by measuring and not yet fixed.** A colour with a per-value transition delay
+publishes its **parsed RGBA array** for the whole delay. The spec's delayed row (`transition-B-hex` = 300 ms after a
+200 ms delay) reads `[51,68,85,255]` at 0, 96 and 192 ms, then `#644a31ff` at 320 ms and `#8a4f16` at 704 ms
+(`delay-row2.log`). The cause is the `ms < c.delay` branch, which publishes `this.startValues[v]`, and for a colour
+`onStart` has replaced that with an array. `statesLib.ts`'s `onTweenRunning` has the same line. No A5 row sees it, because
+A5's delayed value is `opacity`, a number. ⚠️ The first version of that row set the parameter on an unregistered input,
+the delay never took, and it read as "no array". It graded nothing until the input was registered.
+
+**What (b) does not do yet.**
+- **AC3, (a):** the frames between the endpoints are still `#0aNaNNaNNaN` for a token, so in a browser a token colour
+  holds and then **jumps** at the end instead of gliding. R7's warning belongs to (a)'s reader, and "no document" still
+  owes its sentence.
+- **The delay array above:** it belongs to this task's person sentence and needs the same treatment in both files.
+- **AC4, AC5, AC6 and AC7:** not started. `node-transitions.ts` is unmeasured.
+- Owed: the `nodegx-export` `dist` is gitignored build output and was not rebuilt, and the viewer bundles were not
+  rebuilt, so a running editor or deployed app does not have (b) yet.

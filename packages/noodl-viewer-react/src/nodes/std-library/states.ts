@@ -189,10 +189,21 @@ const StatesNode: NodeDefinitionOptions = {
           //  var v = values[i];
 
           if (ms < c.delay) currentValues[v] = this.startValues[v];
-          else if (ms >= c.delay + c.dur)
+          else if (ms >= c.delay + c.dur) {
+            // GAM-006 (b). A colour lands on the value its state names, not on the channels the
+            // tween parsed out of it. The parse only reads hex, so a token (`var(--primary)`) came
+            // out as `#0aNaNNaNNaN` and the last frame published that: a colour the browser
+            // rejects, which left the old colour on screen for good (P78 D49). Transitions off has
+            // always ended on the authored value, so now both do. A state that names no colour
+            // still ends where the tween does.
+            const authored = _internal.stateParameters['value-' + _internal.state + '-' + v];
             currentValues[v] =
-              this.valueTypes[v] === 'color' ? rgbaToHex(this.targetValues[v] as RGBA) : this.targetValues[v];
-          else {
+              this.valueTypes[v] !== 'color'
+                ? this.targetValues[v]
+                : authored !== undefined && authored !== null && authored !== ''
+                  ? authored
+                  : rgbaToHex(this.targetValues[v] as RGBA);
+          } else {
             const _t = _internal.transitionFuncs[v].get((ms - c.delay) / c.dur);
             if (this.valueTypes[v] === 'number') {
               //convert values to Numers, since they might be strings, which can cause NaN
