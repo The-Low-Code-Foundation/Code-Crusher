@@ -1,6 +1,6 @@
 # GAM-018 — A kit registers the same whatever is installed beside it, and a kit that cannot register says so
 
-**Status: ⬜ not started.** **Source:** [P78 D41](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by [TPL-005](../phase-78-the-templates/TPL-005-THE-PIXEL-GAME.md) (the pixel game), 2026-09-11 · **Side:** product (MCP kit extractor / library modules / kit failure surfaces)
+**Status: 🟡 AC1 measured (2026-09-14, session 3): prediction confirmed; scan order excluded by a renamed-kit arm; all 10 guarded kits fail alone (§8). Next is AC2, the product arms, then R2.** **Source:** [P78 D41](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by [TPL-005](../phase-78-the-templates/TPL-005-THE-PIXEL-GAME.md) (the pixel game), 2026-09-11 · **Side:** product (MCP kit extractor / library modules / kit failure surfaces)
 
 TPL-005 wanted `nodegx-confetti` for the end of a run and could not have it. The kit extractor fails confetti on its
 own, and registers it cleanly when all 32 modules sit beside it. A template is a two-module project, which is the arm
@@ -93,4 +93,60 @@ shows confetti registering alone in a browser.
 
 ## 8. Record
 
-Not started.
+### Session 3 (2026-09-14, HEAD `bb27086de`) — AC1 measured: the prediction holds, and the reading is ten kits wide
+
+**Environment (§7): the extractor only.** Every arm is a fresh temp project holding only the named kits under
+`noodl_modules/`, copied from `library/modules/*/project/noodl_modules/<kit>`, and read by the MCP server's own
+`extractProjectOverlay` (`src`), which spawns `dist/kit-extract.cjs`. That bundle is dated 2026-09-12 09:14, newer than
+`src/kitExtract`'s last change (`1e1ab190e`, 2026-08-18). Runners and logs are in session `04c88900…`'s scratchpad, under
+`gam018/` (`ac1-arms.ts`, `ac1-excluding-arms.ts`; `GAM018_AC1_EXIT=0`, `GAM018_AC1_RUN2_EXIT=0`).
+
+**Scan order, now read:** `scanModuleManifests` passes `fs.promises.readdir`'s order straight through `moduleDirectories`,
+which filters and does not sort (`nodegx-module-inject/src/index.js:115-124`, `:186`, `:190`). APFS lists names in order, so
+on this machine scan order is name order. E1 below moves it by renaming a folder. The sort at `:306` orders the browser's
+module injection by `index`, and it is not on this path.
+
+| arm | `noodl_modules/`, in scan order | nodes | `failures`, verbatim |
+|---|---|---|---|
+| A (known-firing) | `keyboard-shortcuts` | 1 | none |
+| B | `nodegx-confetti` | **0** | `registration failed: Cannot convert object to primitive value` |
+| C | `keyboard-shortcuts`, `nodegx-confetti` | 1 | confetti: the same message |
+| **B′** | `custom-html-module` (unguarded), `nodegx-confetti` | **2** | **none**. Predicted to register, and it does |
+| **B″** | `nodegx-clipboard` (guarded), `nodegx-confetti` | **0** | **both** fail with the same message. Predicted, and clipboard fails too |
+| D | all 32 shipped kits | 43 | `noodl-chartjs`: `Cannot read properties of undefined (reading 'ReactCurrentOwner')`; `noodl-lottie`: `Cannot set properties of null (setting 'fillStyle')`; `simple-tooltips`: `Couldn't find a style target. This probably means that the value for the 'insertInto' parameter is invalid.` Confetti is **not** among them, as recorded on 2026-09-11 |
+
+**The arms that exclude, not just fit.** B′ fits two readings: (i) any second kit rescues confetti, or (ii) an unguarded
+kit scanned **before** confetti installs a real `Noodl.defineNode` on the Proxy's target, so confetti's guard skips its
+shim and its call works. Only (ii) predicts that order matters.
+
+| arm | `noodl_modules/`, in scan order | nodes | `failures` |
+|---|---|---|---|
+| **E1** | `nodegx-confetti`, `zz-custom-html-module` (**the same kit as B′, renamed to scan after**) | 1 | confetti: `registration failed: Cannot convert object to primitive value` |
+| E1c (control) | `zz-custom-html-module` alone | 1 | none. The rename breaks nothing |
+| E2 (control) | `noodl-markdown` alone (unguarded) | 1 | none |
+| E3 | `nodegx-confetti`, `noodl-markdown` (unguarded, scans after) | 1 | confetti: the same message |
+
+**(i) is excluded. (ii) survives:** the same kit rescues confetti when scanned first and not when scanned second.
+
+**E4, the blast radius of the guard.** The guard `typeof Noodl.defineNode === "function"` appears in **10** shipped kits
+(grep over each `index.js`; 13 others assign `Noodl.defineNode =` without it). **Every one of the 10 registers zero nodes
+alone**, each with `registration failed: Cannot convert object to primitive value`: `maplibre` (kit module `MapLibre GL`),
+`nodegx-clipboard`, `nodegx-confetti`, `nodegx-drag-to-reorder`, `nodegx-file-download`, `nodegx-intl-format`,
+`nodegx-media-recorder`, `nodegx-qrcode`, `nodegx-richtext` and `nodegx-virtual-list`. The GAM-019 corpus run's
+`kit "nodegx-richtext" failed to load: Cannot convert object to primitive value` was this.
+
+**What this means.**
+- In the extractor, **every `nodegx-*` kit except the charts is invisible to the door and to an agent** in any project
+  whose `noodl_modules/` has no unguarded kit sorting before it. A kit author following the SDK shape these kits share is
+  failed by default. D41's "co-tenancy, cause unknown" is now "co-tenancy by scan order, through the Proxy's missing `set`
+  trap" (`entry.js:94-96`), measured by E1 rather than predicted.
+- **R2 is still not askable.** §5 asks it once AC1 **and AC2** are recorded. AC2 is whether confetti alone registers in a
+  deployed page, the editor preview and SSR, where source says `Noodl` is a plain object with no `defineNode`
+  (§2). Every reading above is from the extractor (§7).
+- **GAM-014:** candidate A (an empty overlay) is live for 10 kits, not one. Its AC1 should use one of them.
+- **AC5 is half-measured:** the guarded half gives 10/10 fail alone. The 13 unguarded and the kits with no assignment
+  still need their alone reading.
+- **Owed by AC4, whatever R2 rules:** the fix lives in `dist/kit-extract.cjs` as well as `src`. A reverted arm on `src`
+  alone grades nothing, because `extractProjectOverlay` spawns the bundle.
+- TPL-005's comment at `tpl005Components.ts:1462-1466` (*"FAILS TO REGISTER in a project holding only it and the keyboard"*)
+  matches arm C and stays accurate.

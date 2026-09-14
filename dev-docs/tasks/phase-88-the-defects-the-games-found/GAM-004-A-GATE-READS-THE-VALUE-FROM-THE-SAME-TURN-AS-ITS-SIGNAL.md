@@ -1,6 +1,6 @@
 # GAM-004 — A gate reads the value from the same turn as its signal
 
-**Status: ⬜ not started.** **Source:** [P78 D47](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-005 the pixel game, while fixing D46, 2026-09-11 · **Side:** product (runtime ordering, `Condition`)
+**Status: 🟡 AC1 measured (2026-09-14, session 3): D47 does not reproduce in the runtime. 13 arms, beside a late arm that reads late (§8). Next is AC5's browser arm, before AC2.** **Source:** [P78 D47](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-005 the pixel game, while fixing D46, 2026-09-11 · **Side:** product (runtime ordering, `Condition`)
 
 The enemy reaches you, the board says `calm`, and the heart comes off one move later. The graph looks right, it renders perfectly, and the author cannot tell this shape from one that works.
 
@@ -75,4 +75,61 @@ Isolation comes first. Nothing here is built until one hypothesis survives a mea
 
 ## 8. Record
 
-Not started.
+### Session 3 (2026-09-14, HEAD `bb27086de`) — AC1 measured: **D47 does not reproduce at the runtime's source**
+
+**The spec:** [`noodl-runtime/test/gam-004-gate-reads-the-same-turn.test.ts`](../../../packages/noodl-runtime/test/gam-004-gate-reads-the-same-turn.test.ts),
+13 rows. Real `Condition`, `Expression`, `JavaScriptFunction`, `Set Variable`, `Variable2`, `Counter` and Component
+Inputs/Outputs in `createCorpusGraph`. Every gate is `runOnChange-condition: false`, as every TPL-005 gate is. **The loop,
+stated (§7):** a turn is one move and then `settle(8)`. That runs `updateDirtyNodes()`, then yields the microtask queue and
+one macrotask before the next frame, which is where a Function's post-`await` `Success` lands in a browser. The answer
+alternates every turn (odd turns hurt), so a stale read cannot be right by accident and DEF-046 never applies. Log:
+session `04c88900…` scratchpad, `gam004/ac1-run6.log` (`AC1_RUN6_EXIT=0`).
+
+| row | shape | reading per turn, 1–6 |
+|---|---|---|
+| control | shipped one-Function (`out-hurt → condition`, `success → eval`) | N N N N N N |
+| control | death gate (Expression off `Counter.currentCount`, `countChanged → eval`) | N N N N N N |
+| 🔴 **instrument** | `eval` from the move, `condition` written by a Function **after an `await`** | *(no prior)* **N-1 N-1 N-1 N-1 N-1** |
+| instrument | `eval` from the move, `condition` from a **synchronous** Function the move starts | N N N N N N |
+| attempt 1 | Expression `hits + attacks > 0` fed by two step Functions, `eval` from `hits.success` | N N N N N N |
+| attempt 1′ | the same, `eval` from `attacks.success` | N N N N N N |
+| attempt 2 | reactive read-back Function off the Variable just written, `eval` from `Set Variable.done` | N N N N N N |
+| attempt 2′ | the same read-back waiting for `Run`, `Set Variable.done` firing it **and** the gate | N N N N N N |
+| control | TPL-005's own `Game/Move` component (x → `done` → y → `done` → `moved` through Component Outputs): x after turn N | 1 2 3 4 5 6 |
+| control | shipped one-Function, behind the real move, reading `px` from the Variable | N N N N N N |
+| attempt 1 | behind the real move | N N N N N N |
+| attempt 2 | behind the real move | N N N N N N |
+| exit gate | the shape that ships today (Expression off the Variable, `eval` from a step Function's `Success`) | N N N N N N |
+
+**The reverted-FB-025 arm.** FB-025 (`27f16f8be`) is a *signal before value, for the life of the node* fix, which is
+exactly a one-turn-late shape, and whether the viewer bundle driven on 2026-09-11 carried it is unrecoverable. So its
+`node.ts` hunk was reverse-applied (it applies clean at HEAD) and the spec re-run: **13/13 identical** (`ac1-olddrain.log`,
+`OLDDRAIN_EXIT=0`). `node.ts` was restored from a snapshot, `git diff --quiet` clean, sha `858be30c…` before and after.
+**A runtime missing FB-025 does not make these shapes late either.**
+
+**What this reading does and does not say.**
+- It says the two gate shapes the register describes are on time in the runtime, at HEAD and on the pre-FB-025 drain,
+  with or without the real move upstream, beside an instrument that does read a late gate.
+- It does **not** exclude D47. Three things the rebuild could not carry: the **browser** (the `keyboard-shortcuts`
+  module's `pressed` arrives from a DOM event, and a viewer bundle, React and the States nodes are all in the page); the
+  **scripts** (the three-node predecessor of `WORLD_TURN_SCRIPT` is not in git, so an attempt that compared enemies'
+  *previous* positions would be a script reading, not an ordering one); and the **served bundle's** 2026-09-11 state
+  (gitignored, rebuilt 2026-09-14 15:12).
+- 🔴 **Trap found:** the "instrument" row with a synchronous Function was written first as the known-late arm, and it read
+  `N`. A Function's script body runs synchronously inside its own update, and the gate's `_updateDependencies` pulls that
+  Function before the gate drains, so `Outputs.hurt` is queued before `eval` is applied. Only `Success` is async. **H1 as
+  worded ("the signal leaves after an `await`") cannot make a value late; only a value written after an `await` is.**
+- ⚠️ Harness trap: a nested component in `createCorpusGraph` needs **component-level `ports`**. The Component Inputs
+  node's own `ports` are not what the instance reads, and the connections fail with `input doesn't exist`, logged, not
+  thrown.
+
+**Consequences for the ACs.**
+- **AC1:** recorded as above. No RED, so nothing is tuned.
+- **AC2 cannot start:** H1, H2 and H3 have no failing arm to separate. 🔒 R5 is not askable.
+- **Next: AC5's browser arm, moved first.** A copy of TPL-005 with attempt 1 restored for the hit gate, driven with real
+  key events: the only environment D47 was ever seen in. If it reads late, bisect browser against runtime from there. If
+  it reads on time, D47 is **measured and not reproduced**, and §8's end condition lets it close as disproved, which is
+  Richard's call.
+- **AC6, owed either way:** `tpl005Components.ts:473-477` states a mechanism (*"can be evaluated before that value has
+  arrived"*) that this spec does not exhibit. §5 forbids stating one, so the sentence is left until the browser arm
+  decides, then corrected.

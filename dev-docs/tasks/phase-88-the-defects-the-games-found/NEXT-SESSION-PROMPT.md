@@ -1,97 +1,97 @@
 # Phase 88 — next session
 
-**Read first:** [`README.md`](README.md) §3 (what scoping corrected), §4 (rulings: 7 ruled in session 1, and what each still
-leaves open) and §7 (rules). Then read the whole task you pick. Every task file has its own collisions (§4) and traps (§7).
+**Read first:** [`README.md`](README.md) §3 (what scoping corrected), §4 (rulings) and §7 (rules). Then read the whole task
+you pick, including its §8: session 3 changed three of them.
 
-**The board (2026-09-14, session 1), re-derived from the task files:** **1 of 24 built.**
-- ✅ **GAM-019**: the door refuses a wire to an input a built-in node does not have. Committed as `4bb438165`, graded by reverted
-  arms at the rule, at `validate_component`/`validate_project`, and in Rocket School's generator. Zero change over the real
-  validator on 178 projects. Its §8 lists what is owed.
-- 🔒 **Ruled, not built:** GAM-001 + GAM-003 (R3), GAM-002 (R4), GAM-005 (R6), GAM-006 (R7), GAM-007 (R8), GAM-008 (R9),
-  GAM-009 (R10).
+**The board (2026-09-14, session 3), re-derived from the task files:** **1 of 24 built.**
+- ✅ **GAM-019**, committed `4bb438165` + `15f7bf720`.
+- 🟡 **GAM-012** faults 1–2 committed `bb27086de`. Fault 3, AC6 and the deploy bundle are owed (GAM-012 §8).
+- 🟡 **GAM-006**: AC1 RED recorded; **(b) built, uncommitted**, graded by reverted arms in the runtime *and* the export (AC8).
+  **(a)/AC3–AC7 not started**, plus a new owed defect (below).
+- 🟡 **GAM-004**: AC1 measured. **D47 does not reproduce in the runtime** (13 arms). Not built, nothing to build yet.
+- 🟡 **GAM-018**: AC1 measured, prediction confirmed and widened. Not built. R2 waits on AC2.
+- 🔒 **Ruled, not built:** GAM-001 + GAM-003 (R3 and its follow-ups), GAM-002 (R4), GAM-005 (R6), GAM-007 (R8), GAM-008 (R9),
+  GAM-009 (R10), GAM-010 (R11, after GAM-012).
 - ⬜ Everything else is as scoped.
+
+## First: commit or not (Richard)
+
+Session 3 committed nothing. Ask Richard, then commit with **pathspecs only**. The tree also holds a peer session's P87/TPL-007
+work (`templates/rocket-school/`, `library/modules/game-kit/`, `packages/noodl-mcp/tests/tpl007*`, `scripts/devtools/drive-rkt*`,
+P78's register and prompt, `package.json`, `docs-site`, `form-fields`), and none of it is P88's.
+
+```sh
+git add packages/noodl-runtime/test/gam-004-gate-reads-the-same-turn.test.ts \
+        packages/noodl-viewer-react/tests/gam-006-states-token-colour.test.ts
+git commit -m "…" -- \
+  packages/noodl-runtime/test/gam-004-gate-reads-the-same-turn.test.ts \
+  packages/noodl-viewer-react/tests/gam-006-states-token-colour.test.ts \
+  packages/noodl-viewer-react/src/nodes/std-library/states.ts \
+  packages/nodegx-export/src/emit/statesLib.ts \
+  packages/nodegx-export/tests/animation-pair.test.ts \
+  packages/nodegx-export/tests/hls001-corpus-identity.test.ts \
+  packages/nodegx-export/tests/goldens/hls001-corpus.sha256.json \
+  dev-docs/tasks/phase-88-the-defects-the-games-found/
+```
+
+Two commits read better than one: GAM-006 (b) as `fix`, and the GAM-004/GAM-018 measurements as `docs`/`test`.
 
 ## Do, in order
 
-1. ✅ **R3's follow-ups ruled, 2026-09-14 (session 2).** Saved Expressions evaluate at load (on for all). The opt-out is a
-   new node-level checkbox. A `NaN` size is empty and silent. GAM-019's hint matches the wire's kind. Recorded in GAM-001 §5,
-   GAM-003 §5, GAM-019 §8 and README §4. **GAM-001 and GAM-003 are now unblocked.** ✅ GAM-019's hint is **built** (session 2,
-   uncommitted, reverted arms at the rule, `validate_component` and the plan door; GAM-019 §8 "Session 2").
-2. **Build what needs no ruling**, by who it bites:
-   - ✅ **GAM-012 AC1 met (session 2).** The tracker is the cause, as three faults (GAM-012 §8). RED in a minimal project and in
-     RKT-003's original build 4. 🔒 **R13 ruled (GAM-012 §5): mounted → focus every time; not mounted → fail, not held,
-     told in the editor only.** R11 (GAM-010) follows it.
-     ⚠️ `deploy-from-disk.cjs` is broken on `landing-pages` and on the fixture (§8), so serve with `render-from-disk.js`, and
-     rebuild the viewer first for AC2.
-   - **GAM-004 AC1, isolation.** It rebuilds the two failing attempts, which are not in git.
-   - **GAM-018 AC1.** Prediction: confetti with `custom-html-module` registers, and confetti with `nodegx-clipboard` fails.
-     GAM-014 may wait on it. ⚠️ The GAM-019 corpus run logged `kit "nodegx-richtext" failed to load: Cannot convert object to
-     primitive value` on the NodeGX test projects. That is a live reading for this task.
-3. **Then the ruled Track A tasks**, in README §5 order: GAM-006 (R7), GAM-005 (R6), GAM-007 (R8), GAM-009 (R10), GAM-008 (R9,
-   AC1 first), GAM-002 (R4, AC3 census first). GAM-001/003 wait on step 1.
+1. **GAM-006, finish what (b) started** (Track A, ruled R7). In this order:
+   - 🔴 **The delayed colour.** A colour with a per-value transition delay publishes its parsed **RGBA array** for the
+     whole delay (`[51,68,85,255]` at 0/96/192 ms; the spec's "delayed hex" row records it and grades nothing yet). The
+     `ms < c.delay` branch in `states.ts` `onRunning` and in `statesLib.ts` `onTweenRunning` both publish the parsed start.
+     Turn the recording row into a RED assertion first, then fix both files, with a reverted arm in each. Add an A5 parity
+     row with a delayed **colour**: today's delayed A5 value is `opacity`, a number, so parity cannot see it.
+   - **(a) and AC3:** read the colour before parsing (Color Blend's `parseColor`, `colorblend.ts:45-90`, with its depth
+     bound). R7: warn only if CSS rejects the value, and say what happens where there is no document. AC3 needs a **browser**.
+   - AC7 (`node-transitions.ts`, measure first), AC4 (census before landing), AC5/AC6 (browser drives, workarounds).
+   - Owed by (b) whatever else happens: rebuild the viewer bundle and the `nodegx-export` `dist` (both gitignored), so the
+     editor and a deployed app get the change.
+2. **GAM-018 AC2, the product arms.** Confetti alone in a deployed page, the editor preview and an SSR deploy, then with
+   one unguarded kit. Then 🔒 R2 with AC1's and AC2's readings beside it. Remember that `extractProjectOverlay` spawns
+   `dist/kit-extract.cjs`, so a fix is graded on the bundle (§8).
+3. **GAM-004, the browser arm (AC5 moved first).** A copy of TPL-005 with attempt 1 restored for the hit gate, driven with
+   real key events. If it reads late, bisect browser against runtime. If on time, D47 is **measured and not reproduced**,
+   and whether to close it is Richard's call. Either way AC6's comment (`tpl005Components.ts:473-477`) is owed.
+4. **Then the ruled Track A tasks** in README §5 order: GAM-005 (R6), GAM-007 (R8), GAM-009 (R10), GAM-008 (R9, AC1 first),
+   GAM-002 (R4, AC3 census first), GAM-001/GAM-003 (R3).
 
-## Owed by GAM-019, small
+## Readings taken in session 3 (2026-09-14, over HEAD `bb27086de`, uncommitted tree)
 
-- 🔴 The jasmine `noodl-editor/tests/validation/dynamic-ports.test.ts` flip has **not run** (Electron `test:ci` only). Run it
-  when the box is free, one heavy job at a time.
-- Look at a Text Input's property panel in a running editor: the Run On Value Change → Value checkbox should now show.
-- Rebuild the bundled MCP server (`noodl-mcp` build) so installed agents get the refusal **and the kind-matched hint**. Until
-  then only `src` has them.
-- Known gap, not owed unless it bites: a refusal inside a *neighbouring* component normalised by `toNormComponent`
-  (`validate.ts:186`, `:327`) still gets the unfiltered hint. The staged candidate goes through `normalizeV2Component`, which is fixed.
+Logs are in session `04c88900…`'s scratchpad (`gam004/`, `gam018/`, `gam006/`).
 
-## Owed, small, not a task
+| gate | result |
+|---|---|
+| `noodl-runtime` `gam-004-gate-reads-the-same-turn.test.ts` | 13/13 (`AC1_RUN6_EXIT=0`); same on the pre-FB-025 drain (`OLDDRAIN_EXIT=0`) |
+| `noodl-runtime` `tsc --noEmit -p tsconfig.json` (includes `test/**`) | 0 errors (`RUNTIME_TSC_EXIT=0`) |
+| GAM-018 extractor arms A–D, B′, B″, E1–E4 | `GAM018_AC1_EXIT=0`, `GAM018_AC1_RUN2_EXIT=0` |
+| `noodl-viewer-react` `gam-006-states-token-colour.test.ts` | 8/8 with (b) (`GAM006_DELAY2_EXIT=0`); reverted arm 3 red of 7 |
+| `noodl-viewer-react` States corpus (`nda-001`, `nda-004`, `erg-001`) | 3 suites, 42/42 |
+| `nodegx-export` `animation-pair.test.ts` | 57/57 (`AC8_GREEN2_EXIT=0`); export half reverted: 7 red |
+| `nodegx-export` full suite | **100/101 suites** (`EXPORT_FULL_EXIT=1`, 3,490 passed). The one red was `hls001-corpus-identity`: exactly **1** hash differed, `glow-desk/src/lib/states.ts`. With (b) reverse-applied it is 4/4 (`HLS001_HEAD_EXIT=0`), so (b) moved it, as it should. The golden was regenerated deliberately (`HLS001_REGENERATE=1`), and **1** hash line moved. 4/4 after (`HLS001_AFTER_REGEN_EXIT=0`). **Re-run on the final bytes: 101/101 suites, 3,491 passed** (`export-full2.log`, `EXPORT_FULL2_EXIT=0`) |
+| `test:ci` (editor, Electron), `test:main` | **not run** |
 
-- P77's register row **D13** reads owner `NONE`, but P80 DEF-028 ✅ covers it. Point the owner cell at DEF-028 (GAM-023 §4 has
-  the reading).
+## Owed, small
 
-## Traps found in session 2
+- GAM-019: the jasmine `dynamic-ports.test.ts` flip (Electron `test:ci`), a Text Input panel look, an MCP bundle rebuild.
+- P77's register row **D13** reads owner `NONE`; point it at P80 DEF-028 (GAM-023 §4).
+- P78's register rows D41, D47 and D49 still read as scoped. Add a dated line pointing at GAM-018/004/006 §8 **when their
+  status changes**, not before.
 
-- 🔴 **A port name is not a port kind.** `NormNode.instancePorts` kept names only. The kind of a `Component Inputs` port lives
-  in `nodes.json` (`type`), and it is now in `instancePortTypes`. Framing a ruling as "the rule knows the source port" hid that.
-- 🔴 **`*` ports have no kind.** The live Text Input's `startValue` and `onTextChanged` are both declared `*`. A premise that
-  guessed `value`/`signal` for them failed in the spec, and the MCP spec's "signal wire" was really a `*` wire.
-- 🔴 **Which normaliser a door uses decides whether an arm grades anything.** The plan door (`stage_plan_operation`)
-  normalises the staged component with `normalizeV2Component` (`planTools.ts:239`), and `toNormComponent` normalises only
-  its neighbours. A reverted arm on the wrong one left AC7 unchanged. Revert where the door reads, and watch the output move.
-- ⚠️ **Read the catalog through `loadDefaultCatalog()` in a spec**, not with an ad-hoc `node -e` over `node-catalog.json`.
-  Three guesses at its shape failed this session.
-- ⚠️ zsh does not word-split an unquoted `$D`. `npx jest $D` ran 0 suites and exited 1. Use an array: `"${D[@]}"`.
+## Traps found in session 3
 
-## Traps found in session 1
-
-- 🔴 **The catalog has two Text Inputs.** `Text Input` is the deprecated node (declared-port-groups only).
-  `net.noodl.controls.textinput` is the live one. Read the type name, not the display name.
-- 🔴 **`createNodeFromReactComponent` builds `defineNode`'s options as an explicit literal.** A definition field it does not
-  copy is silently dropped (NDA-017's `runOnValueChange` was). Suspect it whenever a React node's definition "does nothing".
-- 🔴 **A combined jest run can silently skip a suite.** Five spec paths gave "4 suites". Count the PASS lines against the files.
-- 🔴 **A census that reads the wrong keys prints the same zero.** Legacy `project.json` connections are
-  `fromId/fromProperty/toId/toProperty`, not `targetId`. Match a known baseline (525 / 790) before trusting it.
-- ⚠️ A `cd` inside one parallel Bash call moves the shell for the others. Use absolute paths, or `cd … && pwd &&` in each.
-- Carried from scoping: twelve register rows were wrong about their own mechanism; a fix can remove a template's accidental
-  safety (Rocket School's `cdShown` rides on D55's `null`); P30's audit ruled three of these behaviours correct; export parity
-  is owed for GAM-006/008/013/017; `grep -a` always.
-
-## State of the tree
-
-- `4bb438165` holds GAM-019, the P88 folder and P78's register (P87's register rows included, as Richard ruled). After it, only
-  the "uncommitted → `4bb438165`" doc markers and this prompt changed; commit them with the next P88 work.
-- **Session 2, uncommitted:** the four rulings (GAM-001 §5, GAM-003 §5, GAM-019 §8, README §4) and GAM-019's hint:
-  `validation/{CatalogIndex,model,normalize}.ts`, `validation/rules/nonexistentPort.ts`,
-  `noodl-editor/tests-unit/gam-019/builtinPortDoor.test.ts`, `noodl-mcp/tests/gam019BuiltinPortDoor.test.ts`. Commit with
-  pathspecs, and `git add` nothing untracked. None of the files is new.
-- **Session 2, GAM-012's fix for faults 1 and 2** (AC2, AC4 and AC5's Dropdown drive green, reverted arms red; GAM-012 §8):
-  `noodl-viewer-react/src/{focus-tracker.ts (new), viewer.jsx, react-component-node.ts, nodes/controls/text-input.ts}`,
-  `noodl-viewer-react/tests/gam-012-focus-tracker.test.ts` (new), plus GAM-012/GAM-010 docs. The shared
-  `external/viewer/noodl.viewer.js` holds the final fix (rebuilt after the Dropdown drive).
-- 🔴 **Owed by GAM-012:** fault 3 (the inverted Blur) is kept on purpose. Fixing it naively broke multi-select's Dropdown in a
-  browser. It needs an unmount split from an explicit Blur first. Also owed: AC6 (Rocket School's workaround, which the peer
-  session's tpl007 files hold right now), the deprecated Text Input (no `_canFocus`), and rebuilding the `external/deploy`
-  bundle so deployed apps get the fix.
-- 🔴 **`deploy-from-disk.cjs` is broken** on `templates/landing-pages` and on MCP's `demo-app` fixture (GAM-012 §8 has both
-  errors). Unowned. Use `render-from-disk.js` for drives until someone takes it.
-- Session 2's logs (`hint-*.log`, `gam012/`) are in session `c7b27bb6…`'s scratchpad. Session 1's AC7 runner is still at
-  `2ca95830…/scratchpad/gam019-ac7-rocket.ts` (`npx ts-node -T -P ./scripts/tsconfig.json <file>`, from the repo root).
-- P87's template, kit, gates and drives are still uncommitted, and none of them was touched.
-- Scratch evidence for GAM-019 (census, compare script, AC7 runner, logs) is in session `2ca95830…`'s scratchpad. The
-  numbers are recorded in GAM-019 §8.
+- 🔴 **A Function's script body runs synchronously inside its update.** Only `Success` waits for the `await`. A gate
+  evaluated beside a synchronous Function reads this turn's value. GAM-004's "known-late" arm was wrong the first time for
+  this reason; only a value written *after* an `await` is late.
+- 🔴 **`createCorpusGraph` nested components need component-level `ports`.** Without them every wire into the instance
+  fails with a *logged* `input doesn't exist`, and the arms read "no signal" rather than erroring.
+- 🔴 **`setInputValue` on a dynamic input nobody registered does nothing.** GAM-006's delay row read "no array" until
+  `registerInputIfNeeded` was called first.
+- 🔴 **`extractProjectOverlay` runs `dist/kit-extract.cjs`**, not `src`.
+- 🔴 **`animation-pair.test.ts` boots the real `states.ts`.** A States runtime change reddens P18's parity rows until the
+  emitted `statesLib` changes in step. Count the reds: (b) alone gave 7, not 1.
+- ⚠️ A `cd` inside one parallel Bash call moved the shell for the other (session 3 hit it again). Absolute paths.
+- Carried: two Text Inputs in the catalog; `createNodeFromReactComponent` drops uncopied fields; a combined jest run can
+  skip a suite; a census reading the wrong keys prints the same zero; `*` ports have no kind.

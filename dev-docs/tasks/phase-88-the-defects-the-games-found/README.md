@@ -3,7 +3,9 @@
 **Scoped:** 2026-09-14, at HEAD `eb12ebe99`, from every open row in
 [P78's register](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) whose owner was `NONE`, plus four findings
 from [phase 87](../phase-87-the-first-play-test/README.md) that had never been registered.
-**Status: ⬜ OPEN — 1 of 24 built** (GAM-019 ✅, 2026-09-14, `4bb438165`). 7 rulings landed in session 1 (§4). **Prefix: `GAM`.**
+**Status: ⬜ OPEN — 1 of 24 built** (GAM-019 ✅, 2026-09-14, `4bb438165`). 7 rulings landed in session 1 (§4). GAM-012's
+faults 1–2 are committed (`bb27086de`). **Session 3 (uncommitted):** GAM-004 AC1 does not reproduce in the runtime, GAM-018
+AC1 is confirmed (10 guarded kits fail alone), and GAM-006 (b) is built with AC8. **Prefix: `GAM`.**
 
 > "Let's make a new phase to write task files for all the defects please" — Richard, 2026-09-14
 
@@ -137,13 +139,13 @@ Each task file states its ruling in full, with the trade-offs.
 |---|---|---|---|
 | [GAM-001](GAM-001-AN-OPTIONAL-PORT-LEFT-UNSET-SHOWS-THE-PART.md) | An optional port left unset shows the part | D55 | R3, shared with GAM-003 |
 | [GAM-003](GAM-003-A-METER-COMPUTED-BY-AN-EXPRESSION-LOADS-WITHOUT-AN-ERROR.md) | A meter computed by an Expression loads without an error | D62 | R3; FLD-004 ✅ stays intact |
-| [GAM-006](GAM-006-A-COLOUR-SWITCHED-BY-STATES-REACHES-THE-SCREEN.md) | A colour switched by a States node reaches the screen, with transitions on | D49 | R7 |
+| [GAM-006](GAM-006-A-COLOUR-SWITCHED-BY-STATES-REACHES-THE-SCREEN.md) 🟡 | A colour switched by a States node reaches the screen, with transitions on | D49 | R7 (s3: AC1 RED; (b) built, AC2 runtime half + AC8 graded, uncommitted; a delayed colour publishes an RGBA array, owed) |
 | [GAM-005](GAM-005-TWO-COPIES-OF-A-COMPONENT-KEEP-THEIR-OWN-STATE.md) | Two copies of a component keep their own state, or the author is told they will not | D57 | R6 |
 | [GAM-007](GAM-007-A-DATA-FIELD-CALLED-ON-READS-AS-DATA.md) | A data field called `on`, `get` or `data` reads as the data | D64 | R8 |
 | [GAM-009](GAM-009-WHAT-SOMEONE-TYPED-IS-STILL-THERE-WHEN-THE-FIELD-COMES-BACK.md) | What someone typed is still there when the field comes back | D61 | R10 |
 | [GAM-008](GAM-008-A-BAR-THAT-JUMPS-THEN-GLIDES-REFILLS.md) | An animated value asked to jump and then glide does both | D67 | R9, after AC1 |
 | [GAM-002](GAM-002-STRING-AND-NUMBER-WORK-INSIDE-AN-EXPRESSION.md) | `String(n)` and `Number(s)` work inside an Expression | D54 | R4 |
-| [GAM-004](GAM-004-A-GATE-READS-THE-VALUE-FROM-THE-SAME-TURN-AS-ITS-SIGNAL.md) | A gate reads the value from the same turn as its signal | D47 | isolation first, then R5 |
+| [GAM-004](GAM-004-A-GATE-READS-THE-VALUE-FROM-THE-SAME-TURN-AS-ITS-SIGNAL.md) 🟡 | A gate reads the value from the same turn as its signal | D47 | s3: AC1 measured, **does not reproduce in the runtime** (13 arms incl. TPL-005's real `Game/Move` and the pre-FB-025 drain, beside a late arm that reads late). AC5's browser arm next; AC2/R5 wait on a RED |
 
 ### Track B — the graph is missing a basic
 
@@ -158,7 +160,7 @@ Each task file states its ruling in full, with the trade-offs.
 
 | id | task | row | depends on |
 |---|---|---|---|
-| [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) | A kit registers the same whatever is installed beside it, and a kit that cannot register says so | D41 | AC1, then R2 |
+| [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) 🟡 | A kit registers the same whatever is installed beside it, and a kit that cannot register says so | D41 | s3: AC1 measured, **scan order** proven by a renamed-kit arm; **all 10 guarded kits fail alone** in the extractor. AC2 (browser, preview, SSR) next, then R2 |
 | [GAM-014](GAM-014-A-KIT-NODE-DRAWS-WHEN-IT-IS-THE-WHOLE-COMPONENT.md) | A kit React node draws when it is the whole of a component | D53 | GAM-018 AC1 if its cause is an empty overlay |
 | [GAM-015](GAM-015-A-WIRED-SIZE-REACHES-A-KIT-NODE-AS-A-SIZE.md) | A kit node reads a wired size as the size it was sent | D65 | R15; a separate commit from GAM-003 (same setter) |
 | [GAM-017](GAM-017-A-KIT-NODE-TAKES-A-SIGNAL-AND-A-SIZE-THE-WAY-A-BUILT-IN-DOES.md) | A kit React node takes a signal and a size the way a built-in node does | D70 | R17 |
