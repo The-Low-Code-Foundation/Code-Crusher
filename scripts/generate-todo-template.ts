@@ -1,5 +1,5 @@
 /**
- * TPL-008 — prepare the todo list as a project directory.
+ * TPL-008 — prepare the todo list as a project directory, and its demo.
  *
  *     npm run template:todo
  *
@@ -9,25 +9,34 @@
  * for the reason `generate-members-template.ts` gives: this script clears the
  * output directory wholesale.
  *
+ * It also writes `templates/todo-list-demo/` (AC10, R9): the same components with
+ * the backend taken out, which nodegx.io serves. Both come from one run so the demo
+ * can never be older than the template.
+ *
  * `prepareTodoArtefact` lives in `tpl008Template.ts` so the gate runs the same
  * code as this script and not a twin of it.
  */
 import * as path from 'path';
 
-import { buildTodoTemplateProject, POLICY_FILE, prepareTodoArtefact, TEMPLATE_ID } from '../packages/noodl-mcp/tests/tpl008Template';
+import {
+  AuthoredTemplate,
+  buildTodoTemplateProject,
+  DEMO_ID,
+  POLICY_FILE,
+  prepareTodoArtefact,
+  prepareTodoDemoArtefact,
+  TEMPLATE_ID
+} from '../packages/noodl-mcp/tests/tpl008Template';
 
 const OUTPUT = path.join(__dirname, '..', 'templates', TEMPLATE_ID);
+const DEMO_OUTPUT = path.join(__dirname, '..', 'templates', DEMO_ID);
 const POLICY_SOURCE = path.join(__dirname, '..', 'templates', `${TEMPLATE_ID}.security.json`);
 
-(async () => {
-  const built = await buildTodoTemplateProject();
-  prepareTodoArtefact(built, OUTPUT, POLICY_SOURCE);
-
+function report(output: string, built: AuthoredTemplate): void {
   const pages = Object.values(built.registrations).flatMap((r) => r.added);
   const start = Object.values(built.registrations).find((r) => r.startPage)?.startPage ?? '(none)';
-  console.log(`wrote ${OUTPUT}`);
+  console.log(`wrote ${output}`);
   console.log(`  ${built.order.length} components, pages ${pages.join(', ') || '(none)'}, start page ${start}`);
-  console.log(`  policy ${POLICY_SOURCE} copied in as ${POLICY_FILE}`);
 
   // Printed rather than counted: a warning that never reaches `isError` is a check
   // that fired and was dropped by the caller.
@@ -45,6 +54,17 @@ const POLICY_SOURCE = path.join(__dirname, '..', 'templates', `${TEMPLATE_ID}.se
       for (const d of built.diagnostics) console.log(`    DETAIL ${d.code} | ${d.component} | ${d.message}`);
     }
   }
+}
+
+(async () => {
+  const built = await buildTodoTemplateProject();
+  prepareTodoArtefact(built, OUTPUT, POLICY_SOURCE);
+  report(OUTPUT, built);
+  console.log(`  policy ${POLICY_SOURCE} copied in as ${POLICY_FILE}`);
+
+  const demo = await buildTodoTemplateProject({ variant: 'demo' });
+  prepareTodoDemoArtefact(demo, DEMO_OUTPUT);
+  report(DEMO_OUTPUT, demo);
 })().catch((error) => {
   console.error(error?.message ?? error);
   process.exit(1);

@@ -22,6 +22,13 @@
  * The policy is hand-authored at `templates/todo-list.security.json` and copied
  * in last, because this module clears the output directory.
  *
+ * ## The demo (AC10, R9)
+ *
+ * `variant: 'demo'` authors `TPL008_DEMO_COMPONENTS` — the same components with the
+ * backend taken out (`tpl008Demo.ts`) — through the same door, and
+ * `prepareTodoDemoArtefact` writes it to `templates/todo-list-demo/`, the project
+ * nodegx.io serves. It is generated with the template, never edited by hand.
+ *
  * ## Render off, deliberately
  *
  * `apply_plan` refuses `render: "off"` for a visual plan unless
@@ -43,6 +50,7 @@ import { createServer } from '../src/server';
 import { pinRunOnValueChangeDefaultsInDirectory, readAsLegacyProject } from './templateArtefact';
 import { copyTree, pinComponentFiles, pinRegistry, pinRootNode } from './templatePins';
 import { APP_COMPONENT, APP_NODES, APP_WIRES, COLLECTIONS, TPL008_COMPONENTS, Tpl008Component } from './tpl008Components';
+import { DEMO_STORAGE_KEY, TPL008_DEMO_COMPONENTS } from './tpl008Demo';
 import { TPL008_PRESET, TPL008_TOKENS } from './tpl008Theme';
 
 export const TEMPLATE_ID = 'todo-list';
@@ -50,6 +58,10 @@ export const TEMPLATE_PROJECT_NAME = 'Todo list';
 export const TEMPLATE_EPOCH = '2026-09-14T00:00:00.000Z';
 export const START_HERE_FILE = 'docs/START-HERE.md';
 export const POLICY_FILE = 'nodegx.security.json';
+
+/** AC10 — the browser-only demo nodegx.io serves, generated from the same sources (R9). */
+export const DEMO_ID = 'todo-list-demo';
+export const DEMO_PROJECT_NAME = 'Todo list demo';
 
 interface ToolResult {
   isError?: boolean;
@@ -66,18 +78,18 @@ export interface AuthoredTemplate {
   applied: Record<string, unknown>;
 }
 
-function writeSkeleton(dir: string): void {
+function writeSkeleton(dir: string, name: string): void {
   fs.mkdirSync(path.join(dir, 'components'), { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'nodegx.project.json'),
     JSON.stringify(
       {
         $schema: 'https://opennoodl.dev/schemas/project-v2.json',
-        name: TEMPLATE_PROJECT_NAME,
+        name,
         version: '4',
         nodegxVersion: '1.1.0',
         // A long history scrolls the page, not a box inside it.
-        settings: { htmlTitle: TEMPLATE_PROJECT_NAME, navigationPathType: 'path', bodyScroll: true },
+        settings: { htmlTitle: name, navigationPathType: 'path', bodyScroll: true },
         structure: { componentsDir: 'components', assetsDir: 'assets' }
       },
       null,
@@ -102,18 +114,21 @@ function writeSkeleton(dir: string): void {
 
 export interface BuildOptions {
   components?: ReadonlyArray<Tpl008Component>;
+  /** `demo` authors the browser-only demo (AC10) instead of the template. */
+  variant?: 'template' | 'demo';
 }
 
-/** Author the whole template and read it back. */
+/** Author the whole template (or its demo) and read it back. */
 export async function buildTodoTemplateProject(options: BuildOptions = {}): Promise<AuthoredTemplate> {
   process.env.NODEGX_RENDER_DISABLED = '1';
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tpl008-template-'));
-  writeSkeleton(dir);
-  const components = options.components ?? TPL008_COMPONENTS;
+  const demo = options.variant === 'demo';
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), demo ? 'tpl008-demo-' : 'tpl008-template-'));
+  writeSkeleton(dir, demo ? DEMO_PROJECT_NAME : TEMPLATE_PROJECT_NAME);
+  const components = options.components ?? (demo ? TPL008_DEMO_COMPONENTS : TPL008_COMPONENTS);
 
   const { server } = createServer({ projectDir: dir, allowWrites: true });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: 'tpl008-template', version: '0.0.0' });
+  const client = new Client({ name: demo ? 'tpl008-demo' : 'tpl008-template', version: '0.0.0' });
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   const order: string[] = [];
@@ -153,9 +168,11 @@ export async function buildTodoTemplateProject(options: BuildOptions = {}): Prom
     const plan = await call(
       'create_plan',
       {
-        request:
-          'A todo list you can only order by what you will do next. Every change — a move, a note, a close — leaves a line of history. ' +
-          `Stored in the NodeGX backend (${COLLECTIONS.join(', ')}), private to whoever signed in.`,
+        request: demo
+          ? 'A demo of a todo list you can only order by what you will do next, where every change leaves a line of history. ' +
+            `It has no backend and no sign in: the list (${COLLECTIONS.join(', ')}) is kept in this browser's local storage, starting from an example list.`
+          : 'A todo list you can only order by what you will do next. Every change — a move, a note, a close — leaves a line of history. ' +
+            `Stored in the NodeGX backend (${COLLECTIONS.join(', ')}), private to whoever signed in.`,
         scroll: 'page',
         operations: components.map((c) => ({
           kind: 'create',
@@ -202,20 +219,18 @@ export async function buildTodoTemplateProject(options: BuildOptions = {}): Prom
 
 // ── Preparing the directory a person is handed ───────────────────────────────
 
-export function prepareTodoArtefact(built: AuthoredTemplate, output: string, policySource: string): void {
+function copyPinned(built: AuthoredTemplate, output: string, id: string, namespace: string): void {
   pinRunOnValueChangeDefaultsInDirectory(built.projectDir);
-  pinComponentFiles(built.projectDir, 'tpl008', TEMPLATE_EPOCH);
+  pinComponentFiles(built.projectDir, namespace, TEMPLATE_EPOCH);
   pinRegistry(built.projectDir, TEMPLATE_EPOCH);
 
-  if (path.basename(output) !== TEMPLATE_ID) throw new Error(`refusing to clear ${output}`);
-  if (!fs.existsSync(policySource)) throw new Error(`refusing to write: no security policy at ${policySource}`);
-
+  if (path.basename(output) !== id) throw new Error(`refusing to clear ${output}`);
   fs.rmSync(output, { recursive: true, force: true });
   copyTree(built.projectDir, output);
 
   // 🔴 Browser-only: every write is a record node under the signed-in person's
-  // session, and the policy is what keeps rows private. A cloud function would
-  // run as the system and bypass exactly that.
+  // session (or, in the demo, a Function writing to this browser), and the policy is
+  // what keeps rows private. A cloud function would run as the system and bypass it.
   if (fs.existsSync(path.join(output, 'components', '__cloud__'))) {
     throw new Error('refusing to write: this template ships no cloud functions, and a __cloud__ component was authored');
   }
@@ -223,9 +238,21 @@ export function prepareTodoArtefact(built: AuthoredTemplate, output: string, pol
   if (fs.existsSync(modulesDir) && fs.readdirSync(modulesDir).length > 0) {
     throw new Error(`refusing to write: this template installs no modules and ${modulesDir} holds ${fs.readdirSync(modulesDir).join(', ')}`);
   }
+}
 
+export function prepareTodoArtefact(built: AuthoredTemplate, output: string, policySource: string): void {
+  if (!fs.existsSync(policySource)) throw new Error(`refusing to write: no security policy at ${policySource}`);
+  copyPinned(built, output, TEMPLATE_ID, 'tpl008');
   fs.copyFileSync(policySource, path.join(output, POLICY_FILE));
   writeStartHere(output);
+  pinRootNode(output, APP_COMPONENT);
+  pinProjectModified(output);
+}
+
+/** The demo: no policy (there is no backend to hold one), its own START-HERE. */
+export function prepareTodoDemoArtefact(built: AuthoredTemplate, output: string): void {
+  copyPinned(built, output, DEMO_ID, 'tpl008-demo');
+  writeDemoStartHere(output);
   pinRootNode(output, APP_COMPONENT);
   pinProjectModified(output);
 }
@@ -287,6 +314,34 @@ function writeStartHere(output: string): void {
     '| `Task` | `title`, `position` (lower = sooner), `status` (`open`/`done`), `deadline` (`YYYY-MM-DD`), `closingNote`, `closedAt` |',
     '| `Action` | `taskId`, `title`, `position`, `done`, `note`, `description` |',
     '| `Event` | `taskId`, `kind`, `summary`, `body`, `at` |',
+    ''
+  ];
+  const file = path.join(output, START_HERE_FILE);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, lines.join('\n') + '\n');
+}
+
+function writeDemoStartHere(output: string): void {
+  const lines = [
+    `# ${DEMO_PROJECT_NAME}`,
+    '',
+    `The **${TEMPLATE_PROJECT_NAME}** template with its backend taken out, so it can run on a web page with no server`,
+    'and no account. It starts with an example list, and everything a visitor does stays in their own browser.',
+    '',
+    `🔴 **Generated — do not edit it by hand.** \`npm run template:todo\` writes it from the template's own`,
+    'components beside `templates/todo-list/`. Change the template and regenerate, and the demo follows.',
+    '',
+    '## What is different from the template',
+    '',
+    `- **\`Logic/Todo data\`** reads the list from this browser's local storage (\`${DEMO_STORAGE_KEY}\`), and puts`,
+    '  the example list there the first time it finds none.',
+    '- **Every record write** in `Commands/` and `Logic/Write history` is a `Function` at the same place in the',
+    '  graph, writing to that same storage. The commands, rows, dialog and history rules are the template\'s.',
+    '- **There is no sign in.** The page reads the list when it opens. **Reset demo** in the header puts the',
+    '  example list back.',
+    '',
+    `To keep a list on your phone and your computer, start from the **${TEMPLATE_PROJECT_NAME}** template, which keeps`,
+    'it in the NodeGX backend.',
     ''
   ];
   const file = path.join(output, START_HERE_FILE);

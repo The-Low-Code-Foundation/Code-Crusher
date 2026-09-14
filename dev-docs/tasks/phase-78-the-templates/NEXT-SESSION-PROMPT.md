@@ -1,26 +1,25 @@
 # Phase 78 — next session
 
-> ### 🟢 2026-09-14 (s2) — TPL-008 TODO LIST (Richard's own): D72 FIXED, PAGE SPLIT, COMMITTED — gate 20/20, drive 12/12
+> ### 🟢 2026-09-14 (s3) — TPL-008 TODO LIST: AC10 BUILT — the browser-only demo, derived from the template — gates 20/20 + 18/18, drives 14/14 + 10/10
 >
-> Richard asked for *"the simplest todo list ever"* for himself: one list ordered only by what you will do next, nothing
-> ever deleted, and every move, note, close and tick kept as history. Two mockups (Artifacts), rulings R1–R8 in
-> [TPL-008 §1](TPL-008-THE-TODO-LIST.md). **Storage decided: the NodeGX backend** (phone + PC), per-row private, `delete:
-> nobody`. Built through the plan door: `npm run template:todo` → `templates/todo-list/`, 33 components, 0 refusals.
-> `tpl008Template.test.ts` 19/19 · `tpl008-todo-drive.test.ts` 11/11 against `devOpen: false`, 0 console errors ·
-> `typecheck:mcp` clean.
+> Richard's own template: one list ordered only by what you do next, nothing deleted, every change kept as history; stored
+> in the NodeGX backend. Rulings R1–R9 in [TPL-008 §1](TPL-008-THE-TODO-LIST.md); s1/s2 record in §7.
 >
-> 🔴 **Driving found D71**: the node reference tells an agent a wired `run` makes a Function signal-only, and it does not —
-> clicking any row moved a task. Filed with D72 (icon-only Button has no accessible name) and D73 (no date Text Input),
-> **all owner `NONE`**.
+> **s3 built R9's demo** as `templates/todo-list-demo/`, written by the same `npm run template:todo` run. It is a **transform
+> of the template's components** (`tpl008Demo.ts`): all 15 record writes become `localStorage` Functions at the same node
+> ids, `Logic/Todo data` reads the same store (query shapes read off the backend nodes) and seeds an example list, sign-in is
+> gone, Sign out is **Reset demo**. `tpl008Demo.test.ts` **18/18** grades it in step wire-for-wire (sabotaged: an unconverted
+> write reddens exactly 3 rules). `tpl008-todo-demo-drive.test.ts` **10/10**, 0 console errors, no backend request beside a
+> control that sees one; reload keeps it. 🔴 **Reset had to forget `todoLastHistory`** — with constant example ids a move
+> after reset otherwise saves no line (sabotaged: drive §7 red). The template's drive is **14/14: reopen and untick driven**.
 >
-> **s2:** Richard ruled **R9 — the nodegx.io demo is browser-only** and deferred the tick note until he has used it. Icon
-> buttons now have names (D72 worked around in the template, measured in Chrome's accessibility tree); `Pages/Todo` split
-> 71 → 51 into `Logic/Todo data` + `Todo/Dialog flow`. Committed `2ad64ccee`, `7b6f7c650`, `189c9029f`. A localhost backend
-> and a project copy are set up for him (TPL-008 §7 s2); **the phone half was denied by the classifier and is his call.**
-> 🔴 Deploying it found **D44 is wider**: the devtool drops every `For Each` item output and `DbCollection2` `storageFetch`.
+> 🔴 **GAM-005's uncommitted `variable-in-repeated-component` rule warned 54× per build** (4 pairs, all app-wide on purpose);
+> fixed with "Shared on purpose:" node comments, 0 warnings again. Two pictures in the session's scratchpad for Richard.
 >
-> **NEXT:** build **AC10, the browser-only demo** (defaults in §6.3) — `Logic/Todo data` is now the only reader, so a demo
-> data layer swaps one component plus the writes in `Commands/`. Drive reopen and untick. AC8 stays Richard's.
+> **NEXT:** (1) deploy the demo with the **shipped `nodegx deploy`** on the production viewer (`--base-url
+> /templates/todo-list/`, TPL-006's recipe) and drive the deployed folder — the devtool drops For Each wires (D44), so do
+> not use it; (2) 🙋 **Richard: publish it to nodegx.io?** (outward-facing — ask) and his look at the demo; (3) AC8 (his week of
+> use) and R4a stay his. `test:ci` / `test:main` not run this session.
 
 > ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>
 >

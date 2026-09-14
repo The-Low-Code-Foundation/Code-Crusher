@@ -11,9 +11,9 @@
 >   *"nothing, I just need to delete this task"*, so there is ALWAYS a trace.
 > - Traces are stored: priority changes, notes added, completed, uncompleted, etc.
 
-**Status: 🟢 BUILT, GATED (20/20) AND DRIVEN (12/12) — s2, 2026-09-14. Committed (s1 `2ad64ccee` + `7b6f7c650`).**
-`npm run template:todo` → `templates/todo-list/`. AC1–AC7 and AC9 green; **AC8 is Richard's look and his first real use;
-AC10 (the browser-only demo, R9) is the next build.**
+**Status: 🟢 BUILT, GATED AND DRIVEN — template (gate 20/20, drive 14/14) and demo (gate 18/18, drive 10/10). s3, 2026-09-14.**
+`npm run template:todo` → `templates/todo-list/` **and** `templates/todo-list-demo/`. AC1–AC7, AC9 and **AC10's build** green;
+**AC8 is Richard's look and first real use; publishing the demo on nodegx.io is Richard's call.**
 
 ---
 
@@ -73,40 +73,62 @@ Through the plan door, like TPL-007. Sources: `packages/noodl-mcp/tests/tpl008{C
 - **`Pages/Todo`** (51 nodes, was 71) holds the selection and places the rest; **`Pages/Sign in`** makes or opens an account.
 - The deadline is **typed** (`YYYY-MM-DD`, `today`, `tomorrow`), because Text Input has no date type — **D73**.
 - Icon buttons carry their name as a hidden label (`styleCss: 'font-size: 0;'`), because Button has no accessible-name port — **D72**.
+- The two app-wide Variables in components drawn more than once (`todoLastHistory`, `todoProblem`) carry a node comment
+  **"Shared on purpose: …"** — GAM-005's escape (s3).
+
+### 3a. The demo (AC10, R9) — `packages/noodl-mcp/tests/tpl008Demo.ts`
+
+**Derived, never written twice.** `TPL008_DEMO_COMPONENTS` is computed from `TPL008_COMPONENTS` on every generation, so a change
+to a command, a row or a script reaches the demo with no one remembering. The generator writes both projects in one run.
+
+- **Every record write** (15: 13 in `Commands/`, 2 in `Write history`) becomes a `Function` **at the same node id**: `prop-<f>` →
+  `in-<f>`, `store` → `run`, `modelId` → `in-modelId`, `done`/`id`/`failure` → `out-*`, every input Run On Value Change off.
+  It writes the whole list as one JSON string to `localStorage['nodegx-todo-list-demo-v1']`, with a copy on `window` so a
+  blocked storage still works for the visit.
+- **`Logic/Todo data`** keeps its interface plus `reset`: one reader whose collections, sort orders, filter and limits are
+  **read off the backend queries** at build time, and which puts the example list in the store the first time it finds none.
+  Reset forgets the list **and `todoLastHistory`** (see §7 s3 — without that a move after reset does not save).
+- **`Pages/Sign in` is gone**; `Pages/Todo` loses its four sign-in nodes and six wires and loads on mount. **Sign out is
+  Reset demo.** A line above the header: *"This is a demo. Nothing you type leaves this browser, and Reset demo puts the
+  example list back."*
+- The example list: four tasks added four days ago, one moved to #1, one overdue (red), one closed with a note, three next
+  actions (one ticked with what happened), 13 history lines — each worded as the command that makes it would word it.
+- 🔴 Anything the transform does not recognise (an unmapped record port, a query outside `Todo data`, a page wire count
+  that drifted) **throws** at generation, rather than shipping a backend node that loads clean and saves nothing.
 
 ## 4. Acceptance criteria
 
 | AC | Criterion | Result |
 |---|---|---|
-| AC1 | Generates reproducibly with 0 refusals | ✅ two builds `diff -r` identical; gate §1 compares every byte; 0 warnings, 148 infos |
+| AC1 | Generates reproducibly with 0 refusals | ✅ gate §1 compares every byte; 0 warnings, 148 infos (s3: after the GAM-005 comments) |
 | AC2 | The policy validates, and denies delete on all three collections | ✅ gate §2 (with a control the validator rejects); drive §6: owner `DELETE` → 403 |
 | AC3 | Sign up → three tasks list 1, 2, 3 in the order added | ✅ drive §1, account made on the page, each task has "Added at #n" |
 | AC4 | Move #3 up twice → 3,1,2 and ONE line "Moved #3 → #1" | ✅ drive §2, read off the server |
 | AC5 | Close needs a note; closed task leaves the list, shows under Done, has a `closed` line | ✅ drive §3: OK disabled until typed; "Closed from #2 \| note" |
-| AC6 | Next actions: add, tick-with-note, describe; each leaves a line | ✅ drive §4–§5: history kinds are exactly the eight expected |
+| AC6 | Next actions: add, tick-with-note, describe; each leaves a line | ✅ drive §4–§5; **s3: untick driven** ("Unticked “…” \| note", position to the bottom) and **reopen driven** (§5b: "Reopened at #3 \| note", closing note and date cleared) |
 | AC7 | A second account sees none of the first account's rows | ✅ drive §6: Task/Action/Event 0/0/0 |
 | AC8 | Richard's look, and a week of real use | ⬜ Richard |
-| AC9 | Every icon button has a name a screen reader says; the icon shows and the words do not (D72) | ✅ s2 gate §4 (sabotaged: dropping one label reddens exactly it) + drive: Chrome's AX tree names all 9 list buttons, the tick box flips "Mark done" → "Mark not done", `font-size` 0px, words 0px wide |
-| AC10 | A browser-only demo mode for nodegx.io (R9) | ⬜ next build |
+| AC9 | Every icon button has a name a screen reader says; the icon shows and the words do not (D72) | ✅ s2 gate §4 (sabotaged) + drive: Chrome's AX tree |
+| AC10 | A browser-only demo mode for nodegx.io (R9) | 🟢 **built, gated 18/18, driven 10/10** (s3). ⬜ Not yet deployed with the shipped `nodegx deploy` and driven from the deployed folder; ⬜ publishing is Richard's |
 
-Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **20/20** · `packages/nodegx-backend/tests/tpl008-todo-drive.test.ts`
-**12/12**, `devOpen: false`, **0 console errors** · `npm run typecheck:mcp` clean. Pictures: run the drive with
-`TPL008_SHOTS=<dir>` (desktop list, the close dialog, desktop detail, phone detail, phone list).
+Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **20/20** · `tpl008Demo.test.ts` **18/18** ·
+`packages/nodegx-backend/tests/tpl008-todo-drive.test.ts` **14/14** · `tpl008-todo-demo-drive.test.ts` **10/10**, both drives
+**0 console errors** · `tsc -p packages/noodl-mcp --noEmit` exit 0. Pictures: run either drive with `TPL008_SHOTS=<dir>`.
 
 ## 5. Not in this build
 
 - File uploads (Richard: *"maybe not file uploads yet (complicated)"*).
-- The nodegx.io demo — ruled R9 (browser-only), not yet built (AC10).
 - Paging: the queries cap at 1,000 tasks, 1,000 next actions and 1,000 history lines per task; the Log shows the latest 300.
+- The demo on nodegx.io: built (AC10), not deployed or published.
 
 ## 6. Questions for Richard
 
-1. ~~The public demo on nodegx.io~~ — **ruled R9 (s2): browser-only demo mode.**
-2. **R4 in practice**: is a note on every tick of a next action too much? One parameter's worth of change either way.
-   **Deferred by Richard (s2) until he has used it.**
-3. **For AC10, my defaults unless Richard says otherwise:** the demo starts with a few example tasks (an empty list demos
-   nothing), keeps the visitor's changes in their own browser (`localStorage`) with a visible "Reset the demo" button, and says
-   on screen that it is a demo whose data never leaves the browser.
+1. ~~The public demo on nodegx.io~~ — **ruled R9 (s2): browser-only demo mode.** Built in s3.
+2. **R4 in practice**: is a note on every tick of a next action too much? **Deferred by Richard (s2) until he has used it.**
+3. ~~AC10 defaults~~ — built as proposed (example list, `localStorage`, Reset demo, an on-screen line saying it is a demo).
+   He has not seen it yet: **the two s3 pictures are his to look at**.
+4. **Publish the demo at `nodegx.io/templates/todo-list/`?** Like TPL-006: shipped `nodegx deploy` on the production viewer with
+   `--base-url /templates/<slug>/`, then `ops/deploy.sh`. Outward-facing, so not done without him. The slug is a guess.
 
 ## 7. Session log
 
@@ -185,3 +207,49 @@ Richard and was deleted. The editor's **Run** is unaffected (it renders, it does
 still D44's unmeasured hypothesis. Recorded on D44 (owner GAM-024, P88). Also: the devtool must run with cwd
 `packages/noodl-editor` (it reads `src/external/deploy/index.json` from the cwd), and it copies `nodegx.security.json` into
 the site while excluding `components/` and `docs/`.
+
+### s3 — 2026-09-14: AC10 built — the browser-only demo, derived from the template — and reopen/untick driven
+
+**Built** as §3a: `tpl008Demo.ts` (the transform), `tpl008Template.ts` (`variant: 'demo'`, `prepareTodoDemoArtefact`, its own
+START-HERE, no policy), the generator writing both. The door took the demo first time: 0 refusals, 0 warnings, 138 infos,
+34 components, only `Pages/Todo` routed.
+
+**Gate `tpl008Demo.test.ts` 18/18.** §1 byte-identical build; §2 no backend node type in the demo — **with the same rule run over
+the template as its control** (it finds query, create, update and the four user nodes there); §3 **in step**: exactly the 16
+declared components change, only two interfaces change (Todo data `+reset`, Header `signOut → reset`), every template record
+write is a Function at the same id **with the same wires in and out** (counted against the sources' 15), every other template
+node is in the demo at the same id and type less a named list of 10; §4 the store scripts against a fake browser (seed once,
+changes survive, filter/order/limit, update writes only wired fields, unknown id fails and writes nothing, **storage that
+throws still works**, reset) and the example list read through the template's own `Task rows`/`Selected task` scripts; §5 D71.
+- 🔴 **My own count was wrong first**: I typed 16 record writes; the sources have 15. Fixed by counting the sources, not by
+  changing the literal.
+- **Sabotaged:** leaving `Close task`'s write unconverted reddens exactly byte-identity, the backend-type rule and the
+  record-write rule (naming `ClosetaskWrite`); restored by `cp`, md5 matched.
+
+**Drive `tpl008-todo-demo-drive.test.ts` 10/10, first run, 0 console errors**, no backend port at all, consequences read from
+`localStorage`: opens on `/` with the example list in order and the notice; add → "Added at #4"; up twice → ONE "Moved #4 → #2";
+close → "Closed from #3 | note"; **reopen** → bottom, "Reopened at #4 | note", note and date cleared; **untick** a seeded action →
+position 3, "Unticked “List what shipped” | note"; **a reload keeps the store byte-for-byte**; Reset demo → the example list
+(4/3/13); no request to `/classes|users|login|functions|__backend`, **beside a control fetch the same reading sees**.
+- 🔴 **Reset had a bug the design would have shipped, and the drive is built to catch it.** The example list's ids are
+  constant, and Write history remembers the last line it wrote (`todoLastHistory`) to extend it. Move an example task, reset,
+  and move it again inside two minutes: the move tries to extend a line that no longer exists, `update` fails, and **no history
+  line is written**. So reset also clears `todoLastHistory`. **Sabotaged:** without that step the drive reads
+  `postResetMoveLines []` where `["Moved #3 → #2"]` is expected — only §7 red; restored (md5 matched), regenerated, byte-identity
+  green.
+
+**The template's own drive, 14/14 (was 12/12): reopen and untick are driven.** Untick from a ticked line (one button in it) →
+`done: false`, note cleared, position 2, "Unticked “List what shipped” | note"; reopen from Done → "Reopened at #3 | note",
+`closingNote` and `closedAt` cleared, back at the bottom. The helpers both drives use moved to `tests/helpers/todo-drive.ts`.
+
+**🔴 Found on regeneration: 54 new warnings — GAM-005's rule, a peer's work in progress.** `variable-in-repeated-component`
+(uncommitted, `validation/repeatedComponentVariable.ts`, 19:55 today) warned on both builds, which would have reddened gate §1's
+"no warning". Measured before acting: **108 lines, 4 holder/name pairs** — `todoLastHistory` and `todoProblem` in `Logic/Write
+history` (every command places it), `todoProblem` in `Move task` (×3) and `Move action` (×2). All four are app-wide on purpose:
+R5's collapse *needs* the up and down placements to share the last line, and the problem banner shows one sentence. Fixed with
+the rule's escape, a node comment beginning "Shared on purpose:" (constants `SHARED_LAST_LINE`, `SHARED_PROBLEM`). The template
+artefact changed by exactly 14 `metadata.comment` blocks; 0 warnings on both builds again. **Not a defect** — the rule did what
+it says; recorded here so GAM-005 knows a real template met it.
+
+**Not done:** the demo was not deployed with the shipped `nodegx deploy` (production viewer, `--base-url`) nor driven from a
+deployed folder; nothing published. `test:ci` / `test:main` not run.

@@ -160,6 +160,9 @@
         "setWith": "string",
         "value": "That change did not save. Check your connection, then try again."
       },
+      "metadata": {
+        "comment": "Shared on purpose: this is the one sentence the Problem banner shows, whichever command failed."
+      },
       "x": 40,
       "y": 640
     }

@@ -107,6 +107,15 @@ export const VAR = {
 export const PROBLEM_TEXT = 'That change did not save. Check your connection, then try again.';
 export const LOAD_PROBLEM_TEXT = 'Your list could not be loaded. Check that the backend is running, then sign in again.';
 
+/**
+ * Node comments on the two Variables that live in components drawn more than once (every
+ * command places `Logic/Write history`; Move task and Move action are placed 3 and 2 times).
+ * Both are app-wide ON PURPOSE, and "shared on purpose" is GAM-005's escape for saying so.
+ */
+export const SHARED_LAST_LINE =
+  'Shared on purpose: every command writes history through here, and a move from the up button then the down button must extend the same line (R5).';
+export const SHARED_PROBLEM = 'Shared on purpose: this is the one sentence the Problem banner shows, whichever command failed.';
+
 const FUNCTION = 'JavaScriptFunction';
 const STATES = 'States';
 const FOR_EACH = 'For Each';
@@ -1313,13 +1322,15 @@ const WRITE_HISTORY: Tpl008Component = {
   nodes: [
     inputs('whIn', 'The line', WRITE_HISTORY_INS),
     outputs('whOut', 'Written', [['done', 'signal']]),
-    logic('whLast', VARIABLE, 'The last line written', { name: VAR.lastHistory }),
+    // 🔴 GAM-005 warns on a Variable in a component drawn more than once — every command
+    // places this one. Both names here are app-wide on purpose, and the comment says why.
+    { ...(logic('whLast', VARIABLE, 'The last line written', { name: VAR.lastHistory }) as object), comment: SHARED_LAST_LINE },
     script('whDecide', 'A new line, or extend the last one?', DECIDE_HISTORY_SCRIPT, ['taskId', 'kind', 'summary', 'body', 'from', 'to', 'mergeKey', 'last']),
     logic('whCreate', CREATE, 'Add the line', { collectionName: 'Event' }),
     logic('whUpdate', UPDATE, 'Extend the last line', { collectionName: 'Event', idSource: 'explicit' }),
     script('whRemember', 'Remember it, to extend next time', REMEMBER_HISTORY_SCRIPT, ['pending', 'id']),
     logic('whSet', SET_VARIABLE, 'Keep the last line', { name: VAR.lastHistory, setWith: 'object' }),
-    logic('whProblem', SET_VARIABLE, 'Say it did not save', { name: VAR.problem, setWith: 'string', value: PROBLEM_TEXT })
+    { ...(logic('whProblem', SET_VARIABLE, 'Say it did not save', { name: VAR.problem, setWith: 'string', value: PROBLEM_TEXT }) as object), comment: SHARED_PROBLEM }
   ],
   connections: [
     wire('whIn', 'taskId', 'whDecide', 'in-taskId'),
@@ -1405,7 +1416,7 @@ function command(spec: CommandSpec): Tpl008Component {
       script(`${p}Guard`, 'Is there anything to write?', spec.guard, [...spec.guardIns, ...(spec.quietIns ?? [])]),
       ...built.nodes,
       logic(`${p}History`, C.writeHistory, 'Write the history line', { kind: h.kind }),
-      logic(`${p}Problem`, SET_VARIABLE, 'Say it did not save', { name: VAR.problem, setWith: 'string', value: PROBLEM_TEXT })
+      { ...(logic(`${p}Problem`, SET_VARIABLE, 'Say it did not save', { name: VAR.problem, setWith: 'string', value: PROBLEM_TEXT }) as object), comment: SHARED_PROBLEM }
     ],
     connections: [
       ...spec.guardIns.map((n) => wire(`${p}In`, n, `${p}Guard`, `in-${n}`)),
