@@ -44,10 +44,14 @@ you pick, including its §8.
 
 ## Richard's, not a builder's
 
-- 🔒 **Commit GAM-005, GAM-007, GAM-009 and GAM-008?** None is committed. GAM-005 and GAM-007 both touch
-  `validation/{diagnostics,index,authoredCandidate}.ts`, so one commit for those two is simplest. GAM-009 touches only the
-  viewer and a devtool, so it can be its own commit. So can GAM-008 (see its files below). A pathspec commit must name every
-  file below (`git add` the untracked ones first).
+- ✅ **Committed 2026-09-14, at Richard's request ("commit everything in different commits"), one commit each:**
+  GAM-005 `44b3a9add`, GAM-007 `d57a11668`, GAM-008 `5da1c9fd6`, GAM-009 `bdf1d3b19` (with its Text Input catalog entry
+  and page), and the P88 docs `e939c0466`. The peers' work landed too: TPL-008 `8d046807b`, game-kit `6384bf321`, Rocket
+  School `9d77c9427` (with D74 and the P78 handoff) and P87 `0e9341b7e`, plus the "Coming from Bubble" card `1544aba97` and
+  the Options doc page `8434391e3`. GAM-005 and GAM-007 shared three validation files, so GAM-005's commit carries versions
+  with GAM-007's lines removed.
+- 🔒 **Left out on purpose:** `library/prefabs/form-fields/project/project.json` (modified 09-11, owned by nobody working, turns
+  `cmp004Parts` red). Re-export it or revert it?
 - 🔒 **New, from GAM-008:** a jump does **not** fire At Target Value. R9 did not decide this. It stops a countdown wired
   to "time's up" from firing the moment it refills, and it is the reverse of Transition's open B3. Keep it?
 - 🔒 **New, from GAM-009 AC4:** a `Set` that a focused field absorbs still writes the start value (ERG-001's written rule).
@@ -98,10 +102,9 @@ you pick, including its §8.
 ⚠️ **The P78 register also carries peers' uncommitted hunks.** Stage it hunk by hunk: session 7 owns D57's row and a dated
 paragraph, session 8 owns D64's, session 9 owns D61's, and session 10 owns D67's.
 
-⚠️ **The catalog is red before GAM-008, and it is GAM-009's.** `catalog:check` fails on `net.noodl.controls.textinput` alone,
-which is GAM-009's uncommitted Text Input change, and `docs:nodes:check` fails on the Options and Text Input pages. Session 10
-spliced only Animate To Value's entry and regenerated only its page. **GAM-009's commit owes its own catalog entry**
-(`catalog:generate`, then keep that one entry) **and its doc page.** The Options page's owner was not traced.
+✅ **The catalog is clean at `8434391e3`.** GAM-009's commit carries its Text Input entry and page. The Options page was stale
+against an earlier committed catalog (`runtime-discovered` → `runtime-narrowed`) and was regenerated on its own.
+`catalog:check` exits 0, and `docs:nodes:check` reports clean.
 
 ⚠️ **Peers are live** in `templates/rocket-school`, `packages/noodl-mcp/tests/tpl007*` (untracked, changed 20:07) and
 `templates/todo-list-demo`. Rocket School's D64 gate (`tpl007Template.test.ts:951-958`) and its `rsNameKeep` workaround
