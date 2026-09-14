@@ -1,5 +1,22 @@
 # Phase 78 — next session
 
+> ### 🟢 2026-09-14 — TPL-008 TODO LIST (Richard's own): BUILT, GATED 19/19, DRIVEN 11/11
+>
+> Richard asked for *"the simplest todo list ever"* for himself: one list ordered only by what you will do next, nothing
+> ever deleted, and every move, note, close and tick kept as history. Two mockups (Artifacts), rulings R1–R8 in
+> [TPL-008 §1](TPL-008-THE-TODO-LIST.md). **Storage decided: the NodeGX backend** (phone + PC), per-row private, `delete:
+> nobody`. Built through the plan door: `npm run template:todo` → `templates/todo-list/`, 33 components, 0 refusals.
+> `tpl008Template.test.ts` 19/19 · `tpl008-todo-drive.test.ts` 11/11 against `devOpen: false`, 0 console errors ·
+> `typecheck:mcp` clean.
+>
+> 🔴 **Driving found D71**: the node reference tells an agent a wired `run` makes a Function signal-only, and it does not —
+> clicking any row moved a task. Filed with D72 (icon-only Button has no accessible name) and D73 (no date Text Input),
+> **all owner `NONE`**.
+>
+> **NEXT:** Richard runs it (a NEW local backend, see `docs/START-HERE.md`) and rules AC8, the demo question (§6.1) and
+> whether ticking a next action should keep asking for a note (§6.2). Optional: factor `Pages/Todo` (70 nodes, §7).
+> **Nothing is committed** — the TPL-008 paths are listed in §7's hand-off.
+
 > ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>
 >
 > Richard played it, said *"it works, it's awesome"*, and asked for a zip and a publish to the

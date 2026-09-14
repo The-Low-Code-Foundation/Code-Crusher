@@ -1,0 +1,61 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "9df0212f-9893-5999-87d1-719dc8fae779",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "app_root",
+      "type": "Group",
+      "label": "App",
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "height": {
+          "value": 100,
+          "unit": "%"
+        },
+        "backgroundColor": "var(--background)",
+        "flexDirection": "column"
+      },
+      "children": [
+        "app_router"
+      ],
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "app_router",
+      "type": "Router",
+      "label": "Main router",
+      "parent": "app_root",
+      "parameters": {
+        "name": "Main",
+        "pages": {
+          "startPage": "/Pages/Todo",
+          "routes": [
+            "/Pages/Todo",
+            "/Pages/Sign in"
+          ]
+        }
+      },
+      "x": 100,
+      "y": 160
+    },
+    {
+      "id": "app_css",
+      "type": "CSS Definition",
+      "label": "The page ground",
+      "parameters": {
+        "style": "html, body { background-color: var(--background); }"
+      },
+      "x": 350,
+      "y": 40
+    }
+  ],
+  "visualRoots": [
+    "app_root"
+  ]
+}
