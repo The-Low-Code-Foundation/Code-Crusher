@@ -86,7 +86,10 @@ const easeCurvesModule = loadFile(path.join(VIEWER_SRC, 'easecurves.ts'));
 const edgeTriggeredInput = loadFile(path.join(RUNTIME_SRC, 'edgetriggeredinput.ts'));
 const diagnosticsModule = loadFile(path.join(RUNTIME_SRC, 'diagnostics.ts'));
 const outcomeModule = loadFile(path.join(RUNTIME_SRC, 'outcome.ts'));
+// GAM-006 (P88): states.ts reads colours through the viewer's shared reader.
+const colorReaderModule = loadFile(path.join(VIEWER_SRC, 'color-reader.ts'));
 const runtimeRequire = (id: string): unknown => {
+  if (id === '../../color-reader') return colorReaderModule;
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   if (id === 'bezier-easing') return require('bezier-easing');
   if (id === '@noodl/runtime') return { EdgeTriggeredInput: edgeTriggeredInput };
@@ -600,22 +603,39 @@ describe('§A States against states.ts, the whole node, frame by frame', () => {
     expect(want.frames[0][1].error).toBe('Cannot go to state "Bright" — this node has no such state. Its states are: dim, bright. Did you mean "bright"?');
   });
 
-  test('A5 MEASURED — a var(--token) colour: the interpreter tweens through a NaN hex and LANDS on the token (GAM-006 (b)), and with no document the export answers the same', () => {
+  test('A5 MEASURED — a var(--token) colour with no document: both worlds hold the colour on screen, then LAND on the token (GAM-006 (a) + (b))', () => {
     const params = { ...PANEL_PARAMS, 'value-bright-tint': 'var(--primary)' };
     const def = { ...PANEL_DEF, values: { ...PANEL_DEF.values, tint: { type: 'color', byState: { dim: '#334455', bright: 'var(--primary)' } } } };
     const script = passes({ 0: { pulses: ['to-bright'] } }, 700);
     const want = interpreter(params, script, ['tint']);
     const got = emitted(statesLib, animateLib, def, undefined, script, ['tint']);
-    // Measured, not predicted: `setRGBA` reads `var(--primary)` two characters at a time, so the
-    // first channel is `parseInt('ar', 16)` = 10 and tweens to a real byte; the other three are NaN.
-    expect(want.frames.find(([now]) => now === 300)![1].tint).toMatch(/^#[0-9a-f]{2}NaNNaNNaN$/);
+    // 🔴 Measured before GAM-006: `setRGBA` read `var(--primary)` two characters at a time, so every
+    // frame was `#0aNaNNaNNaN`-shaped and the tween ENDED there too (EXP-011 §49.3, P78 D49).
+    // (b) lands a colour on the value its state names. (a) reads it through the shared reader, which
+    // needs a document to resolve a token; here there is none, so the token cannot be read and the
+    // value holds the colour already on screen until it lands. No frame is a NaN hex.
+    expect(want.frames.find(([now]) => now === 300)![1].tint).toBe('#334455');
+    expect(want.frames.map(([, values]) => String(values.tint))).not.toContainEqual(expect.stringMatching(/NaN/));
     expect(got.frames).toEqual(want.frames);
-    // 🔴 Measured before GAM-006: the tween ENDED on `rgbaToHex(targetValues)`, `#0aNaNNaNNaN`, so a
-    // token-coloured value never reached its colour in the interpreter while transitions were on
-    // (EXP-011 §49.3, P78 D49). GAM-006 (b) lands a colour on the value its state names, in
-    // `states.ts` and in the emitted `statesLib` alike, so both end on the token. The frames in
-    // between are still the NaN hex until GAM-006 (a) reads the token before the tween.
     expect(want.frames[want.frames.length - 1][1].tint).toBe('var(--primary)');
+  });
+
+  test('A5 a delayed COLOUR: both worlds hold the colour on screen for the delay, then tween and land (GAM-006)', () => {
+    // The per-value delay above is on `opacity`, a number, so parity could not see what a delayed
+    // colour publishes. Before GAM-006 both worlds published the tween's parsed RGBA array for the
+    // delay, agreed with each other, and handed a style sink `[51,68,85,255]`.
+    const delayed = { curve: [0, 0, 0.58, 1], dur: 400, delay: 200 };
+    const params = { ...PANEL_PARAMS, 'transition-bright-tint': delayed };
+    const def = { ...PANEL_DEF, values: { ...PANEL_DEF.values, tint: { ...PANEL_DEF.values.tint, transitions: { bright: delayed } } } };
+    const script = passes({ 0: { pulses: ['to-bright'] } }, 800);
+    const want = interpreter(params, script, READS);
+    const got = emitted(statesLib, animateLib, def, undefined, script, READS);
+    expect(got.events).toEqual(want.events);
+    expect(got.frames).toEqual(want.frames);
+    const at = (t: number) => want.frames.find(([now]) => now === t)![1];
+    expect([at(0).tint, at(100).tint, at(150).tint]).toEqual(['#334455', '#334455', '#334455']);
+    expect(String(at(400).tint)).toMatch(/^#[0-9a-f]{8}$/);
+    expect(at(700).tint).toBe('#ffcc00');
   });
 
   test('A5 CONTROL — a machine that animates every queued state rather than settling the intermediates disagrees on the one-pass script', () => {

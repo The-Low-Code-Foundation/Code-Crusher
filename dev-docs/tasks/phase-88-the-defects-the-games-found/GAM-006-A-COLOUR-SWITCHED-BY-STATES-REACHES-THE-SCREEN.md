@@ -1,6 +1,6 @@
 # GAM-006 — A colour switched by a States node reaches the screen, with transitions on
 
-**Status: 🟡 AC1 RED recorded; (b) built with AC2's runtime half and AC8 graded by reverted arms (2026-09-14, session 3, `82a7d3775`). A delayed colour publishing an RGBA array was found and is owed. (a)/AC3–AC7 not started (§8).** **Source:** [P78 D49](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) (replaces D43) · found by TPL-006 story engine, 2026-09-12 (TPL-005 pixel game, 2026-09-11, first) · **Side:** product (runtime, `States`)
+**Status: 🟢 BUILT AND DRIVEN — every AC met except AC6's Rocket School arm (2026-09-14, session 5).** Session 3 (`82a7d3775`): AC1 RED, (b), AC2's runtime half, AC8. Session 4: the delayed colour, AC7 RED then (b) in `node-transitions.ts`, (a) as one shared colour reader with R7's warning, AC4's census, all graded headlessly by reverted arms. **Session 5:** AC3 and AC5 in a real browser (TPL-003 `FilterPill`, TPL-006 `Story/Passage`), each beside the old runtime and a reader-bypassed sabotage runtime. AC6's TPL-005 half is driven, and TPL-006's pin is removed. **Rocket School's `chStates` could not be driven** in the `deploy-from-disk` build (§8), so its pins stay with P87. The viewer bundles and the export `dist` are rebuilt. **Source:** [P78 D49](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) (replaces D43) · found by TPL-006 story engine, 2026-09-12 (TPL-005 pixel game, 2026-09-11, first) · **Side:** product (runtime, `States`)
 
 A States node flips its text and leaves its colour behind: the eyebrow reads "An ending" and the ink stays the
 reading colour, at every sample for 1.5 s. This happens with transitions on, which is the default.
@@ -172,3 +172,252 @@ the delay never took, and it read as "no array". It graded nothing until the inp
 - **AC4, AC5, AC6 and AC7:** not started. `node-transitions.ts` is unmeasured.
 - Owed: the `nodegx-export` `dist` is gitignored build output and was not rebuilt, and the viewer bundles were not
   rebuilt, so a running editor or deployed app does not have (b) yet.
+
+### Session 4 (2026-09-14, HEAD `b3be201e0`) — the delayed colour fixed; AC7 RED, and (b) built in `node-transitions.ts`
+
+Logs are in session `023bc12d…`'s scratchpad, `gam006/`.
+
+**The delayed colour.** The spec's recording row became three graded rows: `hex` and `tint` each wait 200 ms, then
+tween over 300 ms, beside a known-firing row that both still arrive after the delay. The fix, in `states.ts`
+`onRunning` and `statesLib.ts` `onTweenRunning`: inside its delay a colour publishes the start value as a colour
+string (the colour already on screen), falling back to the tween's hex only when the start was never a string.
+
+| reading | result | log |
+|---|---|---|
+| Spec at HEAD source | **2 red of 11**, exactly the two delay rows. `hex` read `[51,68,85,255]` at 0, 96 and 192 ms. 🔴 `tint` read a **six-entry** array, `[10,NaN,NaN,NaN,237,NaN]`: `var(--muted)` is 12 characters, so `setRGBA` writes 5.5 "components" and grows the array | `delay-red.log`, `GAM006_DELAY_RED_EXIT=1` |
+| With the fix | **11/11** | `delay-green.log`, `GAM006_DELAY_GREEN_EXIT=0` |
+| 🔴 Reverted arm, the runtime hunk only | **exactly the 2 delay rows red** | `delay-reverted-runtime.log`, `GAM006_DELAY_REVERTED_EXIT=1` |
+| New A5 parity row, a delayed **colour** (`transition-bright-tint`, 400 ms after 200 ms), both halves in | **58/58**. Both worlds hold `#334455` at 0, 100 and 150 ms, pass through 8-digit hex, land on `#ffcc00` | `a5-delay-green.log`, `A5_DELAY_GREEN_EXIT=0` |
+| 🔴 Reverted arm, the export hunk only (`states.ts` keeps the fix) | **exactly that row red**, 57/58 | `a5-delay-reverted-export.log`, `A5_DELAY_REVERTED_EXIT=1` |
+| The viewer's States specs, 3 suites counted by name | **42/42** | `states-regression3.log`, `STATES_REGRESSION3_EXIT=0` |
+| `nodegx-export` full suite | **100/101**, 3,491 passed. The one red was HLS-001, naming exactly **1** file, `glow-desk/src/lib/states.ts` | `export-full3.log`, `EXPORT_FULL3_EXIT=1` |
+| HLS-001 with only the export hunk reverse-applied | **4/4**, so the move is that hunk | `hls001-delay-reverted.log`, `HLS001_DELAY_REVERTED_EXIT=0` |
+| `HLS001_REGENERATE=1`, then the gate again | **1** hash line moved (`795c6bf2…` → `f474fdaa…`, the same file); 4/4 after. Recorded in the test's header as the fifth regeneration | `hls001-regen2.log`, `hls001-after-regen2.log` |
+
+⚠️ A first regression run named its three States specs as `tests/nda-001-…` and ran **1 suite for 4 patterns**. They
+live under `tests/corpus/`. The 42/42 above is the re-run, with 3 `PASS` lines counted against 3 files.
+
+**AC7: RED at HEAD.** [`gam-006-visual-state-token-colour.test.ts`](../../../packages/noodl-viewer-react/tests/gam-006-visual-state-token-colour.test.ts)
+drives `transitionParameter` (`node-transitions.ts`, which `setVisualStates` calls for every changed parameter with a
+curve) on a stub node carrying exactly what it reads, with the runtime's real `TimerScheduler` and the viewer's real
+`Styles`.
+
+| arm | at HEAD, 20 frames | with (b) |
+|---|---|---|
+| 🔴 `token`, `var(--muted)` → `var(--primary)` | **`#0aNaNNaNNaN` on every frame, the last included.** No (b) exists here: `onFinish` only deleted the timer | ends on `var(--primary)` |
+| `hex`, `#334455` → `#8a4f16` | glides through real colours, ends `#8a4f16ff` | glides, ends `#8a4f16` |
+| `named` (legacy style), `Grey` → `Primary` | resolves, glides, ends `#112233ff` | glides, ends `Primary` |
+| `fromTransparent`, `transparent` → `#8a4f16` | borrows the hue, glides, ends `#8a4f16ff` | glides, ends `#8a4f16` |
+
+- **The change:** `onFinish` queues the authored end value for a colour input. A stopped (retargeted) transition
+  never reaches `onFinish`, so a retarget is unchanged. Transitions off already queued the authored value, so both now
+  end in the same place, which also keeps a token live across a theme change instead of baking in a hex.
+- **Graded:** 8/8 with (b) (`ac7-b-green2.log`, `GAM006_AC7_B2_EXIT=0`). 🔴 **Reverted arm:** exactly the 4 "ends on"
+  rows red, and the 3 known-firing glide rows green (`ac7-reverted.log`, `GAM006_AC7_REVERTED_EXIT=1`). Restored by hash.
+- ⚠️ The first run read `Tests: 0 total`: a TS2556 spread error in the spec itself, not a result.
+- **Whole viewer suite on the final bytes:** **110/110 suites** (110 spec files on disk), 1,442 passed, 1 todo
+  (`viewer-full.log`, `VIEWER_FULL_EXIT=0`).
+
+**AC7's reach, counted.** A visual state only transitions where the node or its variant carries a
+`defaultStateTransitions`/`stateTransitions` entry with a curve (`react-component-node.ts` `_getDefaultTransition`).
+The editor writes none by default (`NodeGraphNode.getDefaultStateTransition` returns `undefined` unless one was set).
+- `templates/`: **0** files. The editor's embedded `site-builder` and `landing-pages` `.content.json`: **0**.
+- `library/prefabs`: **4** files carry one, and exactly **one** colour parameter transitions: `toggle-switch`'s Checkbox,
+  `checked.backgroundColor = "Primary"`, a legacy style name. It resolves only in a project that carries that style.
+- `nodegx-export` emits no visual-state transitions (no `stateTransitions` anywhere in its `src`), so no parity row is owed.
+
+### Session 4, continued — (a) built: one shared colour reader, R7's warning, and what happens with no page
+
+**The change.**
+- **One reader, not three.** [`noodl-viewer-react/src/color-reader.ts`](../../../packages/noodl-viewer-react/src/color-reader.ts)
+  (new) is Color Blend's P79 E2 parser widened to four channels: `var(--token)` read off the document (then the
+  author's own fallback, depth bound 8), `#RGB`, `#RRGGBB[AA]`, `rgb()`/`rgba()` with alpha. It also holds
+  `cssRejectsColor`, which asks `CSS.supports` and answers `undefined` where there is no page. `colorblend.ts` now reads
+  through it (first three channels, as before), so a copy was removed rather than a third added.
+- **`states.ts`** `onStart` reads both endpoints through it. A colour unreadable at either end is recorded and **holds
+  the colour already on screen** for its whole span, then (b) lands it on the authored value.
+- **`node-transitions.ts`** (AC7) does the same: an unreadable colour holds `startValue` (a start that was never set
+  queues nothing), and `onFinish` lands it.
+- **R7's warning.** `states/unreadable-color` and `visual-states/unreadable-color`, raised only when
+  `cssRejectsColor` is `true`, once per colour per node, and guarded as Color Blend's is. `red` and a token the page does
+  not define are valid CSS, so they hold and land silently.
+- 🔒 **R7's owed sentence, "where there is no document".** With no page (server render, the export's parity suite, a
+  headless spec), a `var(--token)` cannot be resolved and CSS cannot be asked. The colour holds the colour already on
+  screen for the transition and lands on the authored value at the end, and **nothing is reported**. Server render also
+  freezes the clock (`ssr.note`), so it shows the start state regardless.
+- **The export, in step.** `statesLib` transcribes `readColor` and the hold. Its A5 token row changed from "tweens through
+  a NaN hex" to "holds `#334455`, no frame contains NaN, lands on the token". The one departure left is documented in
+  `statesLib.ts`'s header: the export's `resolveColor` probe also resolves a named colour, so in a browser `red` glides
+  there and holds in the interpreter.
+- Both parity shims now load `color-reader.ts` from source: `animation-pair`'s `runtimeRequire` (which throws on an
+  unknown import) and `small-utilities`' `loadNode` (which returned `{}` for one, so a missed shim would have broken
+  Color Blend rather than skipped it).
+
+| reading | result | log (`gam006/`) |
+|---|---|---|
+| Viewer, 6 spec files named by path: both GAM-006 specs, `syl-e2-colorblend-tokens`, the 3 States corpus specs | **6 `PASS` lines, 84/84** | `a-viewer.log`, `A_VIEWER_EXIT=0` |
+| Export `animation-pair` + `small-utilities` | **2 `PASS` lines, 78/78** | `a-export.log`, `A_EXPORT_EXIT=0` |
+| 🔴 **Arm A:** `states.ts`'s `readColor` call replaced by the old blind hex parse | **exactly 3 red of 17**: the with-page glide, the no-page hold, R7's known-firing report | `a-reverted-states.log`, `A_REVERTED_STATES_EXIT=1` |
+| 🔴 **Arm B:** the same in `node-transitions.ts` | **exactly 3 red of 13**, the same three rows | `a-reverted-visual.log`, `A_REVERTED_VISUAL_EXIT=1` |
+| 🔴 **Arm C:** the same in `statesLib` | **exactly 1 red of 58**, the A5 token row (the interpreter holds, the export tweens NaN) | `a-reverted-export.log`, `A_REVERTED_EXPORT_EXIT=1` |
+
+All three restored by hash (`a.sha`). R7's rows put a known-firing report (`notacolour` with `CSS` rejecting it: 1)
+beside the three that must stay silent (`red`, `var(--nope)`, and `notacolour` with no `CSS` at all: 0 each).
+
+**Regression on the final bytes, (a) included.**
+
+| gate | result | log (`gam006/`) |
+|---|---|---|
+| Whole viewer suite | **110/110 suites** (110 `PASS` lines, 110 spec files), **1,453** passed, 1 todo. That is 11 more than the pre-(a) run, which is exactly the 11 rows (a) added | `a-viewer-full.log`, `A_VIEWER_FULL_EXIT=0` |
+| `tsc --noEmit -p packages/noodl-viewer-react/tsconfig.json` | **0** errors | `a-tsc.log`, `A_TSC_EXIT=0` |
+| Whole `nodegx-export` suite | **100/101**, 3,491 passed. The one red was HLS-001, naming exactly **1** file, `glow-desk/src/lib/states.ts` | `a-export-full.log`, `A_EXPORT_FULL_EXIT=1` |
+| HLS-001 with the pre-(a) `statesLib` restored | **4/4**, so (a) is the move | `hls001-a-reverted.log`, `HLS001_A_REVERTED_EXIT=0` |
+| `HLS001_REGENERATE=1`, then the gate | **1** line moved (`f474fdaa…` → `8126c053…`); 4/4 after. Net over HEAD's golden: one line, `795c6bf2…` → `8126c053…` | `hls001-a-regen.log`, `hls001-a-after.log` |
+| Whole `nodegx-export` suite again, on the final bytes (golden regenerated, headers edited) | **101/101 suites** (101 `PASS` lines), 3,492 passed, 1 skipped | `export-final.log`, `EXPORT_FINAL_EXIT=0` |
+| Editor `test:ci` (Electron), `test:main` | **not run** | |
+
+⚠️ **What these arms cannot say.** The "page" is a stub: `document`, a `getComputedStyle` that knows two tokens, and an
+optional `CSS.supports`. It proves the node reads what a page would hand it, not that a real page hands it that. **AC3
+still needs a real browser** with the document's own tokens, and so do AC5 and AC6.
+
+### Session 4 — AC4, the census (read-only, before any browser drive)
+
+A script (`gam006/census.js`) walks every JSON file under a root, finds each `States` node, and lists the ones with a
+`type-<v>: color` value whose `useTransitions` is not `false`, with each value's notation. Every root prints how many
+`States` nodes it saw, so a zero is a reading and not a script that read nothing.
+
+| root | files | States seen | colour + transitions on |
+|---|---|---|---|
+| `templates/`, `library/prefabs`, the editor's embedded `*.content.json` | 551 | 76 | **7** (below) |
+| P86 `corpus/` | **0** | 0 | ⚠️ **not a reading**: the corpus is markdown, csv and two zips, no project JSON |
+| P86 `signup_template.zip`'s `project.json`, extracted | 1 | 6 | **0** |
+| `docs/node-catalog/examples` (where COM-003 landed the 12 community graphs) + `packages/noodl-mcp/examples` | 104 | 14 | **1** |
+
+| hit | values (A → B) | before GAM-006 | after (a) + (b), in a page |
+|---|---|---|---|
+| `landing-pages` `Site/FilterPill` "Off / on" (template **and** the embedded `landing-pages.content.json`), pinned `true` | `bg` `transparent` → `var(--primary)`; `fg` and `edge` token → token | 🔴 every frame invalid for `fg`/`edge`, never arrived | glides, lands on the token |
+| `pixel-game` `Pages/Play` "What just happened, in words" (`plBannerStates`), default | `tone`: tokens | 🔴 never arrived | glides, lands |
+| `pixel-game` `Pages/Play` "What the board is doing" (`plBoardStates`), default | `edge`: tokens | 🔴 never arrived | glides, lands |
+| `app-shell` `Nav Item` "Active highlight", default | `color`: `var(--primary)` / `var(--muted-foreground)` | 🔴 never arrived | glides, lands |
+| `navigation-menu` `Item`, default | `color`: `Primary` / `Grey - 900`, **legacy style names**, which the prefab's own project defines | resolved to hex first, so it glided and arrived | unchanged. In a project without those styles: holds, lands, and R7 reports it (CSS rejects `Grey - 900`) |
+| `toggle-switch` `Toggle Switch` "States", default, with `transitiondef-*` | `bg color`, `border color`: `Primary` / `Grey - 200` / `Grey - 700`, style names the prefab defines | glided and arrived | unchanged, as above |
+| community `Strobe - Blinking button` "Blink State (Color Change)", pinned `true` | `Color`: hex | glided and arrived | unchanged, apart from ending on the authored hex rather than its 8-digit form |
+
+**What the census corrects.** §2 said `toggle-switch` "carries no colour". Its States node carries two colour values
+(`bg color`, `border color`) as legacy style names. §2's list of known-firing hits was otherwise right, and the census
+adds `navigation-menu` `Item`, `toggle-switch` and the community Strobe, none of which were broken.
+
+**Still not done.** AC3 (browser), AC5, AC6, and the viewer and export bundle rebuilds. The "after" column above is
+graded headlessly, not driven.
+
+### Session 5 (2026-09-14, HEAD `b3be201e0`, session 4's source bytes) — AC3, AC5 and AC6 in a real browser
+
+Logs are in session `3599104b…`'s scratchpad, `gam006/`. Session 4's four viewer source files were checked against
+their hashes before every build (`build-a.src.sha`), so these readings are about the bytes session 4 graded.
+
+**The instrument.** [`scripts/devtools/drive-gam006-colour.js`](../../../scripts/devtools/drive-gam006-colour.js) (new)
+serves a deploy folder in headless Chrome and takes two readings at once:
+- **publishes:** every value a States node publishes for a watched colour, hooked on the prototype that owns
+  `flagOutputDirty`, each judged by `CSS.supports('color', v)`. This sees the frames a browser throws away.
+- **screen:** the element's computed colour on every animation frame. A glide is three or more distinct colours, a
+  jump is two, and "never arrives" is one.
+
+**Three arms per template, differing in one file.** `deploy-from-disk` built one folder per template over a scratch
+copy. Two copies of each folder then had only `noodl.deploy.js` replaced:
+
+| arm | runtime | sha |
+|---|---|---|
+| old | `src/external/deploy/noodl.deploy.js` as it stood (built 2026-09-12 10:45, before (b) `82a7d3775`, so pre-GAM-006) | `2e8b6999…` |
+| new | session 4's source, `webpack.deploy.prod.js` into scratch | `3f3c8d8f…` |
+| sab | arm A: `states.ts`'s `readColor` call replaced by the old blind hex parse, built into scratch, `states.ts` restored by hash | `5c48c19f…` |
+
+**AC3 and AC5, TPL-003 `Site/FilterPill`.** The `landing-pages` copy is identical to the template. The drive clicks
+*The second kind of work* on `/Pages/Freelancer` with a real CDP click (reachable by `elementFromPoint`). Two pills
+move, one on and one off, three colours each.
+
+| arm | publishes, 6 series | screen: pill background / border, 74 frames |
+|---|---|---|
+| old | **119 of 120 frames invalid** (`#0aNaNNaNNaN`, `#00NaNNaNNaN`) | **1 / 1 colour**: the selected look never arrives |
+| new | **0 of 120 invalid**, 19–20 distinct colours per series, each ending on its token | **27 / 23**, `rgba(0, 0, 0, 0)` → `rgb(143, 52, 22)` |
+| sab | **114 of 120 invalid**; only each series' last frame (the authored token) is valid | 10 / 9 ⚠️ |
+
+⚠️ `.pill` has its own CSS transition (150 ms on background, border and colour), so it animates the sabotage arm's
+end jump as well. On this template the screen cannot tell a States glide from a CSS one. The publish reading can.
+
+**AC3 and AC5, TPL-006 `Story/Passage`.** The `story-engine` copy differs from the template in one byte: `psLook`
+`useTransitions` is `true`. The drive moves the reader to `gallery`, then to `ending-light`.
+
+| arm | publishes, `rule` + `tone` | eyebrow text (known-firing) | eyebrow colour, 92 frames | passage border |
+|---|---|---|---|---|
+| old | **40 of 40 invalid** | *YOU ARE HERE* → *AN ENDING* | **1 colour**, `rgb(99, 88, 72)`: never arrives | 1 |
+| new | **0 of 38 invalid**, 19 and 18 distinct | the same | **19 distinct**, → `rgb(138, 79, 22)`, which is `--primary` `#8a4f16` | 18 |
+| sab | **38 of 40 invalid** | the same | **2**: holds, then jumps | 2 |
+
+The story's text has no CSS transition, so here the screen separates all three arms. The new arm's in-between colours
+(`rgb(102, 87, 67)`, `rgb(106, 86, 63)`, …) differ from both ends. That is AC3's midpoint clause, on the rendered page.
+
+**AC6, TPL-005's two unpinned nodes.** The `pixel-game` copy is identical to the template. The drive fires the wired
+`to-dead` (board) and `to-died` (banner) signals on the page's own States nodes (1 node each, `hasInput` checked).
+
+| arm | publishes, `edge` + `tone` | board border | headline *They got you.* (mounts in every arm) |
+|---|---|---|---|
+| old | **38 of 38 invalid** | **1 colour** | stays `rgb(232, 236, 255)`, the foreground |
+| new | **0 of 38 invalid**, 19 distinct each | **19 distinct**, → `rgb(255, 107, 122)`, `--destructive` | **20 distinct**, → `--destructive` |
+| sab | **36 of 38 invalid** | 2: jumps | jumps |
+
+Console: `landing-pages` shows 8 errors in every arm, all `image/load-failed` for `starter-imagery` files the deploy
+does not carry, so none is GAM-006's. The story and the pixel game show 0.
+
+**How each drive reaches its state, and why it is not a click.**
+- 🔴 **The story is not walked by clicks.** `deploy-from-disk` drops `/Pages/Read`'s three choice wires (D52:
+  `itemOutput-goto`, `itemOutput-gives`, `itemOutputSignal-picked`), so no choice moves a passage. The first run
+  clicked. It read identical old and new arms, and the known-firing eyebrow text never changed, so it graded nothing.
+  The drive now writes `Noodl.Variables.storyAt`, which is what a choice's `Set Variable` writes.
+- 🔴 **The pixel game is not played.** A hit needs an enemy to reach the player. The first run wrote `currentState`,
+  which neither node registers (no wire, no parameter), and read nothing in all three arms, the headline included.
+  The `to-*` signals are wired, so they exist. A written `currentState` and a `to-*` signal both reach
+  `scheduleGoToState`.
+- ⚠️ The first run's six `EXIT=0` lines were `tr`'s status, not the drives'. `$?` came after a `$(…)` in the same
+  `echo`. Three of those drives had thrown and written no JSON. Every exit above was captured as `rc=$?` straight
+  after its drive.
+
+**Found on the way, in the devtool.**
+- 🔴 **`deploy-from-disk` could not deploy any project with a numbered-inputs node.** Its `nodeAdded` stub had no
+  `component.getConnectionsTo`, which `nodedefinition.ts` `collectPorts` has called since the initial commit.
+  `landing-pages` threw `TypeError: node.component.getConnectionsTo is not a function` (`DEPLOY_LANDING_EXIT=1`),
+  from a bundle built fresh off the unchanged entry, so staleness was not the cause. With the stub given the
+  component's real wires it deploys (exit 0, 202 of 213 wires). The fix is in `deploy-from-disk.entry.ts`. It is a
+  devtool, and it has no spec.
+- ⚠️ Run `deploy-from-disk` from `packages/noodl-editor`. `platform.getAppPath()` is the working directory whenever it
+  holds a `package.json`, so from the repo root it looks for `<root>/src/external` and fails `ENOENT`.
+- **D52's drops, counted per template in this devtool:** Rocket School 85 of 1,634 wires (21 of 21 in
+  `/Logic/Play sounds`, 2 in `/Game/Choice row`), `landing-pages` 11, `pixel-game` 4, `story-engine` 3. GAM-024 owns
+  that census.
+
+**The bundles, rebuilt in place (18:29).** With no peer suite running, `webpack.prod.js` rebuilt `src/external`'s
+viewer, deploy and ssr bundles. The previous three are kept in `gam006/external-before/`. The file lists are
+identical. All three carry `states/unreadable-color` and `visual-states/unreadable-color`, and
+`deploy/noodl.deploy.js` is **byte-identical** to the drives' new arm. `nodegx-export`'s `dist` was rebuilt too (exit
+0), and its `index.mjs`/`index.cjs` carry `readColor`. Both are gitignored, so this reaches this machine's editor
+preview and deploys only. An editor built elsewhere gets it from source.
+
+**AC6, Rocket School `Game/Choice` `chStates`: NOT driven.** A copy with `chStates` `useTransitions: true` (the one
+byte changed) deployed in all three arms. No arm reached a choice:
+- The drive installs on the start page, and there is no Choice there. The first run failed on that before any action.
+- *New player* is a reachable `BUTTON`. Clicking it changed nothing on the page, in the old arm, with no console
+  error (`rocket-probe.log`). The click path is `pfNew.onClick` → Set Variable `profileFormOpen` fed by `pfTrue`, an
+  Expression `true` with no inputs. That fits R3's cause for GAM-001/GAM-003, an Expression that never ran reading
+  `null`. **Not measured; a candidate only.**
+- Writing `Noodl.Variables.profileFormOpen = true` did not bring up a *Thumbs* choice either. Not attributed. This
+  build also drops 85 of Rocket School's wires (above).
+
+**AC6, the decision.**
+- **TPL-006's pin and its gate go.** Its own `Story/Passage`, with transitions on, is driven above on the fixed
+  runtime: the eyebrow colour and the rule glide and land on the token. The gate's rationale is also wrong as written.
+  It says a States node "never publishes a colour or a number", and AC1 measured numbers working. Done in its own
+  commit, after this one.
+- **Rocket School's 22 pins and `tpl007Template.test.ts`'s D49 gate stay for now.** That template was not driven here,
+  and both are a peer session's uncommitted P87 work. Its `chStates` carries the same three token colours as
+  `FilterPill` (`bg`, `fg`, `edge`), which is driven above, so removing the pins is **recommended** once a drive
+  reaches a choice. That is P87's call, in its own tree.
+- **TPL-005's two nodes carried no pin** and now read correct in a browser. Nothing to remove.

@@ -265,18 +265,19 @@ async function registerRuntimeDiscoveredPorts(project: ProjectModel): Promise<{
   let portsAdded = 0;
   let unmatched = 0;
 
-  const editorNodes = new Map<string, { node: NodeGraphNode; component: string }>();
+  const editorNodes = new Map<string, { node: NodeGraphNode; component: string; connections: Json[] }>();
   for (const comp of project.getComponents()) {
+    const connections: Json[] = (comp.graph as any).connections ?? [];
     const walk = (list: NodeGraphNode[]) => {
       for (const n of list ?? []) {
-        editorNodes.set(n.id, { node: n, component: comp.name });
+        editorNodes.set(n.id, { node: n, component: comp.name, connections });
         if (n.children) walk(n.children);
       }
     };
     walk(comp.graph.roots);
   }
 
-  for (const [, { node, component }] of editorNodes) {
+  for (const [, { node, component, connections }] of editorNodes) {
     const typeName = typeof node.type === 'string' ? node.type : node.type?.name;
     if (!typeName || types.indexOf(typeName) === -1) continue;
     nodesSeen++;
@@ -293,7 +294,17 @@ async function registerRuntimeDiscoveredPorts(project: ProjectModel): Promise<{
       type: typeName,
       parameters: node.parameters ?? {},
       // `expression.ts` reads `node.component.name` to key its compile warning.
-      component: { name: component },
+      // 🔴 Every numbered-inputs type (`nodedefinition.ts` `collectPorts`) reads
+      // `node.component.getConnectionsTo(id)` for the ports its wires use. Without
+      // it the whole deploy throws on the first such node, which is how
+      // `landing-pages` failed to deploy at all (GAM-006 s5).
+      component: {
+        name: component,
+        getConnectionsTo: (id: string) =>
+          connections
+            .filter((c) => c.toId === id)
+            .map((c) => ({ ...c, targetId: c.toId, targetPort: c.toProperty }))
+      },
       on: () => undefined,
       off: () => undefined
     });

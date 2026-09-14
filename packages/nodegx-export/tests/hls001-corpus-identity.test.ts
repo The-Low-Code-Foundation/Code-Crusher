@@ -60,6 +60,21 @@
  *    **all 840**, where they disagreed about 3 before. The convergence is the evidence that what
  *    was fixed was the realm sensitivity rather than the wording.
  *
+ * ✅ **Regenerated a FIFTH time by GAM-006 (P88, session 4), in two counted steps.** Both moved the
+ * same one file, because `glow-desk` is still the only corpus project with a `States` node.
+ *
+ *  1. A States colour inside its per-value delay holds the colour on screen instead of the tween's
+ *     parsed RGBA array. The full suite named **1** differing file, `glow-desk/src/lib/states.ts`
+ *     (100/101). With only that `statesLib` hunk reverse-applied the gate was 4/4. Regenerating
+ *     moved **1** line (`795c6bf2…` → `f474fdaa…`).
+ *  2. GAM-006 (a): the emitted `statesLib` reads colours through a transcribed `readColor` and holds
+ *     a colour it cannot read. The full suite again named **1** file, the same one. With the step-1
+ *     `statesLib` restored the gate was 4/4. Regenerating moved **1** line (`f474fdaa…` →
+ *     `8126c053…`), and the gate is 4/4 after.
+ *
+ *  - The parity is graded in `animation-pair.test.ts`: the delayed-colour A5 row goes red with step
+ *    1's export hunk reverted, and the token row goes red with step 2's reader bypassed.
+ *
  * ✅ **Regenerated a FOURTH time by GAM-006 (P88), and the red run was counted before the golden was touched.**
  *
  * GAM-006 (b) makes a States colour transition end on the value its state names instead of the

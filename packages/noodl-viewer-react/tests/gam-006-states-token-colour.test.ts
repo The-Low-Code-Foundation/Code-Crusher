@@ -158,11 +158,9 @@ describe('GAM-006 AC1 — a States value switched with transitions on (the defau
   });
 });
 
-describe('GAM-006 — a colour inside its transition delay (found in session 3, recorded, not graded)', () => {
-  test('the value a colour publishes while its per-value delay has not elapsed', async () => {
-    // Predicted from source: `onRunning`'s `ms < c.delay` branch publishes `this.startValues[v]`,
-    // and for a colour `onStart` has replaced that with a parsed RGBA array. So a delayed colour
-    // would publish an array, not a colour, until its delay ends. This row only records it.
+describe('GAM-006 — a colour inside its transition delay (found in session 3)', () => {
+  /** B's `hex` and `tint` wait 200 ms, then tween over 300 ms. */
+  async function delayedGraph(): Promise<CorpusGraph> {
     const graph = await statesGraph();
     // ⚠️ Registered first. The first version of this row called `setInputValue` alone, the input did
     // not exist yet, and `hex` was already moving at 96 ms: the delay never took and the row graded
@@ -170,20 +168,108 @@ describe('GAM-006 — a colour inside its transition delay (found in session 3, 
     const states = graph.node('states') as unknown as {
       registerInputIfNeeded(name: string): void;
       setInputValue(name: string, value: unknown): void;
-      _internal: { stateParameters: Record<string, unknown> };
     };
-    states.registerInputIfNeeded('transition-B-hex');
-    states.setInputValue('transition-B-hex', { curve: [0, 0, 0.58, 1], dur: 300, delay: 200 });
-    console.log('GAM-006 delayed hex, parameter as stored:', JSON.stringify(states._internal.stateParameters['transition-B-hex']));
-    const samples = await sampleToB(graph, [0, 96, 192, 320, 704]);
+    for (const value of ['hex', 'tint']) {
+      states.registerInputIfNeeded(`transition-B-${value}`);
+      states.setInputValue(`transition-B-${value}`, { curve: [0, 0, 0.58, 1], dur: 300, delay: 200 });
+    }
+    return graph;
+  }
+
+  test('the readings, recorded whatever they are', async () => {
+    const samples = await sampleToB(await delayedGraph(), [0, 96, 192, 320, 704]);
     for (const [ms, values] of samples) {
-      console.log(
-        `GAM-006 delayed hex, ${ms} ms:`,
-        JSON.stringify(values.hex),
-        Array.isArray(values.hex) ? 'ARRAY' : typeof values.hex
-      );
+      for (const value of ['hex', 'tint']) {
+        const read = values[value];
+        console.log(`GAM-006 delayed ${value}, ${ms} ms:`, JSON.stringify(read), Array.isArray(read) ? 'ARRAY' : typeof read);
+      }
     }
     expect(samples.length).toBe(5);
+  });
+
+  // 🔴 Measured in session 3: `onRunning`'s `ms < c.delay` branch published `this.startValues[v]`,
+  // which for a colour `onStart` has replaced with the parsed RGBA array. `hex` read
+  // `[51,68,85,255]` at 0, 96 and 192 ms, a value no style sink accepts.
+  test.each([
+    ['hex', '#334455'],
+    ['tint', 'var(--muted)']
+  ] as const)('🔴 %s holds the colour state A left on screen until its delay ends', async (value, fromA) => {
+    const samples = await sampleToB(await delayedGraph(), [0, 96, 192]);
+    expect(samples.map(([, values]) => values[value])).toEqual([fromA, fromA, fromA]);
+  });
+
+  test('🟢 known-firing: past the delay both colours still arrive', async () => {
+    const samples = await sampleToB(await delayedGraph(), [320, 704]);
+    expect(typeof samples[0][1].hex).toBe('string');
+    expect(samples[0][1].hex).not.toBe('#334455');
+    expect(samples[1][1]).toMatchObject({ hex: '#8a4f16', tint: 'var(--primary)' });
+  });
+});
+
+/** Stands in for a page whose stylesheet defines two tokens, and optionally for `CSS.supports`. */
+const globals = globalThis as unknown as Record<string, unknown>;
+const TOKENS: Record<string, string> = { '--muted': '#334455', '--primary': '#8a4f16' };
+function installPage(supports?: (property: string, value: string) => boolean) {
+  globals.document = { documentElement: {} };
+  globals.getComputedStyle = () => ({ getPropertyValue: (name: string) => TOKENS[name] ?? '' });
+  if (supports) globals.CSS = { supports };
+}
+function removePage() {
+  delete globals.document;
+  delete globals.getComputedStyle;
+  delete globals.CSS;
+}
+
+describe('GAM-006 (a) — a token colour is read before the tween', () => {
+  afterEach(removePage);
+
+  // 🔴 Before (a): every frame between was `#0aNaNNaNNaN`, so a token held and then jumped.
+  test('🔴 with a page, a token glides through real colours and lands on the token', async () => {
+    const graph = await statesGraph();
+    installPage();
+    const samples = await sampleToB(graph, [0, 64, 160, 320]);
+    const between = [samples[1][1].tint, samples[2][1].tint];
+    for (const value of between) expect(value).toMatch(/^#[0-9a-f]{8}$/);
+    expect(between[1]).not.toBe('#334455ff');
+    expect(between[1]).not.toBe('#8a4f16ff');
+    expect(new Set(between).size).toBe(2);
+    expect(samples[3][1].tint).toBe('var(--primary)');
+  });
+
+  // 🔴 Before (a): the same NaN hex. With no page a token cannot be read at all, so it holds.
+  test('🔴 with no page, a token holds the colour on screen, never a NaN hex, and lands', async () => {
+    const samples = await sampleToB(await statesGraph(), [0, 64, 160, 320]);
+    expect(samples.slice(0, 3).map(([, values]) => values.tint)).toEqual(['var(--muted)', 'var(--muted)', 'var(--muted)']);
+    expect(samples[3][1].tint).toBe('var(--primary)');
+  });
+});
+
+describe('GAM-006 R7 — a colour is reported only when the browser would also reject it', () => {
+  afterEach(removePage);
+
+  const REJECTS = (_property: string, value: string) => value !== 'notacolour';
+
+  test.each([
+    ['🟢 known-firing: a value CSS rejects is reported once', 'notacolour', REJECTS, 1],
+    ['a named colour the tween cannot read is not', 'red', REJECTS, 0],
+    ['a token the page does not define is not', 'var(--nope)', REJECTS, 0],
+    ['with no CSS to ask, even a rejected value is not', 'notacolour', undefined, 0]
+  ] as const)('%s', async (_name, colour, supports, expected) => {
+    const graph = await statesGraph();
+    const states = graph.node('states') as unknown as {
+      setInputValue(name: string, value: unknown): void;
+      raiseRuntimeError: (code: string, message: string, detail?: unknown) => void;
+    };
+    const raised: Array<[string, string]> = [];
+    states.raiseRuntimeError = (code, message) => raised.push([code, message]);
+    states.setInputValue('value-B-tint', colour);
+    installPage(supports);
+    const samples = await sampleToB(graph, [0, 160, 320]);
+    const reports = raised.filter(([code]) => code === 'states/unreadable-color');
+    expect(reports.length).toBe(expected);
+    if (expected) expect(reports[0][1]).toContain('"notacolour"');
+    // Reported or not, the value lands where the state says.
+    expect(samples[2][1].tint).toBe(colour);
   });
 });
 
