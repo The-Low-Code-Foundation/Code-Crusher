@@ -1,6 +1,6 @@
 # GAM-004 — A gate reads the value from the same turn as its signal
 
-**Status: 🟡 AC1 measured (2026-09-14, session 3): D47 does not reproduce in the runtime. 13 arms, beside a late arm that reads late (§8). Next is AC5's browser arm, before AC2.** **Source:** [P78 D47](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-005 the pixel game, while fixing D46, 2026-09-11 · **Side:** product (runtime ordering, `Condition`)
+**Status: 🟡 measured and not reproduced (2026-09-14).** Session 3 ran 13 runtime arms. Session 6 drove TPL-005 in a real browser with real keys and attempt 1 restored on the hit gate. Each environment had a late arm beside it that reads late (§8). **🔒 Whether D47 closes as disproved is Richard's call.** **Source:** [P78 D47](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-005 the pixel game, while fixing D46, 2026-09-11 · **Side:** product (runtime ordering, `Condition`)
 
 The enemy reaches you, the board says `calm`, and the heart comes off one move later. The graph looks right, it renders perfectly, and the author cannot tell this shape from one that works.
 
@@ -133,3 +133,51 @@ exactly a one-turn-late shape, and whether the viewer bundle driven on 2026-09-1
 - **AC6, owed either way:** `tpl005Components.ts:473-477` states a mechanism (*"can be evaluated before that value has
   arrived"*) that this spec does not exhibit. §5 forbids stating one, so the sentence is left until the browser arm
   decides, then corrected.
+
+### Session 6 (2026-09-14, HEAD `e7a88a49f`) — AC5's browser arm: **D47 does not reproduce with real keys either**
+
+**The arms.** Four copies of `templates/pixel-game`, each starting in room 2, "Company" (`plLevel.startValue: 2`, one enemy at
+(4,7)). Each was deployed through `deploy-from-disk`, bundled fresh at `e7a88a49f`, and every arm exited 0. The deploy drops exactly the 4
+`KeyboardShortcut.pressed → Game/Move.go` wires (GAM-024 §2's module-type drop), and they were put back in each bundle
+with every restored wire printed. Each arm was driven in headless Chrome with **real key events**: `Input.dispatchKeyEvent`
+on the same CDP connection as `Emulation.setFocusEmulationEnabled`, with 350 ms between a key and its reading. The keys
+were `DDDDDDUDUDUDUDUD`, the same for every arm. Runners, projects, deploys and logs are in session `53867993…`'s
+scratchpad, under `gam004/`.
+
+| arm | hit gate | deploy / drive |
+|---|---|---|
+| ship | shipped: `plStepEnemies.out-hurt → condition`, `.success → eval` | `DEPLOY_SHIP_EXIT=0` / `DRIVE_SHIP_EXIT=0` |
+| **att1** | **attempt 1:** `plStepEnemies` answers only *it reached you* (`out-hits`), a second Function `plAttacks` answers *you charged it* (`out-attacks`), both on the same `moved` signals, into Expression `hits + attacks > 0` → `condition`; `eval` from `plStepEnemies.success` | `DEPLOY_ATT1_EXIT=0` / `DRIVE_ATT1_EXIT=0` |
+| late (0 ms) | att1, with `plAttacks` writing its output after `await setTimeout(0)` (checked in the bundle) | `DEPLOY_LATE_EXIT=0` / `DRIVE_LATE_EXIT=0` |
+| **late (80 ms)** | att1, with `plAttacks` writing its output after `await setTimeout(80)`: the **known-late instrument** | `DEPLOY_LATE80_EXIT=0` / `DRIVE_LATE80_EXIT=0` |
+
+**Hearts after each move** (moves 0–7 read 3 in every arm, and moves 12–16 match move 11):
+
+| move | you, enemy after the move | what the script says happened | ship | att1 | late 0 ms | late 80 ms |
+|---|---|---|---|---|---|---|
+| 7 | (1,6), (2,7) | nothing | 3 | 3 | 3 | 3 |
+| 8 | (1,7), (2,7) | **it reached you** (the `hits` path) | **2** | **2** | **2** | **2** |
+| 9 | (1,6), (1,7) | nothing | 2 | 2 | 2 | 2 |
+| 10 | (1,7), gone | **you charged it** (the `attacks` path, the Function that does **not** fire `eval`) | **1** | **1** | **1** | 2 |
+| 11 | (1,6), none | nothing | 1 | 1 | 1 | **1** |
+
+No console or network errors in any arm. Positions and enemy tiles are identical across all four arms on every move.
+
+**What this says.**
+- **Attempt 1 is on time in a real browser**, on both of its paths, including the one whose value comes from a Function
+  other than the one that fires `eval`. The instrument is alive: the 80 ms arm takes its heart **one move late**, exactly
+  D47's symptom, so a late gate would have shown.
+- ⚠️ **The 0 ms arm is on time too, and that separates the browser from session 3's loop.** The runtime spec's `settle` read
+  a value written after an `await` as N−1. In the page, the runtime updates once per animation frame, so a value that lands
+  one macrotask after the signal is still in before the gate's callback reads. A value is late in the browser only if it
+  arrives after the next frame's update.
+- **D47 is measured and not reproduced, in both environments.** What the 2026-09-11 drive saw is still unexplained. The
+  candidates left are the scripts (the three-node predecessor of `WORLD_TURN_SCRIPT`, which is not in git, may have read a
+  stale list), or a viewer bundle from that day, which is gitignored. Neither is recoverable. Attempt 2 (the Variable
+  round-trip) was not rebuilt in the browser; session 3's runtime arm is its only reading.
+- **AC2 cannot start**, and 🔒 **R5 is not askable**: there is no failing arm to isolate. The end condition (README §8)
+  allows *measured and disproved*. Closing it that way is Richard's call.
+- **AC6:** the collapsed `WORLD_TURN_SCRIPT` **may** be split again, as far as ordering goes: the split shape is on time in
+  both environments. Keeping one node is simpler, so it stays. The header's mechanism sentence (*"can be evaluated before
+  that value has arrived"*) is not what was measured, so both comments in `tpl005Components.ts` now say what was measured
+  instead. The template's generated bytes do not change: these are TypeScript comments.

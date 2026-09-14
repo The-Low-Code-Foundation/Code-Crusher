@@ -1983,6 +1983,8 @@ what a person needs told, and today they are told nothing.
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** the source points at the extractor, not the kit. The extractor's global `Noodl` is a catch-all Proxy (`kitExtract` `entry.js:88-93`), so confetti's guard skips installing `defineNode` and registers the Proxy, which throws this message. Thirteen modules assign `Noodl.defineNode` unguarded, four sort before confetti, which is why 32 modules "fix" it. A real page defines `Noodl` with `defineModule` only, so confetti alone should register there. Arm D's three failures are a different, DOM-shaped fault. **Predicted, not run:** GAM-018 AC1 tests it. Owner **GAM-018**.
 
+**2026-09-14 (P88 sessions 3 and 6): measured, 🔒 R2 askable.** AC1: scan order, proven by renaming a kit to scan after confetti. All 10 kits guarded like confetti register 0 nodes alone in the extractor. AC2: confetti **alone** registers in a deployed page (and draws a canvas when Celebrate fires) and in the SSR kit loader, with no failures. It does the same beside an unguarded kit. **The kit is fine; the extractor's `Noodl` is the bug.** The editor-preview picker arm is read from source, not driven. See GAM-018 §8.
+
 ## D42 — ✅ FIXED (2026-09-11): the render harness emitted ZERO shipped design tokens, and looked like a product defect
 
 **Found 2026-09-11** while photographing TPL-005, and it is the harness lying about the product —
@@ -2277,6 +2279,7 @@ does. Not done — it stopped blocking anything the moment the shipped CLI was m
 
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** the remaining 4 and D52's 3 are one function and one instrument; the probe reads its node-type list once (`deploy-from-disk.entry.ts:246-251`). Owner **GAM-024**.
+**2026-09-14 (P88 sessions 3 and 6): measured and not reproduced, 🔒 closing it is Richard's call.** GAM-004 rebuilt both attempts in the runtime (13 arms). It then restored attempt 1 on TPL-005's hit gate in a real browser, with real keys: the heart comes off on the move it happens, on both paths, beside an arm deliberately 80 ms late that takes it a move late. The split scripts of 09-11 are not in git, so what that drive saw is unrecovered. TPL-005's comments no longer state a mechanism. See GAM-004 §8.
 
 ## D48 — 🔴 The shipped `nodegx deploy` never evaluates connection health, so a broken wire ships silently
 
@@ -2373,6 +2376,8 @@ right, the validator is silent, and the screen does not change.
 it**, with the reason in the parameter, so the template is correct while the product is not.
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** **the mechanism is now read.** `styles.resolveColor` returns `var(--token)` unchanged (`styles.ts:122-127`), `setRGBA` parses it as hex into NaN (`states.ts:89-101`), and the tween ends on `#0aNaNNaNNaN`, which the browser rejects (`states.ts:190-194`). ⚠️ **"or a number" is not supported by source:** a number tweens (`states.ts:161-164`, `:197-199`) and a hex colour parses; this row measured token colours only. P18 EXP-011 §49.3/§49.6 had measured the mechanism headlessly, and `animation-pair.test.ts:600` pins the broken output. Owner **GAM-006**.
+
+**2026-09-14 (P88 session 6): 🟢 fixed by GAM-006** (`82a7d3775` + `062dfd9c0`). One colour reader (`noodl-viewer-react/src/color-reader.ts`) is shared by States, visual states and Color Blend, and the `nodegx-export` `statesLib` matches it. Driven in a real browser on TPL-003's `Site/FilterPill`, TPL-006's `Story/Passage` and TPL-005's banner and board, beside the old runtime and a reader-bypassed one (GAM-006 §8, session 5). **TPL-006's `useTransitions: false` pin and its gate are removed** (`1cf0a81d2`). **Rocket School's 22 pins stay** with P87: no drive reached its `chStates` (For Each item wires are dropped by `deploy-from-disk`, D52). The row closes when P87 or TPL-008 removes its pins or says why they stay.
 
 ## D50 — 🔴 `uncollapsible-multi-column` warns about a wrapped row of pills, and the fix it suggests is wrong
 

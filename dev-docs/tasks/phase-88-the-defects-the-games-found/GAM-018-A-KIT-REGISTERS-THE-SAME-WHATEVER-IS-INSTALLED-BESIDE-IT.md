@@ -1,6 +1,6 @@
 # GAM-018 — A kit registers the same whatever is installed beside it, and a kit that cannot register says so
 
-**Status: 🟡 AC1 measured (2026-09-14, session 3): prediction confirmed; scan order excluded by a renamed-kit arm; all 10 guarded kits fail alone (§8). Next is AC2, the product arms, then R2.** **Source:** [P78 D41](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by [TPL-005](../phase-78-the-templates/TPL-005-THE-PIXEL-GAME.md) (the pixel game), 2026-09-11 · **Side:** product (MCP kit extractor / library modules / kit failure surfaces)
+**Status: 🟡 AC1 measured (session 3); AC2 measured on 3 of 4 arms (session 6): confetti registers alone in a deployed page and in the SSR kit loader, and draws; only the extractor fails it. The editor-preview picker arm is not driven (§8). 🔒 R2 is askable now.** **Source:** [P78 D41](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by [TPL-005](../phase-78-the-templates/TPL-005-THE-PIXEL-GAME.md) (the pixel game), 2026-09-11 · **Side:** product (MCP kit extractor / library modules / kit failure surfaces)
 
 TPL-005 wanted `nodegx-confetti` for the end of a run and could not have it. The kit extractor fails confetti on its
 own, and registers it cleanly when all 32 modules sit beside it. A template is a two-module project, which is the arm
@@ -150,3 +150,52 @@ alone**, each with `registration failed: Cannot convert object to primitive valu
   alone grades nothing, because `extractProjectOverlay` spawns the bundle.
 - TPL-005's comment at `tpl005Components.ts:1462-1466` (*"FAILS TO REGISTER in a project holding only it and the keyboard"*)
   matches arm C and stays accurate.
+
+### Session 6 (2026-09-14, HEAD `e7a88a49f`) — AC2: the product registers confetti alone; only the extractor does not
+
+**The project.** A hand-written V2 project, `GAM-018 confetti alone`: `App` (Group + Router) and `Pages/Home` holding a
+Button, a `nodegx.confetti` node, and two Counters driving two Texts. `Button.onClick → Confetti.Celebrate` and
+`Confetti.Fired → Counter → Text` are what is graded. `Button.onClick → Counter → Text` is the known-firing signal beside
+it. `noodl_modules/` holds only `nodegx-confetti`, copied from `library/modules/confetti`. The two-kit copy adds
+`custom-html-module`, which is unguarded and scans first. Runners, projects, deploys and logs are in session
+`53867993…`'s scratchpad, under `gam018/`.
+
+**Environments (§7), each named:** the MCP extractor (`src` → `dist/kit-extract.cjs`, dated 09-12); the real deploy path,
+`deploy-from-disk` bundled fresh from the entry at `e7a88a49f` and run from `packages/noodl-editor`, served and driven in
+headless Chrome through `drive-deployed.js`; the SSR server's own `installRuntimeGlobals` and `loadKitModules` from
+`src/external/ssr` (byte-identical to `static/ssr`), run in Node on the deploy's `index.html`.
+
+| arm | environment | registered | Celebrate → Fired / canvases | known-firing clicks | errors |
+|---|---|---|---|---|---|
+| confetti alone | extractor | **0** nodes, `registration failed: Cannot convert object to primitive value` | — | — | `EXTRACT_CONFETTI_EXIT=0` |
+| confetti alone | deployed page, as built | ✅ `window.__noodl_modules` = `nodegx-confetti: [nodegx.confetti]`; `typeof Noodl.defineNode` = `function`; `window.confetti` = `function` | 0 / 0 (**the wire was not deployed**, see below) | 0 → 1 | none, `DRIVE_ASIS_EXIT=0` |
+| confetti alone | deployed page, the 2 dropped wires restored in the bundle | ✅ the same | **0 → 1 / 0 → 1** | 0 → 1 | none, `DRIVE_WIRED_EXIT=0` |
+| confetti + `custom-html-module` | deployed page, wires restored | ✅ both: `module.inlineHtml`, `nodegx.confetti` | **0 → 1 / 0 → 1** | 0 → 1 | none, `DRIVE_HTML_EXIT=0` |
+| confetti alone | SSR kit loader | ✅ `loaded: [nodegx-confetti]`, `failures: []`; `defineNode` `undefined` → `function`; `nodegx.confetti` in `__noodl_modules`; `window` removed afterwards | not rendered | — | `SSR_deploy-confetti_EXIT=0` |
+| confetti + `custom-html-module` | SSR kit loader | ✅ both, no failures (`custom-html-module` registers under `reactNodes`) | not rendered | — | `SSR_deploy-confetti-html_EXIT=0` |
+| confetti alone | **editor preview picker** | **not driven** | — | — | — |
+
+**Read, not driven: the editor preview.** The picker is fed by the preview's own runtime: `ViewerConnection.ts:334` answers
+the viewer's `nodelibrary` request, which `EditorConnection.sendNodeLibrary` (`noodl-runtime/src/editorconnection.ts:898`)
+sends from the registered library. The preview registers kits through the same bootstrap shape as the deployed page
+(`static/viewer/index.html:92-104`: `defineModule` only, no `defineNode`, `deployed: false`), which the deployed arm
+measured. This repo has no script that opens a project in a launched editor. The arm is a prediction, not a reading.
+
+**What this means.**
+- **The product works where the extractor fails**, in both environments measured, alone and beside an unguarded kit.
+  Together with AC1's E1, the defect is the extractor's catch-all `Noodl` answering a feature test (§5 option 1 or 2),
+  not confetti's guard (option 3). Browser co-tenancy with an unguarded kit that installs its own `defineNode` changed
+  nothing here.
+- **R2 is askable now**, with AC1 and three of AC2's four arms beside it. The editor arm is the gap, and it is a
+  prediction from shared source.
+- 🔴 **`deploy-from-disk` dropped both confetti wires** (`dropped by component: /Pages/Home 5 → 3`), and the as-built page
+  shows it: a working kit whose button does nothing. That is the module-type drop [GAM-024](GAM-024-THE-DEPLOY-CENSUS-REPORTS-ONLY-REAL-DROPS.md)
+  §2 already owns (`bootstrapNodeLibrary` loads built-ins only). Not refiled. ⚠️ GAM-024 §5 plans to fix it by reusing
+  `kitExtract`, so **GAM-024's fix inherits this task's defect**: on the extractor as it stands, confetti's two wires would
+  still drop. GAM-018's fix comes first.
+- ⚠️ **Trap for the next hand-written V2 project:** without `rootNodeId` in `nodegx.project.json`, `deployToFolder`
+  rejects with `{ result: 'failure', message: 'Failed to export project.' }`, which `deploy-from-disk` prints as
+  `[object Object]`. Three arms separated it: the same project without the kit failed the same way, and the fresh bundle
+  deployed `templates/pixel-game` (exit 0, 4 dropped, matching session 5).
+- AC7's pixel-game-sized question waits on the fix. TPL-005 could take confetti in a browser today, but the door and an
+  agent would still not see the node.

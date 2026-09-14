@@ -8,7 +8,7 @@ faults 1–2 are committed (`bb27086de`). **Session 3 (`82a7d3775`, `42cd090fe`)
 AC1 is confirmed (10 guarded kits fail alone), and GAM-006 (b) is built with AC8. **Sessions 4–5 (`062dfd9c0`):** GAM-006's
 colour reader is built and driven in a real browser on three templates, beside the old runtime and a reader-bypassed
 one. TPL-006's workaround is removed (`1cf0a81d2`), and Rocket School's stays with P87, undriven. `test:main` found
-GAM-019 had turned CN-002 red, fixed in `8af0c943d`. **Prefix: `GAM`.**
+GAM-019 had turned CN-002 red, fixed in `8af0c943d`. **Session 6:** GAM-018 AC2 is measured. Confetti registers alone in a deployed page, where it also draws, and in the SSR kit loader, so 🔒 R2 is askable. GAM-004's browser arm, run with real keys beside a known-late arm, does not reproduce D47 either. TPL-003's `test:main` red is fixed by counting the content. **Prefix: `GAM`.**
 
 > "Let's make a new phase to write task files for all the defects please" — Richard, 2026-09-14
 
@@ -124,7 +124,7 @@ Each task file states its ruling in full, with the trade-offs.
 
 | # | asked only if | task |
 |---|---|---|
-| R2 | AC1 confirms the extractor, not the kit: then how honest must the extractor's environment be? | [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) |
+| R2 | ✅ **measured, now askable (session 6):** AC1 and AC2 both point at the extractor, not the kit. How honest must the extractor's environment be? §5 option 1 is a plain `Noodl` shaped like the page; option 2 keeps the Proxy but answers `undefined` for the SDK names | [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) |
 | R5 | isolation names the mechanism: does the runtime owe a gate the other branch's latest value? | [GAM-004](GAM-004-A-GATE-READS-THE-VALUE-FROM-THE-SAME-TURN-AS-ITS-SIGNAL.md) |
 | R13 | ✅ **measured, now askable (session 2):** the tracker is the cause, as three faults (a no-op Focus is recorded, a recorded node is never refocused, Blur is inverted). Should it exist at all? | [GAM-012](GAM-012-A-FIELD-FOCUSED-AS-ITS-ROW-APPEARS-HAS-THE-CURSOR.md) §8 |
 | R14 | AC1 finds the door wrote no visual root: refuse, warn, or treat an unknown root type as visual? | [GAM-014](GAM-014-A-KIT-NODE-DRAWS-WHEN-IT-IS-THE-WHOLE-COMPONENT.md) |
@@ -148,7 +148,7 @@ Each task file states its ruling in full, with the trade-offs.
 | [GAM-009](GAM-009-WHAT-SOMEONE-TYPED-IS-STILL-THERE-WHEN-THE-FIELD-COMES-BACK.md) | What someone typed is still there when the field comes back | D61 | R10 |
 | [GAM-008](GAM-008-A-BAR-THAT-JUMPS-THEN-GLIDES-REFILLS.md) | An animated value asked to jump and then glide does both | D67 | R9, after AC1 |
 | [GAM-002](GAM-002-STRING-AND-NUMBER-WORK-INSIDE-AN-EXPRESSION.md) | `String(n)` and `Number(s)` work inside an Expression | D54 | R4 |
-| [GAM-004](GAM-004-A-GATE-READS-THE-VALUE-FROM-THE-SAME-TURN-AS-ITS-SIGNAL.md) 🟡 | A gate reads the value from the same turn as its signal | D47 | s3: AC1 measured, **does not reproduce in the runtime** (13 arms incl. TPL-005's real `Game/Move` and the pre-FB-025 drain, beside a late arm that reads late). AC5's browser arm next; AC2/R5 wait on a RED |
+| [GAM-004](GAM-004-A-GATE-READS-THE-VALUE-FROM-THE-SAME-TURN-AS-ITS-SIGNAL.md) 🟡 | A gate reads the value from the same turn as its signal | D47 | s3: AC1 measured, **does not reproduce in the runtime** (13 arms incl. TPL-005's real `Game/Move` and the pre-FB-025 drain, beside a late arm that reads late). s6: **does not reproduce in a browser either** (TPL-005 with attempt 1 restored, real keys, beside an 80 ms arm that reads a move late). 🔒 Close as disproved? Richard |
 
 ### Track B — the graph is missing a basic
 
@@ -163,7 +163,7 @@ Each task file states its ruling in full, with the trade-offs.
 
 | id | task | row | depends on |
 |---|---|---|---|
-| [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) 🟡 | A kit registers the same whatever is installed beside it, and a kit that cannot register says so | D41 | s3: AC1 measured, **scan order** proven by a renamed-kit arm; **all 10 guarded kits fail alone** in the extractor. AC2 (browser, preview, SSR) next, then R2 |
+| [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) 🟡 | A kit registers the same whatever is installed beside it, and a kit that cannot register says so | D41 | s3: AC1 measured, **scan order** proven by a renamed-kit arm; **all 10 guarded kits fail alone** in the extractor. s6: AC2 measured. Confetti alone registers in a deployed page (where it draws) and in the SSR kit loader; the editor picker is read from source, not driven. **The extractor is the bug. 🔒 R2 is askable** |
 | [GAM-014](GAM-014-A-KIT-NODE-DRAWS-WHEN-IT-IS-THE-WHOLE-COMPONENT.md) | A kit React node draws when it is the whole of a component | D53 | GAM-018 AC1 if its cause is an empty overlay |
 | [GAM-015](GAM-015-A-WIRED-SIZE-REACHES-A-KIT-NODE-AS-A-SIZE.md) | A kit node reads a wired size as the size it was sent | D65 | R15; a separate commit from GAM-003 (same setter) |
 | [GAM-017](GAM-017-A-KIT-NODE-TAKES-A-SIGNAL-AND-A-SIZE-THE-WAY-A-BUILT-IN-DOES.md) | A kit React node takes a signal and a size the way a built-in node does | D70 | R17 |

@@ -467,15 +467,17 @@ Outputs.left = coins.length;`;
  * what stops it jittering on a diagonal. It will not walk through a wall, and it
  * will not step onto a tile another enemy has already claimed this turn.
  *
- * 🔴 **It answers the WHOLE turn, and that is an ordering decision, not tidiness.**
- * This was three nodes — step, store, then a separate seam that read the stored
- * list back to see who reached you — and driving found the damage landing **one
- * move late**, twice, from two different intermediates. The cause is the same
- * both times: a gate whose `eval` comes from one node and whose `condition`
- * travels through another (a variable round-trip, or a reactive `Expression`)
- * can be evaluated before that value has arrived. With one node there is nothing
- * in between: the gate's condition is this script's own output and its `eval` is
- * this script's own `success`.
+ * **It answers the WHOLE turn in one node.** This was three nodes — step, store,
+ * then a separate seam that read the stored list back to see who reached you —
+ * and driving on 2026-09-11 found the damage landing **one move late**, twice,
+ * from two different intermediates. ⚠️ **The ordering cause this comment used to
+ * state was never measured, and re-measuring did not find it.** P88 GAM-004
+ * rebuilt both split shapes in the runtime (13 arms) and restored the Expression
+ * one on this page in a real browser with real keys (2026-09-14): both land the
+ * heart on time, beside a deliberately late arm that lands it a move late. Why
+ * the original drive read late is unrecovered (the split scripts are not in git).
+ * One node stays because it is simpler: the gate's condition is this script's own
+ * output and its `eval` is this script's own `success`.
  *
  * 🔴 **It may never END its turn on your tile** — the defect Richard found by
  * playing. An enemy that landed on you had `dx = dy = 0` the next turn, so it had
@@ -1477,10 +1479,10 @@ const PLAY: Tpl005Component = {
     wire('plVarY', 'value', 'plStepEnemies', 'in-py'),
     wire('plStepEnemies', 'out-enemies', 'plSetEnemies', 'value'),
     wire('plStepEnemies', 'success', 'plSetEnemies', 'do'),
-    // 🔴 ONE node answers the whole turn, so the gate's condition and its eval
-    // come from the SAME script run with nothing in between. Driving found the
-    // damage landing a move late twice — once through a reactive `Expression`,
-    // once through a variable round-trip — and both intermediates are gone.
+    // ONE node answers the whole turn, so the gate's condition and its eval come
+    // from the SAME script run with nothing in between. A 2026-09-11 drive found
+    // the damage a move late through two intermediates; P88 GAM-004 could not
+    // reproduce either, in the runtime or in a browser (see the script's header).
     wire('plStepEnemies', 'out-hurt', 'plHitGate', 'condition'),
     wire('plStepEnemies', 'success', 'plHitGate', 'eval'),
     wire('plHitGate', 'ontrue', 'plHearts', 'decrease'),
