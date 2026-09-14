@@ -6,7 +6,7 @@ you pick, including its §8: session 3 changed three of them.
 **The board (2026-09-14, session 3), re-derived from the task files:** **1 of 24 built.**
 - ✅ **GAM-019**, committed `4bb438165` + `15f7bf720`.
 - 🟡 **GAM-012** faults 1–2 committed `bb27086de`. Fault 3, AC6 and the deploy bundle are owed (GAM-012 §8).
-- 🟡 **GAM-006**: AC1 RED recorded; **(b) built, uncommitted**, graded by reverted arms in the runtime *and* the export (AC8).
+- 🟡 **GAM-006**: AC1 RED recorded; **(b) built, `82a7d3775`**, graded by reverted arms in the runtime *and* the export (AC8).
   **(a)/AC3–AC7 not started**, plus a new owed defect (below).
 - 🟡 **GAM-004**: AC1 measured. **D47 does not reproduce in the runtime** (13 arms). Not built, nothing to build yet.
 - 🟡 **GAM-018**: AC1 measured, prediction confirmed and widened. Not built. R2 waits on AC2.
@@ -14,27 +14,13 @@ you pick, including its §8: session 3 changed three of them.
   GAM-009 (R10), GAM-010 (R11, after GAM-012).
 - ⬜ Everything else is as scoped.
 
-## First: commit or not (Richard)
+## State of the tree
 
-Session 3 committed nothing. Ask Richard, then commit with **pathspecs only**. The tree also holds a peer session's P87/TPL-007
-work (`templates/rocket-school/`, `library/modules/game-kit/`, `packages/noodl-mcp/tests/tpl007*`, `scripts/devtools/drive-rkt*`,
-P78's register and prompt, `package.json`, `docs-site`, `form-fields`), and none of it is P88's.
-
-```sh
-git add packages/noodl-runtime/test/gam-004-gate-reads-the-same-turn.test.ts \
-        packages/noodl-viewer-react/tests/gam-006-states-token-colour.test.ts
-git commit -m "…" -- \
-  packages/noodl-runtime/test/gam-004-gate-reads-the-same-turn.test.ts \
-  packages/noodl-viewer-react/tests/gam-006-states-token-colour.test.ts \
-  packages/noodl-viewer-react/src/nodes/std-library/states.ts \
-  packages/nodegx-export/src/emit/statesLib.ts \
-  packages/nodegx-export/tests/animation-pair.test.ts \
-  packages/nodegx-export/tests/hls001-corpus-identity.test.ts \
-  packages/nodegx-export/tests/goldens/hls001-corpus.sha256.json \
-  dev-docs/tasks/phase-88-the-defects-the-games-found/
-```
-
-Two commits read better than one: GAM-006 (b) as `fix`, and the GAM-004/GAM-018 measurements as `docs`/`test`.
+Session 3 is **committed** (Richard: "Commit away"): `82a7d3775` (GAM-006 (b), the export's `statesLib`, the regenerated
+HLS-001 golden, the gam-006 spec) and `42cd090fe` (the gam-004 spec, GAM-004/GAM-018 records, README, this prompt). The tree
+still holds a peer session's uncommitted P87/TPL-007 work (`templates/rocket-school/`, `library/modules/game-kit/`,
+`packages/noodl-mcp/tests/tpl007*`, `scripts/devtools/drive-rkt*`, P78's register and prompt, `package.json`, `docs-site`,
+`form-fields`). None of it is P88's, so commit only by pathspec.
 
 ## Do, in order
 

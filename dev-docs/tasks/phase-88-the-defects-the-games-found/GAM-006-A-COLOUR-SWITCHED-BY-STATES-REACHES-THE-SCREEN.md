@@ -1,6 +1,6 @@
 # GAM-006 — A colour switched by a States node reaches the screen, with transitions on
 
-**Status: 🟡 AC1 RED recorded; (b) built with AC2's runtime half and AC8 graded by reverted arms (2026-09-14, session 3, uncommitted). A delayed colour publishing an RGBA array was found and is owed. (a)/AC3–AC7 not started (§8).** **Source:** [P78 D49](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) (replaces D43) · found by TPL-006 story engine, 2026-09-12 (TPL-005 pixel game, 2026-09-11, first) · **Side:** product (runtime, `States`)
+**Status: 🟡 AC1 RED recorded; (b) built with AC2's runtime half and AC8 graded by reverted arms (2026-09-14, session 3, `82a7d3775`). A delayed colour publishing an RGBA array was found and is owed. (a)/AC3–AC7 not started (§8).** **Source:** [P78 D49](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) (replaces D43) · found by TPL-006 story engine, 2026-09-12 (TPL-005 pixel game, 2026-09-11, first) · **Side:** product (runtime, `States`)
 
 A States node flips its text and leaves its colour behind: the eyebrow reads "An ending" and the ink stays the
 reading colour, at every sample for 1.5 s. This happens with transitions on, which is the default.
@@ -119,7 +119,7 @@ session `04c88900…` scratchpad, `gam006/ac1-run1.log` (`GAM006_AC1_EXIT=1`, 3 
 - The three red rows are `tint`, `hex` and `named`. `hex` and `named` fail on the string's form, not its colour, and (b)
   turns them green along with `tint`.
 
-### Session 3, continued — (b) built, AC2's runtime half graded, AC8 kept in step (uncommitted)
+### Session 3, continued — (b) built, AC2's runtime half graded, AC8 kept in step (`82a7d3775`)
 
 **The change.** `states.ts` `onRunning`, the end-of-transition branch: a colour ends on
 `stateParameters['value-<state>-<value>']`, the value its state names, instead of `rgbaToHex(targetValues)`. When the

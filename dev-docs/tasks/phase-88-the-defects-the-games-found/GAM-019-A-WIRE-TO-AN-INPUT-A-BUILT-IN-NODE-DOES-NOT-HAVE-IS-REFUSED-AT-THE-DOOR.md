@@ -243,7 +243,7 @@ MCP `toolDisclosure` (byte budgets), run alone because the combined run silently
   seen it.
 - **The bundled MCP server (`packages/noodl-mcp/dist/noodl-mcp.cjs`) is not rebuilt.** Agents on an installed or bundled server
   still get the old skip until it is rebuilt.
-- **Follow-up, ruled and built 2026-09-14 (session 2), uncommitted:** the refusal's first hint was "did you mean `set`?", which offers a signal for a value wire.
+- **Follow-up, ruled and built 2026-09-14 (session 2), `15f7bf720`:** the refusal's first hint was "did you mean `set`?", which offers a signal for a value wire.
   > 🔒 **Match the wire's kind.** The hint never suggests a signal input for a value wire, nor a value input for a signal
   > wire. The short-name threshold is **not** tightened. `startValue` stays in `alternatives`. — Richard, choosing it over
   > tightening the threshold, both, or leaving it
