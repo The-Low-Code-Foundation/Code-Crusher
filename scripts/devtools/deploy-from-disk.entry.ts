@@ -470,7 +470,10 @@ async function main() {
   // under `components`. Reading only one shape is how this census first
   // reported "0 connections deployed" on a deploy that carried 360.
   const bundleDir = path.join(outDir, 'noodl_bundles');
-  for (const f of fs.readdirSync(bundleDir).filter((f) => f.endsWith('.json'))) {
+  // P88 GAM-009: a project whose every component lands in the index writes no bundle folder at all. A
+  // one-component project did, and this line threw ENOENT after the deploy had already written every file.
+  const bundleFiles = fs.existsSync(bundleDir) ? fs.readdirSync(bundleDir) : [];
+  for (const f of bundleFiles.filter((f) => f.endsWith('.json'))) {
     const b = readJson<any>(path.join(bundleDir, f));
     walk(Array.isArray(b) ? b : b.components);
   }

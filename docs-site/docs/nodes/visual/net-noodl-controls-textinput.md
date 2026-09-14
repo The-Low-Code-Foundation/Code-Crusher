@@ -107,6 +107,7 @@ Any free-text entry. Use `type` instead of separate nodes for email/number/passw
 | `placeHolderOpacity` | Number | `0.5` | How faded the placeholder text is, from 0 to 1 |
 | `placeholder` | String | `` | Greyed-out hint shown while the field is empty |
 | `position` | Enum (`relative`, `absolute`, `sticky`, `fixed`) | `relative` | How the element is placed: In Layout follows its siblings, Absolute ignores them, Sticky pins to the parent edge on overflow, Fixed stays put and takes no space |
+| `runOnChange-startValue` | Boolean | `true` | Whether a new value on Value re-runs this node. On by default; untick to make this input passive so only the control signal runs it |
 | `sizeMode` | Enum (`explicit`, `contentWidth`, `contentHeight`, `contentSize`) | `contentSize` | Whether Width and Height are used as given, or the element sizes itself to fit its contents |
 | `startValue` | * | — | The value to put in the field. Applied as it arrives, unless you untick it under Run On Value Change, in which case it waits for a Set pulse |
 | `styleCss` | String | `/* background-color: red; */` | Raw CSS declarations applied to this element, overriding the styling ports above |
@@ -169,12 +170,12 @@ Any free-text entry. Use `type` instead of separate nodes for email/number/passw
 | `pointerDown` | Signal | — | Fires as a mouse button or finger goes down on this control, before any click has completed |
 | `pointerUp` | Signal | — | Fires when the mouse button or finger is lifted, and also when a touch is cancelled by the system |
 | `textChanged` | Signal | — | Fires whenever the Value output changes, so a graph can sequence off the new value rather than poll it |
-| `unchanged` | Signal | — | Fires when a Set or Clear left the field as it was — most often a Set while the field has focus, which is deliberately absorbed so it cannot overwrite what is being typed |
+| `unchanged` | Signal | — | Fires when a Set or Clear left the field as it was — most often a Set while the field has focus, which is deliberately absorbed so it cannot overwrite what is being typed — or when a Focus arrived while the field was not on the page |
 | `willUnmount` | Signal | — | Fires just before this element is removed from the page, while it still exists |
 
 ## Dynamic ports
 
-_This node's port list changes at runtime (declared-port-groups, runtime-discovered); the tables above may be incomplete for a given instance._
+_This node's port list changes at runtime (declared-port-groups, runtime-narrowed); the tables above may be incomplete for a given instance._
 
 The port list above is complete — this node mints no ports. It republishes its own two value ports (`startValue`, `onTextChanged`) per instance with a narrowed type: `number` when the `type` parameter is `number`, `string` for every other Type. They are declared `*` statically because nothing outside a connected editor can narrow them.
 

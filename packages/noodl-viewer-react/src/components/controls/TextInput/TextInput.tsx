@@ -57,6 +57,12 @@ type State = {
   value: string;
 };
 
+/** GAM-009 — the two things the field asks of its node. Optional: a stand-in node may have neither. */
+interface TextInputNodeSeam {
+  _typed?: (text: string) => void;
+  _announcedValueIs?: (value: string | number | null) => boolean;
+}
+
 export class TextInput extends React.Component<TextInputProps, State> {
   ref: React.MutableRefObject<InputRef>;
 
@@ -88,6 +94,14 @@ export class TextInput extends React.Component<TextInputProps, State> {
   componentDidMount() {
     //plumbing for the focused signals
     this.ref.current.noodlNode = this.props.noodlNode;
+
+    // GAM-009 🔒 R10 — a remount fires `Value Changed` only on a real change. The constructor has
+    // already put `startValue` in the state, so all a mount adds is the announcement, and a field
+    // coming back to the value it last announced has nothing to announce. A value the node wrote
+    // while the field was away was never announced, so it still is, here, as before.
+    const node = this.props.noodlNode as unknown as TextInputNodeSeam | undefined;
+    const text = this.props.startValue === null || this.props.startValue === undefined ? '' : String(this.props.startValue);
+    if (node?._announcedValueIs?.(outwardValueForFieldType(this.props.type, text))) return;
 
     this.setText(this.props.startValue);
   }
@@ -260,6 +274,10 @@ export class TextInput extends React.Component<TextInputProps, State> {
 
   onChange(event) {
     const value = event.target.value;
+    // GAM-009 🔒 R10 (a) — what a person typed is what the next mount starts from. Only typing
+    // writes it from here, and it writes the raw text: `Set` and `Clear` already write the start
+    // value through the node, and a converted value would bring a Number field's "1." back as "1".
+    (this.props.noodlNode as unknown as TextInputNodeSeam | undefined)?._typed?.(value);
     this.setText(value);
   }
 

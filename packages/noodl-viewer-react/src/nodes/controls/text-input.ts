@@ -293,7 +293,9 @@ const TextInputNode = {
       description:
         'What the field currently contains, updated as the user types. A number when Type is Number, otherwise text',
       index: 1,
-      onChange() {
+      onChange(value) {
+        // GAM-009 — what was last announced, so a remount can tell a real change from a return.
+        this._internal.announced = { value };
         this.sendSignalOnOutput('textChanged');
       }
     },
@@ -353,6 +355,24 @@ const TextInputNode = {
     /** GAM-012 — being listed by the tracker is not holding focus: a remounted field is a new element. */
     _hasFocus() {
       return !!this.innerReactComponentRef && this.innerReactComponentRef.hasFocus();
+    },
+    /**
+     * GAM-009 🔒 R10 (a) — typing writes the start value, so a field that unmounts and mounts again
+     * starts from what the person typed. Called by the component on a real keystroke only.
+     *
+     * ⚠️ `_internal.text` is deliberately left alone. It is the author's last Value, and R10 keeps
+     * `Set` meaning that: typed over, an unfocused `Set` still puts the author's Value back.
+     */
+    _typed(text) {
+      this.props.startValue = text;
+    },
+    /**
+     * GAM-009 🔒 R10 — did the Value output last announce exactly this? The component's mount asks
+     * before it announces. A value `setText` or `Clear` wrote while unmounted flags the output but
+     * sends no `Value Changed`, so it is not announced and the mount still sends it.
+     */
+    _announcedValueIs(value) {
+      return this._internal.announced !== undefined && this._internal.announced.value === value;
     },
     /** @returns whether anything actually changed — ERG-001 §4 reports `Unchanged` when not. */
     clear() {

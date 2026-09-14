@@ -52558,7 +52558,7 @@
             "name": "signal"
           },
           "isSignal": true,
-          "description": "Fires when a Set or Clear left the field as it was — most often a Set while the field has focus, which is deliberately absorbed so it cannot overwrite what is being typed"
+          "description": "Fires when a Set or Clear left the field as it was — most often a Set while the field has focus, which is deliberately absorbed so it cannot overwrite what is being typed — or when a Focus arrived while the field was not on the page"
         },
         {
           "name": "willUnmount",
