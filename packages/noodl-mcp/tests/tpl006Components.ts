@@ -797,15 +797,10 @@ const PASSAGE_STATES = {
   'value-stuck-rule': MEANING.broken,
   'value-stuck-eyebrow': 'No way on from here',
   'value-stuck-tone': MEANING.broken,
-  // 🔴 FALSE, and it is the difference between this panel working and not.
-  // Measured in a browser with the control beside it (TPL-006 §6): with
-  // `useTransitions: true` — which is the port's DEFAULT — a States node publishes
-  // its string and boolean values on a state change and **never publishes a colour
-  // or a number at all**. Sampled at 0, 60, 150, 320, 700 and 1500ms after the
-  // change: the eyebrow string flipped at 60ms and both colours read their
-  // previous value at every sample. With it false, all three change together.
-  // Registered as a product defect; do not "tidy" this back to the default.
-  useTransitions: false
+  // `useTransitions` is left at its default, true. It was pinned false while D49 stood: a token colour
+  // tweened through an invalid `#0aNaNNaNNaN` and never arrived. P88 GAM-006 fixed that in the runtime,
+  // and its session 5 drove this node with transitions on in a deployed page: the eyebrow colour and the
+  // rule glide and land on their tokens. So the workaround is removed.
 };
 
 const PASSAGE: Tpl006Component = {
@@ -1202,12 +1197,8 @@ const MODE_STATES = {
   'value-stuck-note':
     'Every choice here needs something you are not carrying, so there is no way on. That is usually a "requires" that nothing "gives".',
   'value-stuck-panel': 'stuck',
-  // False for the same measured reason as `PASSAGE_STATES` — and here it is
-  // belt-and-braces rather than load-bearing, because every value on this node is a
-  // string and strings are the type the transition path does not swallow. It is set
-  // anyway so the two States nodes in this template cannot disagree about a
-  // parameter whose default is a defect.
-  useTransitions: false
+  // Every value here is a string, which transitions never delayed. It was pinned false only so the two
+  // States nodes agreed while D49 stood; both are back at the default now (P88 GAM-006).
 };
 
 /**

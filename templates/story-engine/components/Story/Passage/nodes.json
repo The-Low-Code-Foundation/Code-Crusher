@@ -122,8 +122,7 @@
         "value-lost-tone": "var(--destructive)",
         "value-stuck-rule": "var(--destructive)",
         "value-stuck-eyebrow": "No way on from here",
-        "value-stuck-tone": "var(--destructive)",
-        "useTransitions": false
+        "value-stuck-tone": "var(--destructive)"
       },
       "x": 350,
       "y": 40

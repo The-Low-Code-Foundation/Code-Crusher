@@ -526,28 +526,10 @@ describe('TPL-006 §3 — the writes are sequenced, not raced', () => {
     expect(portType).toBe('*');
   });
 
-  /**
-   * 🔴 The parameter whose DEFAULT is a defect, pinned so a later session cannot
-   * undo this by tidying it.
-   *
-   * Measured in a browser with the control beside it: with `useTransitions: true`
-   * a `States` node publishes its `string` and `boolean` values on a state change
-   * and **never publishes a `color` or a `number`**. Sampled at 0, 60, 150, 320,
-   * 700 and 1500ms after one change, the eyebrow string flipped at 60ms and both
-   * colours read their previous value at every sample; with the flag false all
-   * three changed together. The port's default is `true`, so the failing arm is
-   * the one an author gets by not thinking about it.
-   */
-  it('every States node in the template has transitions OFF, because the default does not publish colours', () => {
-    const found: Array<[string, unknown]> = [];
-    for (const c of componentsOf()) {
-      for (const n of nodesOf(c.name)) {
-        if (n.type === 'States') found.push([`${c.name}::${n.id}`, n.parameters?.useTransitions]);
-      }
-    }
-    expect(found.length).toBeGreaterThanOrEqual(2);
-    for (const [where, value] of found) expect([where, value]).toEqual([where, false]);
-  });
+  // The gate that pinned every States node here to `useTransitions: false` (D49) is removed with the
+  // workaround. A token colour with transitions on is now graded where it broke, in the runtime:
+  // `noodl-viewer-react/tests/gam-006-states-token-colour.test.ts`, and in a deployed page by
+  // `scripts/devtools/drive-gam006-colour.js story` (P88 GAM-006 §8, session 5).
 });
 
 // ── §4 The prose wraps ──────────────────────────────────────────────────────
