@@ -11,9 +11,9 @@
 >   *"nothing, I just need to delete this task"*, so there is ALWAYS a trace.
 > - Traces are stored: priority changes, notes added, completed, uncompleted, etc.
 
-**Status: 🟢 BUILT, GATED AND DRIVEN — template (gate 20/20, drive 14/14) and demo (gate 18/18, drive 10/10). s3, 2026-09-14.**
-`npm run template:todo` → `templates/todo-list/` **and** `templates/todo-list-demo/`. AC1–AC7, AC9 and **AC10's build** green;
-**AC8 is Richard's look and first real use; publishing the demo on nodegx.io is Richard's call.**
+**Status: 🟢 BUILT, GATED, DRIVEN — and the demo is PUBLISHED: <https://nodegx.io/templates/todo-list/> (s3, 2026-09-14).**
+`npm run template:todo` → `templates/todo-list/` **and** `templates/todo-list-demo/`. AC1–AC7, AC9 and **AC10** green
+(template gate 20/20, drive 14/14; demo gate 18/18, drive 10/10; the public URL driven 12/12). **AC8 is Richard's week of use.**
 
 ---
 
@@ -109,7 +109,7 @@ to a command, a row or a script reaches the demo with no one remembering. The ge
 | AC7 | A second account sees none of the first account's rows | ✅ drive §6: Task/Action/Event 0/0/0 |
 | AC8 | Richard's look, and a week of real use | ⬜ Richard |
 | AC9 | Every icon button has a name a screen reader says; the icon shows and the words do not (D72) | ✅ s2 gate §4 (sabotaged) + drive: Chrome's AX tree |
-| AC10 | A browser-only demo mode for nodegx.io (R9) | 🟢 **built, gated 18/18, driven 10/10** (s3). ⬜ Not yet deployed with the shipped `nodegx deploy` and driven from the deployed folder; ⬜ publishing is Richard's |
+| AC10 | A browser-only demo mode for nodegx.io (R9) | ✅ **built, gated 18/18, driven 10/10, PUBLISHED** (s3): shipped `nodegx deploy` on the production engine, `drive-tpl008-demo.js` 12/12 on the folder and **12/12 on <https://nodegx.io/templates/todo-list/>** |
 
 Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **20/20** · `tpl008Demo.test.ts` **18/18** ·
 `packages/nodegx-backend/tests/tpl008-todo-drive.test.ts` **14/14** · `tpl008-todo-demo-drive.test.ts` **10/10**, both drives
@@ -119,16 +119,14 @@ Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **20/20** · `tpl008Dem
 
 - File uploads (Richard: *"maybe not file uploads yet (complicated)"*).
 - Paging: the queries cap at 1,000 tasks, 1,000 next actions and 1,000 history lines per task; the Log shows the latest 300.
-- The demo on nodegx.io: built (AC10), not deployed or published.
+- The in-editor template shelf: the demo is a static page on the marketing site, like TPL-006's; the shelf is T3's.
 
 ## 6. Questions for Richard
 
 1. ~~The public demo on nodegx.io~~ — **ruled R9 (s2): browser-only demo mode.** Built in s3.
 2. **R4 in practice**: is a note on every tick of a next action too much? **Deferred by Richard (s2) until he has used it.**
-3. ~~AC10 defaults~~ — built as proposed (example list, `localStorage`, Reset demo, an on-screen line saying it is a demo).
-   He has not seen it yet: **the two s3 pictures are his to look at**.
-4. **Publish the demo at `nodegx.io/templates/todo-list/`?** Like TPL-006: shipped `nodegx deploy` on the production viewer with
-   `--base-url /templates/<slug>/`, then `ops/deploy.sh`. Outward-facing, so not done without him. The slug is a guess.
+3. ~~AC10 defaults~~ — built as proposed; Richard looked at it running locally: *"Looks great"*.
+4. ~~Publish the demo?~~ — *"you can push to the nodegx site as a template"* — **published s3 at `/templates/todo-list/`.**
 
 ## 7. Session log
 
@@ -251,5 +249,18 @@ the rule's escape, a node comment beginning "Shared on purpose:" (constants `SHA
 artefact changed by exactly 14 `metadata.comment` blocks; 0 warnings on both builds again. **Not a defect** — the rule did what
 it says; recorded here so GAM-005 knows a real template met it.
 
-**Not done:** the demo was not deployed with the shipped `nodegx deploy` (production viewer, `--base-url`) nor driven from a
-deployed folder; nothing published. `test:ci` / `test:main` not run.
+**Shown to Richard, then published at his word.** Served locally with `render-from-disk`. 🔴 **The first copy served was the
+SABOTAGED build**: the newest `tpl008-demo-drive-*` temp folder was the sabotage arm's, and `diff -rq` against the committed
+demo caught `Logic/Todo data/connections.json` before the link was given; re-served from `templates/todo-list-demo/` plus the
+starter `noodl_modules`. He: *"Looks great, you can push to the nodegx site as a template."*
+
+**The publish (TPL-006's recipe):** `node packages/noodl-preview/dist/nodegx-deploy.cjs <demo + noodl_modules>
+<site>/templates/todo-list --base-url /templates/todo-list/` → `ok: true`, engine `kind: production`, no warnings, 2.9 MB,
+`<base href="/templates/todo-list/">`. New gate `scripts/devtools/drive-tpl008-demo.js` (site root + `--path`, real CDP clicks,
+clean storage first): **12/12 on the local folder**. Before pushing, the host's `/srv/nodegx/site` held exactly the local
+`site/` (same three templates, same `index.html` md5), so `deploy.sh`'s `--delete` removed nothing. `ops/deploy.sh
+49.12.102.195`: neighbours 200 before and after, `index.html` md5 unchanged by `build.py`. **`/templates/todo-list/` 404 → 200,
+and the gate against <https://nodegx.io> is 12/12** — first visit, add, move and its line, reload, Reset demo, 0 console and
+network errors, no backend request beside a control. ⚠️ `site/templates/` in `nodegx-web` is still untracked (as TPL-006 left it).
+
+`test:ci` / `test:main` not run.

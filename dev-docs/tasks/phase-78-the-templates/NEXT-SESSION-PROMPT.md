@@ -1,6 +1,6 @@
 # Phase 78 — next session
 
-> ### 🟢 2026-09-14 (s3) — TPL-008 TODO LIST: AC10 BUILT — the browser-only demo, derived from the template — gates 20/20 + 18/18, drives 14/14 + 10/10
+> ### 🟢 2026-09-14 (s3) — TPL-008 TODO LIST: AC10 BUILT AND PUBLISHED — <https://nodegx.io/templates/todo-list/> — gates 20/20 + 18/18, drives 14/14 + 10/10, live 12/12
 >
 > Richard's own template: one list ordered only by what you do next, nothing deleted, every change kept as history; stored
 > in the NodeGX backend. Rulings R1–R9 in [TPL-008 §1](TPL-008-THE-TODO-LIST.md); s1/s2 record in §7.
@@ -16,10 +16,14 @@
 > 🔴 **GAM-005's uncommitted `variable-in-repeated-component` rule warned 54× per build** (4 pairs, all app-wide on purpose);
 > fixed with "Shared on purpose:" node comments, 0 warnings again. Two pictures in the session's scratchpad for Richard.
 >
-> **NEXT:** (1) deploy the demo with the **shipped `nodegx deploy`** on the production viewer (`--base-url
-> /templates/todo-list/`, TPL-006's recipe) and drive the deployed folder — the devtool drops For Each wires (D44), so do
-> not use it; (2) 🙋 **Richard: publish it to nodegx.io?** (outward-facing — ask) and his look at the demo; (3) AC8 (his week of
-> use) and R4a stay his. `test:ci` / `test:main` not run this session.
+> ✅ **Richard looked ("Looks great") and asked for it on the site: PUBLISHED at <https://nodegx.io/templates/todo-list/>.**
+> Shipped `nodegx deploy` on the production engine with `--base-url /templates/todo-list/`, then `ops/deploy.sh
+> 49.12.102.195` (neighbours 200 before/after, homepage md5 unchanged, host held exactly the local `site/` before `--delete`).
+> `scripts/devtools/drive-tpl008-demo.js` **12/12 on the local folder and 12/12 against the public URL**.
+>
+> **NEXT:** nothing is owed on TPL-008 but Richard's: AC8 (a week of real use) and R4a (is a note on every tick too much).
+> After any template change: `npm run template:todo`, the four suites, the deploy + drive above, `ops/deploy.sh`.
+> `test:ci` / `test:main` not run this session.
 
 > ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>
 >
