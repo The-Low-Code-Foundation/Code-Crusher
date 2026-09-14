@@ -77,6 +77,131 @@ export const CONTRAST_PAIRS: ReadonlyArray<{ fg: string; bg: string; floor: numb
   { fg: '--border-control', bg: '--surface', floor: 3 }
 ];
 
+// ── Dark, and the switch between them ───────────────────────────────────────
+
+/**
+ * Richard (2026-09-14): *"can we have dark and light mode, matching system by default
+ * but with a little icon at the top right for changing?"*
+ *
+ * The same palette at night: one ink ground a step darker than the surfaces, one grey
+ * for everything secondary, the accent lifted to a light blue (the primary button's
+ * words go dark on it), red lifted just enough to read. **Every colour token the light
+ * set overrides is overridden here**, by name — the gate fails on a name in one set and
+ * not the other — and {@link CONTRAST_PAIRS} is recomputed against this set too.
+ *
+ * 🔴 **The project's token block is `:root { … }` (`ProjectTokenCss`), so the dark block
+ * is a CSS rule on a MORE specific selector, not a second token set.** Nothing in the
+ * runtime knows about dark mode; the App's `CSS Definition` carries both rules:
+ *
+ * - `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { … } }` —
+ *   the system decides, live, with no script;
+ * - `:root[data-theme="dark"] { … }` — the person chose dark on a light system.
+ *
+ * `data-theme` is written only when the choice DIFFERS from the system, so choosing
+ * the system's own theme again forgets the choice and the page follows the system from
+ * then on (`THEME_FLIP_SCRIPT`).
+ */
+export const TPL008_DARK_TOKENS: ReadonlyArray<{ name: string; value: string }> = [
+  { name: '--background', value: '#161718' },
+  { name: '--foreground', value: '#e7e7e4' },
+  { name: '--surface', value: '#1f2022' },
+  { name: '--surface-raised', value: '#25272a' },
+  { name: '--muted', value: '#2b2d30' },
+  { name: '--muted-foreground', value: '#a4a8ac' },
+  { name: '--primary', value: '#8aa9f2' },
+  { name: '--primary-hover', value: '#a6bef6' },
+  { name: '--primary-foreground', value: '#10141f' },
+  { name: '--ring', value: '#8aa9f2' },
+  { name: '--destructive', value: '#f0877e' },
+  { name: '--destructive-hover', value: '#f4a49d' },
+  { name: '--destructive-foreground', value: '#1b100f' },
+  { name: '--secondary', value: '#2b2d30' },
+  { name: '--secondary-hover', value: '#34373a' },
+  { name: '--secondary-foreground', value: '#e7e7e4' },
+  { name: '--accent', value: '#1e2941' },
+  { name: '--accent-foreground', value: '#b8cbf8' },
+  { name: '--border', value: '#323437' },
+  { name: '--border-subtle', value: '#2a2c2f' },
+  { name: '--border-strong', value: '#474a4e' },
+  { name: '--border-control', value: '#83878c' }
+];
+
+/** Where the person's choice is kept. Absent = follow the system. */
+export const THEME_STORAGE_KEY = 'nodegx-todo-list-theme';
+
+/** The two icon buttons. CSS shows exactly one: the theme you would switch TO. */
+export const THEME_TO_DARK_CLASS = 'todo-theme-to-dark';
+export const THEME_TO_LIGHT_CLASS = 'todo-theme-to-light';
+
+/**
+ * The App's stylesheet: the page ground, the dark tokens under both conditions, and
+ * which switch icon shows. Which icon shows is decided by the SAME conditions as the
+ * palette, so a system that turns dark at sunset changes the icon with the colours,
+ * with no script listening.
+ */
+export function themeCss(): string {
+  const tokens = TPL008_DARK_TOKENS.map((t) => `    ${t.name}: ${t.value};`).join('\n');
+  const hide = (cls: string) => `.${cls} { display: none !important; }`;
+  return [
+    'html, body { background-color: var(--background); }',
+    '',
+    '/* Dark: the system asks for it and the person has not chosen light. */',
+    '@media (prefers-color-scheme: dark) {',
+    '  :root:not([data-theme="light"]) {',
+    '    color-scheme: dark;',
+    tokens,
+    '  }',
+    `  :root:not([data-theme="light"]) ${hide(THEME_TO_DARK_CLASS)}`,
+    '}',
+    '',
+    '/* Dark: the person chose it on a light system. */',
+    ':root[data-theme="dark"] {',
+    '  color-scheme: dark;',
+    tokens.replace(/^ {2}/gm, ''),
+    '}',
+    `:root[data-theme="dark"] ${hide(THEME_TO_DARK_CLASS)}`,
+    '',
+    '/* Light shows the moon; dark shows the sun. */',
+    '@media not all and (prefers-color-scheme: dark) {',
+    `  :root:not([data-theme="dark"]) ${hide(THEME_TO_LIGHT_CLASS)}`,
+    '}',
+    `:root[data-theme="light"] ${hide(THEME_TO_LIGHT_CLASS)}`
+  ].join('\n');
+}
+
+/** Shared by the two theme scripts: what the system wants, what the person chose, and applying it. */
+const THEME_FNS = `var KEY = ${JSON.stringify(THEME_STORAGE_KEY)};
+function systemTheme() {
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function chosenTheme() {
+  var v = null;
+  try { v = window.localStorage.getItem(KEY); } catch (e) { v = window.__todoTheme || null; }
+  return v === 'dark' || v === 'light' ? v : null;
+}
+function remember(v) {
+  window.__todoTheme = v;
+  try { if (v) window.localStorage.setItem(KEY, v); else window.localStorage.removeItem(KEY); } catch (e) {}
+}
+function applyTheme(v) {
+  if (v) document.documentElement.setAttribute('data-theme', v);
+  else document.documentElement.removeAttribute('data-theme');
+}
+`;
+
+/** On load (a Function with nothing wired runs once): put back what the person chose, if anything. */
+export const THEME_BOOT_SCRIPT = `${THEME_FNS}applyTheme(chosenTheme());`;
+
+/**
+ * The switch: the other theme from the one showing. Choosing the system's own theme
+ * forgets the choice, so the page follows the system again.
+ */
+export const THEME_FLIP_SCRIPT = `${THEME_FNS}var showing = chosenTheme() || systemTheme();
+var next = showing === 'dark' ? 'light' : 'dark';
+var keep = next === systemTheme() ? null : next;
+remember(keep);
+applyTheme(keep);`;
+
 export const VOCABULARY = buildStyleVocabulary({ getMetaData: () => undefined });
 
 const requested = new Set<string>();

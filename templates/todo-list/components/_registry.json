@@ -6,7 +6,7 @@
     "App": {
       "path": "App",
       "type": "visual",
-      "nodeCount": 3,
+      "nodeCount": 4,
       "connectionCount": 0,
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
@@ -147,10 +147,18 @@
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
     },
+    "Todo/Theme switch": {
+      "path": "Todo/Theme switch",
+      "type": "visual",
+      "nodeCount": 4,
+      "connectionCount": 2,
+      "modified": "2026-09-14T00:00:00.000Z",
+      "created": "2026-09-14T00:00:00.000Z"
+    },
     "Todo/Header": {
       "path": "Todo/Header",
       "type": "visual",
-      "nodeCount": 10,
+      "nodeCount": 11,
       "connectionCount": 10,
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
@@ -278,15 +286,15 @@
     "Pages/Sign in": {
       "path": "Pages/Sign in",
       "type": "page",
-      "nodeCount": 18,
+      "nodeCount": 20,
       "connectionCount": 21,
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
     }
   },
   "stats": {
-    "totalComponents": 35,
-    "totalNodes": 330,
-    "totalConnections": 628
+    "totalComponents": 36,
+    "totalNodes": 338,
+    "totalConnections": 630
   }
 }

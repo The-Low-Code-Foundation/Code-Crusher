@@ -37,7 +37,7 @@
  *
  * @module noodl-mcp/tests/tpl008Components
  */
-import { composition } from './tpl008Theme';
+import { composition, THEME_BOOT_SCRIPT, THEME_FLIP_SCRIPT, THEME_TO_DARK_CLASS, THEME_TO_LIGHT_CLASS, themeCss } from './tpl008Theme';
 
 export const ROUTER = 'Main';
 export const APP_COMPONENT = 'App';
@@ -57,6 +57,7 @@ export interface Tpl008Component {
 // ── Names, spelled once ─────────────────────────────────────────────────────
 
 export const C = {
+  themeSwitch: '/Todo/Theme switch',
   header: '/Todo/Header',
   problem: '/Todo/Problem banner',
   taskRow: '/Todo/Task row',
@@ -349,9 +350,35 @@ const FIND_ROW = `function findRow(rows, id) {
 // Todo/ — what you can see
 // ════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Richard: *"dark and light mode, matching system by default but with a little icon at
+ * the top right for changing"*. Two icon buttons — the moon switches to dark, the sun to
+ * light — and **the App's stylesheet shows exactly one**, from the same conditions that
+ * pick the palette (`themeCss`). So there is no value on a wire saying which theme is
+ * showing, and nothing to fall out of step when the system changes at sunset.
+ *
+ * 🔴 Why not one button with its icon wired: a `Function` publishes an output only when it
+ * changes, and "which icon" would have two producers (load and click) — the stale-value
+ * trap in this file's header. No `Variable`, so it can be placed on both pages.
+ */
+const THEME_SWITCH: Tpl008Component = {
+  path: 'Todo/Theme switch',
+  description:
+    'The moon or the sun at the top right. The page follows the system until the person presses it; choosing the system’s own theme again goes back to following the system.',
+  nodes: [
+    // `th`, not `ts`: node ids are unique across the project, and `Todo/Task summary` owns `ts`.
+    group('thRoot', 'Theme switch', undefined, { flexDirection: 'row', alignItems: 'center', sizeMode: 'contentSize' }),
+    place('thToDark', BUTTON, 'Use dark theme', 'thRoot', { ...BTN_ICON('icon-moon', 'Use dark theme'), cssClassName: THEME_TO_DARK_CLASS }),
+    place('thToLight', BUTTON, 'Use light theme', 'thRoot', { ...BTN_ICON('icon-sun', 'Use light theme'), cssClassName: THEME_TO_LIGHT_CLASS }),
+    logic('thFlip', FUNCTION, 'Switch to the other theme', { functionScript: THEME_FLIP_SCRIPT })
+  ],
+  connections: [wire('thToDark', 'onClick', 'thFlip', 'run'), wire('thToLight', 'onClick', 'thFlip', 'run')]
+};
+
 const HEADER: Tpl008Component = {
   path: 'Todo/Header',
-  description: 'The app name, the three views (List, Done, Log) and Sign out. Tab is the view that is showing.',
+  description: 'The app name, the three views (List, Done, Log), Sign out and the theme switch. Tab is the view that is showing.',
+  instantiates: [C.themeSwitch],
   ...iface(
     [['tab', 'string'], ['listLabel', 'string'], ['doneLabel', 'string']],
     [['pickList', 'signal'], ['pickDone', 'signal'], ['pickLog', 'signal'], ['signOut', 'signal']]
@@ -366,6 +393,7 @@ const HEADER: Tpl008Component = {
     place('hdDone', BUTTON, 'Done', 'hdNav', { ...BTN_GHOST, label: 'Done' }),
     place('hdLog', BUTTON, 'Log', 'hdNav', { ...BTN_GHOST, label: 'Log' }),
     place('hdSignOut', BUTTON, 'Sign out', 'hdNav', { ...BTN_GHOST, label: 'Sign out', color: 'var(--muted-foreground)' }),
+    place('hdTheme', C.themeSwitch, 'Light or dark', 'hdNav'),
     logic('hdLook', STATES, 'Which view is showing', {
       states: 'list,done,log',
       currentState: 'list',
@@ -1846,16 +1874,19 @@ const ADD_NOTE = command({
 const PAGE_SIGN_IN: Tpl008Component = {
   path: 'Pages/Sign in',
   description: 'Sign in, or create an account with the same two boxes. Someone already signed in goes straight to their list.',
+  instantiates: [C.themeSwitch],
   nodes: [
     { id: 'siPage', type: 'Page', label: 'Sign in', parameters: { title: 'Sign in', urlPath: 'sign-in' } },
     group('siRoot', 'Page', 'siPage', {
       ...COLUMN('var(--space-0)'),
       alignItems: 'center',
-      paddingTop: 'var(--space-16)',
+      paddingTop: 'var(--space-4)',
       paddingBottom: 'var(--space-16)',
       paddingLeft: 'var(--space-4)',
       paddingRight: 'var(--space-4)'
     }),
+    group('siTop', 'Top right', 'siRoot', { ...ROW('var(--space-0)'), justifyContent: 'flex-end', paddingBottom: 'var(--space-12)' }),
+    place('siTheme', C.themeSwitch, 'Light or dark', 'siTop'),
     group('siCard', 'Sign-in card', 'siRoot', {
       ...composition('card'),
       maxWidth: px(400),
@@ -2374,7 +2405,10 @@ export const APP_NODES = [
   // 🔴 With body scroll on, the App's 100% height is the content's height, so the
   // ground stopped under a short list and the rest of the window was white. Found by
   // LOOKING at the drive's screenshots; no check in either suite could see it.
-  logic('app_css', 'CSS Definition', 'The page ground', { style: 'html, body { background-color: var(--background); }' })
+  // The same stylesheet holds the dark palette and decides which theme icon shows.
+  logic('app_css', 'CSS Definition', 'The page ground, the dark palette, and which theme icon shows', { style: themeCss() }),
+  // Nothing wired into it, so it runs once at load: a theme the person chose is put back on every page.
+  logic('app_theme', FUNCTION, 'Put back the theme the person chose', { functionScript: THEME_BOOT_SCRIPT })
 ];
 export const APP_WIRES: unknown[] = [];
 
@@ -2401,6 +2435,7 @@ export const TPL008_COMPONENTS: ReadonlyArray<Tpl008Component> = [
   SELECTED_TASK,
   LOG_ROWS,
   TODO_DATA,
+  THEME_SWITCH,
   HEADER,
   PROBLEM_BANNER,
   TASK_ROW,

@@ -111,7 +111,8 @@
         "hdList",
         "hdDone",
         "hdLog",
-        "hdSignOut"
+        "hdSignOut",
+        "hdTheme"
       ],
       "x": 100,
       "y": 280
@@ -203,6 +204,14 @@
       },
       "x": 160,
       "y": 760
+    },
+    {
+      "id": "hdTheme",
+      "type": "/Todo/Theme switch",
+      "label": "Light or dark",
+      "parent": "hdNav",
+      "x": 160,
+      "y": 880
     },
     {
       "id": "hdLook",

@@ -107,6 +107,49 @@ export async function blur(page: RenderedPage): Promise<void> {
   await wait(800);
 }
 
+/**
+ * The theme switch: how many of its two buttons are in the page, and which are drawn AND
+ * on top at their own centre. The stylesheet hides one of the pair, so `inDom: 2` is the
+ * known-firing half beside "only one shows".
+ */
+export async function themeSwitches(page: RenderedPage): Promise<{ inDom: number; shown: string[] }> {
+  return JSON.parse(
+    String(
+      await page.evaluate(`(function () {
+        window.scrollTo(0, 0);
+        var all = Array.prototype.filter.call(document.querySelectorAll('button'), function (b) {
+          return /^Use (dark|light) theme$/.test((b.textContent || '').trim());
+        });
+        var shown = all.filter(function (b) {
+          var r = b.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) return false;
+          var hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return !!hit && (hit === b || b.contains(hit));
+        }).map(function (b) { return (b.textContent || '').trim(); });
+        return JSON.stringify({ inDom: all.length, shown: shown });
+      })()`)
+    )
+  ) as { inDom: number; shown: string[] };
+}
+
+/** Press whichever theme switch is drawn. */
+export async function clickThemeSwitch(page: RenderedPage): Promise<void> {
+  const found = String(
+    await page.evaluate(`(function () {
+      window.scrollTo(0, 0);
+      var b = Array.prototype.filter.call(document.querySelectorAll('button'), function (x) {
+        return /^Use (dark|light) theme$/.test((x.textContent || '').trim()) && x.getBoundingClientRect().width > 0;
+      })[0];
+      if (!b) return 'absent';
+      var r = b.getBoundingClientRect();
+      return JSON.stringify({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    })()`)
+  );
+  if (found === 'absent') throw new Error('no theme switch is drawn');
+  const at = JSON.parse(found) as { x: number; y: number };
+  await clickAt(page, at.x, at.y);
+}
+
 /** Whether the LAST button with this label is disabled — or `'absent'` when there is none. */
 export const buttonDisabled = async (page: RenderedPage, label: string): Promise<unknown> =>
   page.evaluate(`(function () {

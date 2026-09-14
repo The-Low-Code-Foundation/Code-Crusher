@@ -1,9 +1,16 @@
 # Phase 78 — next session
 
-> ### 🟢 2026-09-14 (s3) — TPL-008 TODO LIST: AC10 BUILT AND PUBLISHED — <https://nodegx.io/templates/todo-list/> — gates 20/20 + 18/18, drives 14/14 + 10/10, live 12/12
+> ### 🟢 2026-09-14 (s4) — TPL-008 TODO LIST: LIGHT/DARK BUILT (R10) AND REPUBLISHED — gates 24/24 + 18/18, drives 14/14 + 10/10 + theme 9/9, live 16/16
+>
+> **s4:** follows the system, a moon/sun at the top right overrides it, the choice is remembered ([§3b](TPL-008-THE-TODO-LIST.md)).
+> A `CSS Definition` on `App` overrides the colour tokens on two selectors more specific than the token block; CSS also picks
+> which icon shows. Theme drive sabotaged (the sun's hide rules gone → exactly §0 and §2 red). Built with the SAME Sep 11
+> `nodegx-deploy.cjs`, 16/16 on the folder, `ops/deploy.sh` (neighbours 200, homepage md5 unchanged), **16/16 live**.
+> 🔴 **R11: the backend stays local** — sign-in from other devices and hosting are a later phase, not owed here.
+> ⚠️ **Richard's own copy does NOT have dark mode yet**: `rsync --delete` into it was denied by the classifier. **Uncommitted** — s4's paths are listed in §7.
 >
 > Richard's own template: one list ordered only by what you do next, nothing deleted, every change kept as history; stored
-> in the NodeGX backend. Rulings R1–R9 in [TPL-008 §1](TPL-008-THE-TODO-LIST.md); s1/s2 record in §7.
+> in the NodeGX backend. Rulings R1–R11 in [TPL-008 §1](TPL-008-THE-TODO-LIST.md); s1–s4 record in §7.
 >
 > **s3 built R9's demo** as `templates/todo-list-demo/`, written by the same `npm run template:todo` run. It is a **transform
 > of the template's components** (`tpl008Demo.ts`): all 15 record writes become `localStorage` Functions at the same node
@@ -21,8 +28,9 @@
 > 49.12.102.195` (neighbours 200 before/after, homepage md5 unchanged, host held exactly the local `site/` before `--delete`).
 > `scripts/devtools/drive-tpl008-demo.js` **12/12 on the local folder and 12/12 against the public URL**.
 >
-> **NEXT:** nothing is owed on TPL-008 but Richard's: AC8 (a week of real use) and R4a (is a note on every tick too much).
-> After any template change: `npm run template:todo`, the four suites, the deploy + drive above, `ops/deploy.sh`.
+> **NEXT:** nothing is owed on TPL-008 but Richard's: AC8 (a week of real use) and R4a (is a note on every tick too much) —
+> plus, if he says so, putting dark mode into his own copy and committing s4.
+> After any template change: `npm run template:todo`, the five suites, the deploy + `drive-tpl008-demo.js` (16 clauses), `ops/deploy.sh`.
 > `test:ci` / `test:main` not run this session.
 
 > ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>

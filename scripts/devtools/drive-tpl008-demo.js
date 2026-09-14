@@ -154,6 +154,43 @@ withDeployedSite(LIVE ? { origin: DIR } : { dir: DIR, port: 0 }, async (page) =>
   const resetText = await until(text, (s) => !s.includes(ADDED));
   check('Reset demo puts the example list back', JSON.stringify(reset) === JSON.stringify(SEEDED) && !resetText.includes(ADDED), JSON.stringify(reset));
 
+  // ── Light and dark (the system decides, the switch at the top right overrides) ─
+  // `THEME_STORAGE_KEY` in `packages/noodl-mcp/tests/tpl008Theme.ts`; the grounds are `--background` of each palette.
+  const THEME_KEY = 'nodegx-todo-list-theme';
+  const LIGHT = 'rgb(245, 245, 243)';
+  const DARK = 'rgb(22, 23, 24)';
+  const system = (value) => page.client.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value }] });
+  const look = async () =>
+    JSON.parse(
+      String(
+        await page.evaluate(`JSON.stringify({
+          ground: getComputedStyle(document.body).backgroundColor,
+          stored: localStorage.getItem(${JSON.stringify(THEME_KEY)}),
+          inDom: [...document.querySelectorAll('button')].filter((b) => /^Use (dark|light) theme$/.test((b.textContent || '').trim())).length,
+          shown: [...document.querySelectorAll('button')]
+            .filter((b) => /^Use (dark|light) theme$/.test((b.textContent || '').trim()) && b.getBoundingClientRect().width > 0)
+            .map((b) => b.textContent.trim())
+        })`)
+      )
+    );
+  await page.evaluate(`localStorage.removeItem(${JSON.stringify(THEME_KEY)})`);
+  await system('light');
+  const light = await until(look, (l) => l.ground === LIGHT);
+  check('a light system draws light, with only the moon showing', light.ground === LIGHT && light.inDom === 2 && JSON.stringify(light.shown) === '["Use dark theme"]', JSON.stringify(light));
+  await system('dark');
+  const dark = await until(look, (l) => l.ground === DARK);
+  check('a dark system draws dark, with only the sun showing, and nothing remembered', dark.ground === DARK && dark.inDom === 2 && JSON.stringify(dark.shown) === '["Use light theme"]' && dark.stored === null, JSON.stringify(dark));
+  await clickButton('Use light theme', null);
+  const chosen = await until(look, (l) => l.ground === LIGHT);
+  check('the switch picks light on a dark system, and remembers it', chosen.ground === LIGHT && chosen.stored === 'light', JSON.stringify(chosen));
+  await page.navigate(BASE);
+  await until(text, (s) => s.includes(SEEDED[2]));
+  const kept = await until(look, (l) => l.ground === LIGHT, 5000);
+  check('a reload keeps the choice', kept.ground === LIGHT && kept.stored === 'light', JSON.stringify(kept));
+  await shot('3-light-chosen-on-dark');
+  await page.evaluate(`localStorage.removeItem(${JSON.stringify(THEME_KEY)})`);
+  await system('light');
+
   // ── Nothing else was asked ───────────────────────────────────────────────
   const errors = [...page.consoleErrors];
   const netErrors = [...page.networkErrors];

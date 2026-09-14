@@ -35,7 +35,7 @@ import { request } from './helpers/http';
 import { placeStarterAssets } from './helpers/judge';
 import { clickButton, currentSession, fill } from './helpers/members-drive';
 import { bindProjectToBackend, RenderedPage, withRenderedPage } from './helpers/site-drive';
-import { blur, buttonDisabled, clickButtonBeside, clickButtonByField, clickWords, pathname, text, until, wait } from './helpers/todo-drive';
+import { blur, buttonDisabled, clickButtonBeside, clickButtonByField, clickWords, pathname, text, themeSwitches, until, wait } from './helpers/todo-drive';
 
 jest.setTimeout(600_000);
 
@@ -164,6 +164,11 @@ describe('TPL-008 — the todo list, driven', () => {
         // ── §0 A stranger is sent to Sign in ────────────────────────────────────
         step('§0 redirect');
         R.redirectedTo = await until('sent to sign in', () => pathname(page), (p) => p === '/sign-in');
+        await until('sign in drawn', () => text(page), (s) => s.includes('Create account'));
+        // The theme switch is on this page too (the demo's theme drive grades what it does).
+        // 🔴 Headless Chrome follows the machine's own light/dark setting, so read it beside the switch.
+        R.signInSystemDark = await page.evaluate("matchMedia('(prefers-color-scheme: dark)').matches");
+        R.signInSwitches = await themeSwitches(page);
         // Which collections a signed-out visitor's browser asked for. It should be none.
         R.bootRequests = await page.evaluate(
           "JSON.stringify(performance.getEntriesByType('resource').map(function (e) { return e.name; })" +
@@ -390,6 +395,9 @@ describe('TPL-008 — the todo list, driven', () => {
 
   it('§0 sends a signed-out visitor to Sign in', () => {
     expect(R.redirectedTo).toBe('/sign-in');
+    // Both buttons are there, and the one showing is the other theme from the machine's own.
+    expect(typeof R.signInSystemDark).toBe('boolean');
+    expect(R.signInSwitches).toEqual({ inDom: 2, shown: [R.signInSystemDark ? 'Use light theme' : 'Use dark theme'] });
   });
 
   it('§1 AC3 — an account made on the page; three tasks list in the order added, each with an "Added at #n" line', () => {

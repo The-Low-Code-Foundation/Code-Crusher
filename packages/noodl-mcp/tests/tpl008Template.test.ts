@@ -34,7 +34,17 @@ import {
   TPL008_COMPONENTS
 } from './tpl008Components';
 import { AuthoredTemplate, buildTodoTemplateProject, POLICY_FILE, prepareTodoArtefact, TEMPLATE_ID } from './tpl008Template';
-import { CONTRAST_PAIRS, TPL008_TOKENS } from './tpl008Theme';
+import {
+  CONTRAST_PAIRS,
+  THEME_BOOT_SCRIPT,
+  THEME_FLIP_SCRIPT,
+  THEME_STORAGE_KEY,
+  THEME_TO_DARK_CLASS,
+  THEME_TO_LIGHT_CLASS,
+  themeCss,
+  TPL008_DARK_TOKENS,
+  TPL008_TOKENS
+} from './tpl008Theme';
 
 jest.setTimeout(300_000);
 
@@ -220,19 +230,24 @@ describe('§4 the look Richard approved', () => {
         if (!/font-size:\s*0/.test(String(p.styleCss ?? ''))) loud.push(`${c.name} ${n.id} shows its words`);
       }
     }
-    // The control: the rule reached every icon button there is — two moves and a tick box per row kind.
+    // The control: the rule reached every icon button there is — two moves and a tick box per
+    // row kind, and the theme switch's moon and sun.
     expect(seen.sort()).toEqual(
-      ['/Todo/Action row arCheck', '/Todo/Action row arDown', '/Todo/Action row arUp', '/Todo/Task row trClose', '/Todo/Task row trDown', '/Todo/Task row trUp'].sort()
+      [
+        '/Todo/Action row arCheck',
+        '/Todo/Action row arDown',
+        '/Todo/Action row arUp',
+        '/Todo/Task row trClose',
+        '/Todo/Task row trDown',
+        '/Todo/Task row trUp',
+        '/Todo/Theme switch thToDark',
+        '/Todo/Theme switch thToLight'
+      ].sort()
     );
     expect(loud).toEqual([]);
   });
 
-  it('every pair it draws passes WCAG AA, recomputed from the tokens', () => {
-    const token = (name: string) => {
-      const found = TPL008_TOKENS.find((t) => t.name === name);
-      if (!found) throw new Error(`no token ${name}`);
-      return found.value;
-    };
+  it('every pair it draws passes WCAG AA in BOTH palettes, recomputed from the tokens', () => {
     const lum = (hex: string) => {
       const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -241,8 +256,122 @@ describe('§4 the look Richard approved', () => {
       const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
       return (x + 0.05) / (y + 0.05);
     };
-    const failing = CONTRAST_PAIRS.map((p) => ({ ...p, ratio: Math.round(ratio(token(p.fg), token(p.bg)) * 100) / 100 })).filter((p) => p.ratio < p.floor);
+    const failing: unknown[] = [];
+    let measured = 0;
+    for (const [palette, set] of [['light', TPL008_TOKENS], ['dark', TPL008_DARK_TOKENS]] as const) {
+      const token = (name: string) => {
+        const found = set.find((t) => t.name === name);
+        if (!found) throw new Error(`no ${palette} token ${name}`);
+        return found.value;
+      };
+      for (const p of CONTRAST_PAIRS) {
+        measured++;
+        const r = Math.round(ratio(token(p.fg), token(p.bg)) * 100) / 100;
+        if (r < p.floor) failing.push({ palette, ...p, ratio: r });
+      }
+    }
+    expect(measured).toBe(CONTRAST_PAIRS.length * 2);
     expect(failing).toEqual([]);
+  });
+});
+
+// ── §4b ────────────────────────────────────────────────────────────────────
+
+describe('§4b light and dark — following the system, and the switch at the top right', () => {
+  const component = (name: string) => {
+    const found = componentsOf().find((c) => c.name === name);
+    if (!found) throw new Error(`no component ${name}`);
+    return found;
+  };
+
+  it('the dark palette overrides exactly the colour tokens the light one does', () => {
+    const colours = (set: ReadonlyArray<{ name: string; value: string }>) => set.filter((t) => /^#[0-9a-f]{6}$/i.test(t.value)).map((t) => t.name).sort();
+    expect(colours(TPL008_TOKENS).length).toBeGreaterThan(0);
+    expect(TPL008_DARK_TOKENS.map((t) => t.name).sort()).toEqual(colours(TPL008_TOKENS));
+  });
+
+  it('App carries every dark token under BOTH conditions, and puts a remembered choice back at load', () => {
+    const app = component('/App');
+    const css = nodesOf(app).find((n) => n.type === 'CSS Definition');
+    const style = String((css?.parameters as { style?: string })?.style ?? '');
+    expect(style).toBe(themeCss());
+    const twice = TPL008_DARK_TOKENS.filter((t) => style.split(`${t.name}: ${t.value};`).length - 1 !== 2).map((t) => t.name);
+    expect(twice).toEqual([]);
+    expect(style).toContain('@media (prefers-color-scheme: dark)');
+    expect(style).toContain(':root[data-theme="dark"]');
+    // 🔴 A Function runs at load only while its Run is NOT wired.
+    const boot = nodesOf(app).find((n) => n.type === 'JavaScriptFunction');
+    expect((boot?.parameters as { functionScript?: string })?.functionScript).toBe(THEME_BOOT_SCRIPT);
+    expect((app.graph?.connections ?? []).filter((w) => w.toId === boot?.id)).toEqual([]);
+  });
+
+  it('the switch is two icon buttons the stylesheet chooses between, both running the one flip — placed on both pages', () => {
+    const sw = component(C.themeSwitch);
+    const buttons = nodesOf(sw).filter((n) => n.type === 'net.noodl.controls.button');
+    expect(buttons.map((b) => [b.id, (b.parameters as { cssClassName?: string }).cssClassName])).toEqual([
+      ['thToDark', THEME_TO_DARK_CLASS],
+      ['thToLight', THEME_TO_LIGHT_CLASS]
+    ]);
+    const flip = nodesOf(sw).find((n) => n.type === 'JavaScriptFunction');
+    expect((flip?.parameters as { functionScript?: string })?.functionScript).toBe(THEME_FLIP_SCRIPT);
+    expect(
+      (sw.graph?.connections ?? []).filter((w) => w.toId === flip?.id).map((w) => `${w.fromId}.${w.fromProperty} → ${w.toProperty}`).sort()
+    ).toEqual(['thToDark.onClick → run', 'thToLight.onClick → run']);
+    const placedIn = allNodes().filter((n) => n.node.type === C.themeSwitch).map((n) => n.component).sort();
+    expect(placedIn).toEqual([C.header, C.pageSignIn].sort());
+  });
+
+  it('the scripts: the other theme, remembered only when it differs from the system, and working with storage blocked', () => {
+    /** A browser: a system setting, a storage that may throw, and a fresh document per page load. */
+    const browser = (systemDark: boolean, blocked = false) => {
+      const map = new Map<string, string>();
+      const guard = () => {
+        if (blocked) throw new Error('storage is blocked');
+      };
+      const win: Record<string, unknown> = {
+        matchMedia: (q: string) => ({ matches: q === '(prefers-color-scheme: dark)' && systemDark }),
+        localStorage: {
+          getItem: (k: string) => (guard(), map.has(k) ? (map.get(k) as string) : null),
+          setItem: (k: string, v: string) => (guard(), void map.set(k, v)),
+          removeItem: (k: string) => (guard(), void map.delete(k))
+        }
+      };
+      let attrs = new Map<string, string>();
+      const doc = {
+        documentElement: {
+          setAttribute: (k: string, v: string) => void attrs.set(k, v),
+          removeAttribute: (k: string) => void attrs.delete(k)
+        }
+      };
+      // eslint-disable-next-line no-new-func
+      const run = (script: string) => new Function('window', 'document', script)(win, doc);
+      const read = () => `${attrs.get('data-theme') ?? '-'}/${blocked ? 'blocked' : map.get(THEME_STORAGE_KEY) ?? '-'}`;
+      return {
+        map,
+        boot: () => ((attrs = new Map()), run(THEME_BOOT_SCRIPT), read()),
+        flip: () => (run(THEME_FLIP_SCRIPT), read())
+      };
+    };
+
+    const light = browser(false);
+    const dark = browser(true);
+    const blocked = browser(false, true);
+    const odd = browser(false);
+    odd.map.set(THEME_STORAGE_KEY, 'purple');
+    expect({
+      light: [light.boot(), light.flip(), light.boot(), light.flip(), light.boot()],
+      dark: [dark.boot(), dark.flip(), dark.boot(), dark.flip()],
+      blocked: [blocked.boot(), blocked.flip(), blocked.boot(), blocked.flip()],
+      odd: [odd.boot()]
+    }).toEqual({
+      // Nothing chosen → dark is chosen and remembered → a new page keeps it → light again forgets it.
+      light: ['-/-', 'dark/dark', 'dark/dark', '-/-', '-/-'],
+      dark: ['-/-', 'light/light', 'light/light', '-/-'],
+      // No storage: the choice still holds for the visit.
+      blocked: ['-/blocked', 'dark/blocked', 'dark/blocked', '-/blocked'],
+      // A stored value that is not a theme is ignored, and left alone.
+      odd: ['-/purple']
+    });
   });
 });
 

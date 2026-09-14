@@ -11,9 +11,10 @@
 >   *"nothing, I just need to delete this task"*, so there is ALWAYS a trace.
 > - Traces are stored: priority changes, notes added, completed, uncompleted, etc.
 
-**Status: 🟢 BUILT, GATED, DRIVEN — and the demo is PUBLISHED: <https://nodegx.io/templates/todo-list/> (s3, 2026-09-14).**
-`npm run template:todo` → `templates/todo-list/` **and** `templates/todo-list-demo/`. AC1–AC7, AC9 and **AC10** green
-(template gate 20/20, drive 14/14; demo gate 18/18, drive 10/10; the public URL driven 12/12). **AC8 is Richard's week of use.**
+**Status: 🟢 BUILT, GATED, DRIVEN — with light and dark (s4) — and the demo is PUBLISHED: <https://nodegx.io/templates/todo-list/>.**
+`npm run template:todo` → `templates/todo-list/` **and** `templates/todo-list-demo/`. AC1–AC7, AC9, AC10 and **AC11** green
+(template gate 24/24, drive 14/14; demo gate 18/18, drive 10/10; theme drive 9/9; the public URL driven 16/16).
+**AC8 is Richard's week of use. R11: the backend stays on his computer; sign-in from other devices and hosting are a later phase.**
 
 ---
 
@@ -33,6 +34,8 @@ The mockups are Artifacts: v1, then v2 — the one he approved.
 | R8 | Look | v1 was *"trying too hard"*. **v2: one system font, three sizes, one accent, red only for overdue** — "Love it, build it please" |
 | R9 | The nodegx.io demo (s2) | **A browser-only demo mode** — not a public backend on nexus-1, not screenshots. A second data layer, to be kept in step with the backend one |
 | R4a | A note on every tick (s2) | **"Try it first, decide after use"** — unchanged until Richard has used it |
+| R10 | Light and dark (s4) | *"dark and light mode, matching system by default but with a little icon at the top right for changing"* — built s4 (§3b) |
+| R11 | Phone, sign-in, hosting (s4) | *"Just let it run locally for now, only on the computer, and we'll do logging in and cloud hosting in a later phase"* — **the backend stays on localhost; the phone half is a later phase, not a TPL-008 gap** |
 
 ### 1a. Storage — decided by me, at Richard's request (*"you decide, my head hurts"*)
 
@@ -62,7 +65,7 @@ SQLite file, so the template connects to it and uses nothing else.
 Through the plan door, like TPL-007. Sources: `packages/noodl-mcp/tests/tpl008{Components,Template,Theme}.ts`; policy
 `templates/todo-list.security.json` (copied in last); generator `scripts/generate-todo-template.ts`.
 
-**35 components** (s2): `App`, 15 in `Todo/` (what you see), 5 in `Logic/`, 12 in `Commands/`, 2 pages.
+**36 components** (s4): `App`, 16 in `Todo/` (what you see, including the theme switch), 5 in `Logic/`, 12 in `Commands/`, 2 pages.
 
 - **`Commands/*`** — one component per thing a person can do (add, move ×3 placements, close, reopen, rename, set deadline,
   add/tick/untick/move/describe a next action, add a note). Each: a guard `Function` → the record write → `Logic/Write history`.
@@ -96,6 +99,28 @@ to a command, a row or a script reaches the demo with no one remembering. The ge
 - 🔴 Anything the transform does not recognise (an unmapped record port, a query outside `Todo data`, a page wire count
   that drifted) **throws** at generation, rather than shipping a backend node that loads clean and saves nothing.
 
+### 3b. Light and dark (R10, s4) — `tpl008Theme.ts` → `themeCss()`, `Todo/Theme switch`
+
+**Nothing in the runtime knows about dark mode, so it is a stylesheet.** The project's tokens arrive as `:root { … }`
+(`ProjectTokenCss`); `App`'s `CSS Definition` adds `TPL008_DARK_TOKENS` on two more specific selectors:
+`@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` (the system decides, live, no script) and
+`:root[data-theme="dark"]` (chosen on a light system). Every colour token the light set overrides is overridden, by name,
+and gate §4 recomputes every contrast pair against both sets (dark: lowest text pair 5.77, control edge 4.51).
+
+- **The switch is two icon buttons, and the stylesheet shows one** (`cssClassName` `todo-theme-to-dark` / `-to-light`), from
+  the same conditions as the palette. 🔴 Not one button with a wired icon: a `Function` publishes only on change, and
+  "which icon" would have two producers (load and click) — the stale-value trap. A system that turns dark at sunset changes
+  the icon with the colours.
+- **`data-theme` is written only when the choice DIFFERS from the system** (`THEME_FLIP_SCRIPT`), so picking the system's
+  own theme forgets the choice and the page follows the system again. Kept in `localStorage['nodegx-todo-list-theme']`, with
+  a copy on `window` when storage throws.
+- `App` has a `Function` with **nothing wired**, which the runtime runs once at load (`simplejavascript.ts`: the script
+  setter schedules a run when `run` is unconnected) — it puts a remembered choice back on every page.
+- Placed at the end of the Header's nav (top right) and in a top-right row on Sign in. No `Variable`, so two placements
+  raise nothing. Node ids are `th…`: ids are unique across the project, and the first try's `tsRoot` renamed Task
+  summary's own to `tsRoot-2`.
+- The demo inherits it with no transform change: `App` and `Todo/Theme switch` are the template's.
+
 ## 4. Acceptance criteria
 
 | AC | Criterion | Result |
@@ -110,10 +135,12 @@ to a command, a row or a script reaches the demo with no one remembering. The ge
 | AC8 | Richard's look, and a week of real use | ⬜ Richard |
 | AC9 | Every icon button has a name a screen reader says; the icon shows and the words do not (D72) | ✅ s2 gate §4 (sabotaged) + drive: Chrome's AX tree |
 | AC10 | A browser-only demo mode for nodegx.io (R9) | ✅ **built, gated 18/18, driven 10/10, PUBLISHED** (s3): shipped `nodegx deploy` on the production engine, `drive-tpl008-demo.js` 12/12 on the folder and **12/12 on <https://nodegx.io/templates/todo-list/>** |
+| AC11 | Light and dark: follows the system, a switch at the top right overrides it, the choice is remembered (R10) | ✅ **s4**: gate §4 both palettes AA + §4b (4 rules); `tpl008-theme-drive.test.ts` **9/9** (sabotaged: the sun's hide rules removed → exactly §0 and §2 red); template drive reads the switch on Sign in; **republished, live 16/16** |
 
-Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **20/20** · `tpl008Demo.test.ts` **18/18** ·
-`packages/nodegx-backend/tests/tpl008-todo-drive.test.ts` **14/14** · `tpl008-todo-demo-drive.test.ts` **10/10**, both drives
-**0 console errors** · `tsc -p packages/noodl-mcp --noEmit` exit 0. Pictures: run either drive with `TPL008_SHOTS=<dir>`.
+Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **24/24** · `tpl008Demo.test.ts` **18/18** ·
+`packages/nodegx-backend/tests/tpl008-todo-drive.test.ts` **14/14** · `tpl008-todo-demo-drive.test.ts` **10/10** ·
+`tpl008-theme-drive.test.ts` **9/9**, all drives **0 console errors** · `tsc -p packages/noodl-mcp --noEmit` exit 0 ·
+`scripts/devtools/drive-tpl008-demo.js` **16/16** on the built folder and on the live URL. Pictures: `TPL008_SHOTS=<dir>`.
 
 ## 5. Not in this build
 
@@ -264,3 +291,47 @@ and the gate against <https://nodegx.io> is 12/12** — first visit, add, move a
 network errors, no backend request beside a control. ⚠️ `site/templates/` in `nodegx-web` is still untracked (as TPL-006 left it).
 
 `test:ci` / `test:main` not run.
+
+### s4 — 2026-09-14: light and dark (R10), republished; R11 keeps the backend local
+
+**Rulings** (asked mid-session): R10 is the request itself. R11 — asked what "finish the backend" meant, since the backend was
+already built and driven: *"Just let it run locally for now, only on the computer, and we'll do logging in and cloud hosting in a
+later phase"*. The demo redeploy: *"Yes, redeploy it"*.
+
+**Built** as §3b. Measured before writing: the token block is `:root{}` in `<style id="noodl-design-tokens">`, every colour token the
+template draws is a literal there (only spacing and gradients reference other tokens), nothing in the viewer stamps `data-theme`,
+`icon-moon`/`icon-sun` exist in the lucide set, and a Function with `run` unwired runs at load. Dark palette computed before it was
+typed (lowest text pair 5.77, control edge 4.51 vs a floor of 3).
+
+**Gates:** tsc exit 0; regenerated with 0 refusals and 0 warnings (148 / 138 infos, as before); template gate **24/24** (§4 icon
+buttons now include the switch's two, contrast over BOTH palettes, §4b: the dark set names exactly the light set's colours, App's
+stylesheet carries each dark token twice, the boot Function has nothing wired, the flip scripts against a fake browser — light and
+dark systems, blocked storage, a stored value that is not a theme); demo gate **18/18** unchanged.
+
+**Drives:** `tpl008-theme-drive.test.ts` **9/9** first run, 0 console errors — light → the system turning dark redraws dark with the
+sun and nothing stored → the switch picks light and stores it → a reload keeps it → picking dark (the system's own) forgets it and the
+dialog panel reads `--surface` dark → the system turning light is followed → dark chosen on a light system. **Sabotaged:** the
+`todo-theme-to-light` hide lines removed from the demo's App → exactly §0 and §2 red; restored by `cp`, md5 matched, clean 9/9.
+Demo drive **10/10**. Template drive **14/14**.
+
+**Found on the way, all mine:**
+- 🔴 **Node ids are unique across the project**: the switch's first root id `tsRoot` made the door rename `Todo/Task summary`'s own to
+  `tsRoot-2`. Seen as an untouched component changing in `git status`; the switch's ids are now `th…` and Task summary is byte-identical again.
+- 🔴 **Headless Chrome follows the Mac's light/dark setting.** My Sign in assertion said "headless reports light"; at 21:30 it read a dark
+  system and the sun, which is correct. The drive now reads `matchMedia` beside the switch; the theme drive emulates both settings.
+- `drive-tpl008-demo.js` needs an `index.html` at the site root and an existing `--shots` directory — harness, not product.
+
+**Published.** Deploy build: the SAME `nodegx-deploy.cjs` (Sep 11) as s3, not rebuilt, because runtime sources now carry a peer's
+uncommitted edits; production engine, no warnings. `drive-tpl008-demo.js` gained 4 light/dark clauses: **16/16 on the built folder**.
+Before `ops/deploy.sh` (`--delete`), every local `index.html` (homepage and all five demos) matched the live one and nodegx-web had
+nothing else pending. Old folder moved aside, not deleted. `deploy.sh`: neighbours 200 before and after, homepage md5 unchanged.
+**<https://nodegx.io/templates/todo-list/> 16/16.**
+
+⚠️ **Not done:**
+- **Richard's working copy has no dark mode.** Mirroring the template's `components/` into it with `rsync --delete` was **denied by
+  the auto-mode classifier** ("Irreversible Local Destruction"). Nothing ran. His copy dates from s2 and he had not edited it since 19:21.
+- **Uncommitted**, not asked for: `packages/noodl-mcp/tests/tpl008{Theme,Components,Template,Template.test}.ts`,
+  `packages/nodegx-backend/tests/{tpl008-theme-drive.test.ts,tpl008-todo-drive.test.ts,helpers/todo-drive.ts}`,
+  `scripts/devtools/drive-tpl008-demo.js`, `templates/todo-list/`, `templates/todo-list-demo/`, this file, and one hunk of
+  `NEXT-SESSION-PROMPT.md` (which also holds a peer's uncommitted hunk — commit from a private index).
+- `test:ci` / `test:main` not run.
