@@ -288,3 +288,19 @@ kept files have not changed since). Editor `tests-unit` gam-019, cn-010, def-002
 24 spec files, 24 PASS lines, 327 tests (session 1's 323 + 4). MCP `tools`, `validateOnDiskPreconditions`, `kitOverlay`,
 `gam019BuiltinPortDoor`: 4 of 4 PASS lines, 53 tests. `toolDisclosure` alone: 18.
 - Committed as `4bb438165` (Richard, 2026-09-14, register included).
+
+### 2026-09-14, P88 session 5 — the refusal turned `test:main` red, and nobody had run it
+
+`npm run test:main` (a PR CI gate) read **7,498 of 7,500**. One red was
+`tests-unit/cn-002/unknown-type-check-skipped.test.ts` › *leaves error and warning counts exactly where they were*:
+expected 2 errors, received 1. CN-002 compares a `Text` target with a kit target over the same wire,
+`src.text → dst.label`. A `Text` has no `label` input, so this rule now refuses the wire on the resolvable twin. The kit
+twin's port check is skipped, so its error count stayed where it was.
+- **Measured by a throwaway probe spec, deleted after.** The `Text` twin's errors: `Text has no output named "text"`
+  and `Text has no input named "label"`. The kit twin's: the first only.
+- **The fix is in the fixture, not the rule.** The control wire now targets `text`, an input a `Text` has. CN-002 is
+  12/12. The red run with `label` is the reverted arm. Committed `8af0c943d`.
+- The other red, `tests-unit/tpl-003/landing-template.test.ts` (21 components expected, 28 installed), is not this
+  task's. The embedded `landing-pages.content.json` grew with P78 TPL-004's commits on 2026-09-11, and the spec's
+  literal was last set on 09-06. It is owed to P78.
+- ⚠️ Session 1's regression list named 24 editor spec files. CN-002 was not among them, and `test:main` is where it lives.

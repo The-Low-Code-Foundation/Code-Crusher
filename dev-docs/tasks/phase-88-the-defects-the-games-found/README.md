@@ -3,9 +3,12 @@
 **Scoped:** 2026-09-14, at HEAD `eb12ebe99`, from every open row in
 [P78's register](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) whose owner was `NONE`, plus four findings
 from [phase 87](../phase-87-the-first-play-test/README.md) that had never been registered.
-**Status: ⬜ OPEN — 1 of 24 built** (GAM-019 ✅, 2026-09-14, `4bb438165`). 7 rulings landed in session 1 (§4). GAM-012's
+**Status: ⬜ OPEN — 2 of 24 built** (GAM-019 ✅ `4bb438165`; GAM-006 🟢 `062dfd9c0`). 7 rulings landed in session 1 (§4). GAM-012's
 faults 1–2 are committed (`bb27086de`). **Session 3 (`82a7d3775`, `42cd090fe`):** GAM-004 AC1 does not reproduce in the runtime, GAM-018
-AC1 is confirmed (10 guarded kits fail alone), and GAM-006 (b) is built with AC8. **Prefix: `GAM`.**
+AC1 is confirmed (10 guarded kits fail alone), and GAM-006 (b) is built with AC8. **Sessions 4–5 (`062dfd9c0`):** GAM-006's
+colour reader is built and driven in a real browser on three templates, beside the old runtime and a reader-bypassed
+one. TPL-006's workaround is removed (`1cf0a81d2`), and Rocket School's stays with P87, undriven. `test:main` found
+GAM-019 had turned CN-002 red, fixed in `8af0c943d`. **Prefix: `GAM`.**
 
 > "Let's make a new phase to write task files for all the defects please" — Richard, 2026-09-14
 
@@ -139,7 +142,7 @@ Each task file states its ruling in full, with the trade-offs.
 |---|---|---|---|
 | [GAM-001](GAM-001-AN-OPTIONAL-PORT-LEFT-UNSET-SHOWS-THE-PART.md) | An optional port left unset shows the part | D55 | R3, shared with GAM-003 |
 | [GAM-003](GAM-003-A-METER-COMPUTED-BY-AN-EXPRESSION-LOADS-WITHOUT-AN-ERROR.md) | A meter computed by an Expression loads without an error | D62 | R3; FLD-004 ✅ stays intact |
-| [GAM-006](GAM-006-A-COLOUR-SWITCHED-BY-STATES-REACHES-THE-SCREEN.md) 🟡 | A colour switched by a States node reaches the screen, with transitions on | D49 | R7 (s3: AC1 RED; (b) built, AC2 runtime half + AC8 graded, `82a7d3775`; a delayed colour publishes an RGBA array, owed) |
+| [GAM-006](GAM-006-A-COLOUR-SWITCHED-BY-STATES-REACHES-THE-SCREEN.md) 🟢 | A colour switched by a States node reaches the screen, with transitions on | D49 | R7 (s3 `82a7d3775`; s4+s5 `062dfd9c0`: (a) one colour reader, (b), AC7, AC4, and in a real browser AC3 + AC5 on FilterPill and Story/Passage beside the old and a reader-bypassed runtime, AC6's TPL-005 half. TPL-006's pin removed `1cf0a81d2`. **Left:** Rocket School's `chStates` not driven, pins stay with P87; D49's register line) |
 | [GAM-005](GAM-005-TWO-COPIES-OF-A-COMPONENT-KEEP-THEIR-OWN-STATE.md) | Two copies of a component keep their own state, or the author is told they will not | D57 | R6 |
 | [GAM-007](GAM-007-A-DATA-FIELD-CALLED-ON-READS-AS-DATA.md) | A data field called `on`, `get` or `data` reads as the data | D64 | R8 |
 | [GAM-009](GAM-009-WHAT-SOMEONE-TYPED-IS-STILL-THERE-WHEN-THE-FIELD-COMES-BACK.md) | What someone typed is still there when the field comes back | D61 | R10 |
