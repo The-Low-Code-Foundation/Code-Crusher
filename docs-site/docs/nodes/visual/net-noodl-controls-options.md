@@ -160,7 +160,7 @@ One-of-many choices too numerous or space-constrained for radio buttons: country
 
 ## Dynamic ports
 
-_This node's port list changes at runtime (declared-port-groups, runtime-discovered); the tables above may be incomplete for a given instance._
+_This node's port list changes at runtime (declared-port-groups, runtime-narrowed); the tables above may be incomplete for a given instance._
 
 The port list above is complete — this node mints no ports. It republishes its own `value` input per instance as an `enum` built from this node's `items`: one choice per option, labelled with the option's `Label` and carrying its `Value`, plus the currently stored value when that matches no option. It is declared `string` statically because nothing outside a connected editor can know the instance's options.
 
