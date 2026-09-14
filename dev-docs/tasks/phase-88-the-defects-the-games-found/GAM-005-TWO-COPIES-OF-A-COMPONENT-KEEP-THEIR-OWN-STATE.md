@@ -1,6 +1,6 @@
 # GAM-005 — Two copies of a component keep their own state, or the author is told they will not
 
-**Status: ⬜ not started.** **Source:** [P78 D57](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 Rocket School, 2026-09-12 · **Side:** product (authoring doctrine, validation)
+**Status: 🟢 built 2026-09-14 (session 7, uncommitted).** AC1–AC4 graded, AC6 decided by reading. **Owed:** AC5 (browser drive), AC7 (repeater `id`), the site-builder embedded marks, and an MCP bundle rebuild. **Source:** [P78 D57](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 Rocket School, 2026-09-12 · **Side:** product (authoring doctrine, validation)
 
 A page places two feedback banners. One answer opens both, because the banner kept "open" in a `Variable`, and a
 `Variable` is one value for the whole app however many times its component is placed. Nothing the author or the agent reads says so.
@@ -92,4 +92,42 @@ console see it. Rocket School's banner was caught from a screenshot.
 
 ## 8. Record
 
-Not started.
+### Session 7 — 2026-09-14, over HEAD `3747d1d20`
+
+**What was built**
+
+- **(a) Doctrine.** Playbook §4 gains *"A `Variable` is one value for the whole app"*: a component's own state goes in States, a Component Object, or a Counter/Switch, and the escape is named. The decomposition line gains the converse (`interfaces.ts`, `decomposition.ts`).
+- **(b) `variable-in-repeated-component`**, a warning that never blocks (`validation/repeatedComponentVariable.ts`). It is wired into `authoredPreconditionDiagnostics` through a new `views` option (omitted means "do not check"), and passed by both clients (`noodl-mcp/src/validate.ts`, `authoring/validate.ts`). So it reaches `validate_component`, `validate_project`, `create_component` and the plan door. `ComponentNodesView` nodes gain optional `id`, `label`, `comment` and `metadata`.
+- **The marker (owed by §5):** a node comment containing "shared on purpose", on any `Variable2`/`Set Variable` node of that name in that component. An agent writes it as `comment` (stored as `metadata.comment`), and a person sees it on the canvas. The check reads both the flat and the stored form.
+- **Copies** are counted project-wide. An instance counts once. An explicit `For Each` template counts as "more than once". A placement inside a component drawn N times counts N times. A dynamic repeater and component-typed parameters are not read, so they under-count and stay quiet.
+- **Where it reports:** at the holder's first node of that name. It is emitted when the holder is validated and when a component placing it is validated. The message never names the component being validated, so `dedupeDiagnostics` collapses the two, and `validate_project` gives exactly one finding. The placer direction exists because the doctrine's order writes leaves before the page.
+  - ⚠️ The plan door stamps each finding with the **candidate's** component name. TPL-006 therefore showed it once per placing page (`Pages/Read`, `Pages/Remix`).
+- A read-only Variable counts, as §5(b) says. Story/Source is §2's read-only hit, and it is AC4's known-firing signal.
+
+**Readings** (logs in session `4e34184e…`'s scratchpad, `gam005/`)
+
+| AC | gate | result |
+|---|---|---|
+| AC1 | `noodl-mcp` `gam005VariableInRepeatedComponent.test.ts` at HEAD, before any change | **7 failed / 2 passed**, `GAM005_RED_EXIT=1`. Every failure is on its target line, with its anchor passing: `States.currentState` present, `interfaceless-instance` / `component-port-direction` firing. The 2 passes are the quiet arms (placed once, marked). ⚠️ The first run's decomposition arm failed on its own anchor (the source wraps "Shared app / state"), so it was re-taken after the regex fix: 2 failed on target, `GAM005_RED_DOCTRINE_EXIT=1` |
+| AC2/AC3 | same spec, after | **9/9**, `GAM005_GREEN4_EXIT=0` |
+| — | editor `tests-unit/gam-005` (counting, cycles, For Each, both comment shapes, gate wiring, not blocking) | **12/12**, `UNIT_GREEN2_EXIT=0` |
+| AC2 sabotage | playbook sentence deleted / decomposition converse deleted | exactly the one matching arm red each time (`SAB_AC2A_EXIT=1`, `SAB_AC2B_EXIT=1`). Both files restored and `cmp`-identical |
+| AC3 sabotage | `entry.count++` → `entry.count = 1` | **4 red**: twice at the banner, validate_project once, non-silencing comment, create_component. For Each and the quiet arms stay green (`SAB_AC3B_EXIT=1`). Restored, `cmp`-identical. ⚠️ The first sabotage left create_component green, because the fixture's own Home placed Card once too (two parents). That arm was fixed so the named sabotage reaches it |
+| AC2 | `cmp001InterfaceDoctrine.test.ts` | 32/33. The one red is **not this change**: `:353` pins the corpus publish rate at 33%, and the catalog measures **17/46 = 37%**, identically at `4bb438165^`, `4bb438165` and HEAD. Its inputs are the catalog and the spec only. Owner CMP-001 (P85): count the artefact, do not bump the literal. `test:main` does not run noodl-mcp, which is why it was unseen |
+| AC4 | the product check over every population (`ac4.ts`, ts-node) | **19 findings.** landing-pages 1 (FilterPill `workFilter`) · pixel-game 2 (Game/Move `playerX`, `playerY`) · rocket-school 4 (New player form, drawn 6 times) · story-engine 1 (Story/Source `storyPasted`) · todo-list 4 and todo-list-demo 4 (Write history `todoLastHistory`/`todoProblem`, Move action, Move task `todoProblem`) · embedded landing 1 · embedded site-builder 2 (NavLink via For Each, ContactSection, both reading `siteCurrentSlug`). **0 / 46 prefabs, 0 / 104 catalog examples.** §2's four all appear. An independent python census found the same hits |
+| AC4 | template gates, before marking | red on this code: TPL-003 `:198`, TPL-005 `:510`, TPL-006 `:756`, TPL-007 `:119`. TPL-008 and SB-007 pass. Also red but **not this code**: DEF-038's rocket-school control `:161`, TPL-007 `:1178`/`:1220` (Rocket School was being edited live at 20:00) |
+| — | `test:main`, with everything above in the tree | **7,512 / 7,512, 457 suites**, `TEST_MAIN_EXIT=0` (session 6 read 7,500 / 456; the difference is exactly the new unit spec) |
+| AC6 | marks, then regenerated (`generate-{landing,pixel,story}-template.ts`) | diff is 4 files, +16/−1, the comment stored as `metadata.comment` in each. tpl003 + tpl005 + tpl006 + gam005: **176/176**, `TPL_GATES2_EXIT=0` |
+
+**Classified (AC4/AC6):** every finding is **intended**.
+- FilterPill: the pills write one filter. Game/Move: four buttons move one player. Story/Source: Read and Remix show one pasted story. Site-builder: the nav and contact read the current page. Todo list: commands write one problem slot.
+- Rocket School `New player form`, by **reading, not driven:** create mode's `reset` and edit mode's `fill` rewrite the draft every time it opens, and the Profiles copy and a header copy are never on screen together.
+- Rocket School's banner and choice row left Variables in P87, and that stays correct.
+- TPL-007 and TPL-008 are live peers' templates. Both busy sessions were messaged, and their marks are theirs.
+
+**Owed**
+- AC5: a browser drive, two banners built the new way beside the Variable version.
+- AC7: measure the repeater `id` note before teaching it. The P87 README `:143` note stands until then.
+- Mark site-builder's two reads (P77's `sb006Components.ts`, then regenerate).
+- An MCP bundle rebuild, so the installed server carries the warning.
+- The editor's Electron `test:ci` (not run) and the full noodl-mcp suite (not run).

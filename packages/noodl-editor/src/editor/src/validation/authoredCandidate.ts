@@ -72,6 +72,7 @@ import { checkNavigation, checkPageShape, looksLikePageComponent, PAGE_NODE_TYPE
 import { checkParameterValues } from './parameterValues';
 import { checkPublicWriteDoor, type FunctionSecurityPolicy } from './publicWriteDoor';
 import { checkRepeaterTemplate } from './repeaterTemplate';
+import { checkVariableInRepeatedComponent } from './repeatedComponentVariable';
 import { checkLayoutInertCombination } from './layoutInertCombination';
 import { checkOneWayGate } from './oneWayGate';
 import { checkQueryBeforeFilter } from './queryBeforeFilter';
@@ -179,6 +180,15 @@ export interface ComponentNodesView {
     type: string;
     parameters?: Record<string, unknown> | null;
     ports?: readonly AuthoredPortLike[] | null;
+    /**
+     * GAM-005 — where the "shared on purpose" diagnostic points, and the escape it reads. Both
+     * clients already hand these over: MCP views are the stored v2 nodes (`id`, `label`,
+     * `metadata.comment`), and the editor's are `GraphNode`s (`comment` flat).
+     */
+    id?: string;
+    label?: string;
+    comment?: string;
+    metadata?: Record<string, unknown> | null;
   }[];
 }
 
@@ -476,6 +486,12 @@ export interface AuthoredPreconditionOptions {
    */
   derived?: DerivedPortIndex;
   /**
+   * GAM-005 — every component's nodes, the candidate's included, the same views `interfaces` and
+   * `derived` are built from. **Omitted means "do not check"**: a caller that cannot enumerate the
+   * project cannot count copies, and a component it has not read may be the one placing a second.
+   */
+  views?: readonly ComponentNodesView[];
+  /**
    * REL-002a — the project's `settings.bodyScroll`, in three states.
    *
    * **`undefined` means "do not check"; `null` means "the project file was read and the setting
@@ -552,7 +568,8 @@ export function authoredPreconditionDiagnostics(options: AuthoredPreconditionOpt
     wires,
     derived,
     security,
-    bodyScroll
+    bodyScroll,
+    views
   } = options;
   return [
     ...checkParameterValues(nodes, catalog, { component }),
@@ -595,6 +612,10 @@ export function authoredPreconditionDiagnostics(options: AuthoredPreconditionOpt
     // is a value the predicate cannot read and must not count as a cap.
     ...checkUnrealisedMeasure(nodes, { component, catalog, connectedInputs: connections }),
     ...checkRepeaterTemplate(nodes, { component, components, connectedInputs: connections }),
+    // GAM-005 (P78 D57) — a Variable in a component drawn more than once is one value every copy
+    // shares. Reads the views rather than `nodes`, because the copies are counted project-wide and
+    // the holder may be a component this candidate places, not the candidate itself.
+    ...(views ? checkVariableInRepeatedComponent({ component, views }) : []),
     // DEF-010 (SB-009) — the other twelve of the catalog's thirteen
     // component-typed ports. `For Each.template` is skipped inside the check:
     // the line above owns it, and a second producer over one population is a

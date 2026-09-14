@@ -1162,7 +1162,21 @@ export enum DiagnosticCode {
    * not check", so a door that cannot read the project root stays honest about
    * the limited functions it cannot see.
    */
-  PublicWriteDoorUnlimited = 'public-write-door-unlimited'
+  PublicWriteDoorUnlimited = 'public-write-door-unlimited',
+  /**
+   * GAM-005 (P78 D57): a `Variable2`/`Set Variable` inside a component the
+   * project draws more than once. A Variable is one value for the whole app by
+   * name, so every copy reads and writes the same one: Rocket School's two
+   * feedback banners opened together, and four choice rows shared one pick.
+   *
+   * 🔒 Warning, never blocking (R6, Richard 2026-09-14), with an escape: a
+   * comment containing "shared on purpose" on any node of that name in the
+   * component silences it. App-wide is correct and depended on (TPL-006,
+   * SBR-004), and a row of filter pills writing one filter is the point.
+   * Reported at the holder, from the holder's validation and from its placer's,
+   * as one identical diagnostic (`repeatedComponentVariable.ts`).
+   */
+  VariableInRepeatedComponent = 'variable-in-repeated-component'
 }
 
 // ─── Location ─────────────────────────────────────────────────────────────────

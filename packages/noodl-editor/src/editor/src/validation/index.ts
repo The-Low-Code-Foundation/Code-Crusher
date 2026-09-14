@@ -93,6 +93,19 @@ export type {
   MinedFunctionPorts,
   ScriptCarryingNode
 } from './functionPorts';
+// GAM-005 — a Variable inside a component drawn more than once.
+export {
+  checkVariableInRepeatedComponent,
+  componentCopies,
+  SHARED_ON_PURPOSE,
+  VARIABLE_NODE_TYPES
+} from './repeatedComponentVariable';
+export type {
+  CheckVariableInRepeatedComponentOptions,
+  ComponentCopies,
+  VariableView,
+  VariableViewNode
+} from './repeatedComponentVariable';
 // LAS-001 — an instance parameter that reaches a port that exists.
 export {
   checkComponentPortDirection,

@@ -848,8 +848,10 @@ const MOVE: Tpl005Component = {
     logic('mvTy', EXPRESSION_NODE, 'The tile down', { expression: 'py + dy' }),
     logic('mvWall', FUNCTION_NODE, 'Is there a wall in the way?', { functionScript: IS_WALL_SCRIPT }),
     gate('mvGate', 'Can you walk there?'),
-    logic('mvSetX', SET_VARIABLE_NODE, 'You are here now — across', { name: VAR_X }),
-    logic('mvSetY', SET_VARIABLE_NODE, 'You are here now — down', { name: VAR_Y }),
+    // GAM-005: two or more copies share this Variable by design, so it says so and the door stays quiet.
+    { ...(logic('mvSetX', SET_VARIABLE_NODE, 'You are here now — across', { name: VAR_X }) as object), comment: 'Shared on purpose: the four Move buttons all move the one player.' },
+    // GAM-005: two or more copies share this Variable by design, so it says so and the door stays quiet.
+    { ...(logic('mvSetY', SET_VARIABLE_NODE, 'You are here now — down', { name: VAR_Y }) as object), comment: 'Shared on purpose: the four Move buttons all move the one player.' },
     outputs('mvOutputs', 'What happened', [
       ['moved', 'signal'],
       ['refused', 'signal']

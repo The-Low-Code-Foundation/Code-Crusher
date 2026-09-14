@@ -216,6 +216,8 @@ export function preconditionDiagnostics(
     // DEF-002 §1(b)/§1(c) — the same views again, read for what an editor
     // adapter would mint rather than for what a Component Inputs node declares.
     derived: derivedPortIndices(views),
+    // GAM-005 — the same views, counted for how many copies of each component are drawn.
+    views,
     // LAS-012 — a `template` fed by a wire is a working list, and only the
     // candidate's own connections can say so.
     connections: connectedInputs(candidate.connections.connections),

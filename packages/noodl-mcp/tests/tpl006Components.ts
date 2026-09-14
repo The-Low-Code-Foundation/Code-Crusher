@@ -718,7 +718,8 @@ function sourceComponent(storyJson: string): Tpl006Component {
         label: `${EDIT}your story — every passage, in this one list`,
         parameters: { type: 'json', json: storyJson }
       },
-      logic('srPasted', VARIABLE_NODE, 'A story somebody pasted on the Remix page', { name: VAR_PASTED }),
+      // GAM-005: two or more copies share this Variable by design, so it says so and the door stays quiet.
+    { ...(logic('srPasted', VARIABLE_NODE, 'A story somebody pasted on the Remix page', { name: VAR_PASTED }) as object), comment: 'Shared on purpose: the Read page and the Remix page show the same pasted story.' },
       logic('srPick', FUNCTION_NODE, 'Which story is being read', { functionScript: PICK_STORY_SCRIPT }),
       outputs('srOutputs', 'The story', [
         ['ready', 'signal'],
