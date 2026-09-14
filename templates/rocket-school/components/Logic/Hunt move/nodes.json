@@ -1,0 +1,122 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "ac07434c-acd3-5268-89b3-5bd56e307b17",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "huntmoveIn",
+      "type": "Component Inputs",
+      "label": "What the caller gives",
+      "ports": [
+        {
+          "name": "run",
+          "plug": "output",
+          "type": "signal"
+        },
+        {
+          "name": "game",
+          "plug": "output",
+          "type": "object"
+        },
+        {
+          "name": "action",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "index",
+          "plug": "output",
+          "type": "number"
+        }
+      ],
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "huntmoveFn",
+      "type": "JavaScriptFunction",
+      "label": "Hunt move",
+      "parameters": {
+        "functionScript": "\nvar LEVELS = [\"CE2\",\"CM1\",\"CM2\",\"6e\"];\nvar LEVEL_BASE = {\"CE2\":800,\"CM1\":1050,\"CM2\":1300,\"6e\":1550};\nfunction levelIndex(level) { var i = LEVELS.indexOf(String(level || 'CE2')); return i < 0 ? 0 : i; }\nfunction rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }\nfunction pickOne(arr) { return arr[Math.floor(Math.random() * arr.length)]; }\nfunction shuffle(arr) { var a = arr.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }\nfunction isFr(lang) { return String(lang) === 'fr'; }\n/** 1234567.5 → \"1 234 567,5\" (fr, grouped with a narrow no-break space) or \"1,234,567.5\" (en). RKT-003: an ordinary space let a phone break \"8 266\" across two lines. */\nfunction fmtNum(n, lang) {\n  var neg = n < 0; n = Math.abs(n);\n  var s = String(Math.round(n * 1000) / 1000);\n  var parts = s.split('.');\n  var int = parts[0]; var out = '';\n  while (int.length > 3) { out = (isFr(lang) ? ' ' : ',') + int.slice(-3) + out; int = int.slice(0, -3); }\n  out = int + out;\n  if (parts[1]) out += (isFr(lang) ? ',' : '.') + parts[1];\n  return (neg ? '−' : '') + out;\n}\n/** What a typed answer becomes before comparison: numbers as numbers, words lower-case. */\nfunction normalise(v) {\n  var s = String(v === undefined || v === null ? '' : v).trim().toLowerCase();\n  var num = s.replace(/\\s+/g, '').replace(/,/g, '.');\n  if (/^-?\\d+(\\.\\d+)?$/.test(num)) return String(Number(num));\n  var big = s.replace(/[\\s.,']/g, '');\n  if (/^-?\\d+$/.test(big) && /\\d[\\s.,']\\d{3}/.test(s)) return String(Number(big));\n  return s.replace(/\\s+/g, ' ');\n}\nfunction sameAnswer(a, b) { return normalise(a) === normalise(b); }\n\nvar EN_ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];\nvar EN_TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];\nfunction enUnder1000(n) {\n  var out = '';\n  if (n >= 100) { out = EN_ONES[Math.floor(n / 100)] + ' hundred'; n = n % 100; if (n > 0) out += ' and '; }\n  if (n >= 20) { out += EN_TENS[Math.floor(n / 10)]; if (n % 10) out += '-' + EN_ONES[n % 10]; }\n  else if (n > 0 || out === '') out += EN_ONES[n];\n  return out;\n}\nfunction spellEn(n) {\n  n = Math.floor(Number(n)); if (n === 0) return 'zero';\n  var blocks = [[1000000000, 'billion'], [1000000, 'million'], [1000, 'thousand']];\n  var parts = [];\n  for (var i = 0; i < blocks.length; i++) { var q = Math.floor(n / blocks[i][0]); if (q > 0) { parts.push(enUnder1000(q) + ' ' + blocks[i][1]); n = n % blocks[i][0]; } }\n  if (n > 0) { if (parts.length && n < 100) parts.push('and ' + enUnder1000(n)); else parts.push(enUnder1000(n)); }\n  return parts.join(' ');\n}\nvar FR_ONES = ['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize'];\nvar FR_TENS = ['','dix','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];\nfunction frUnder100(n) {\n  if (n < 17) return FR_ONES[n];\n  if (n < 20) return 'dix-' + FR_ONES[n - 10];\n  var t = Math.floor(n / 10), u = n % 10;\n  if (t === 7 || t === 9) { u += 10; }\n  var base = FR_TENS[t];\n  if (t === 8 && u === 0) return 'quatre-vingts';\n  if (u === 0) return base;\n  if (u === 1 && t !== 8) return base + ' et un';\n  if (u === 11 && t === 7) return base + ' et onze';\n  var unit = u < 17 ? FR_ONES[u] : 'dix-' + FR_ONES[u - 10];\n  return base + '-' + unit;\n}\nfunction frUnder1000(n) {\n  var out = '';\n  if (n >= 100) { var h = Math.floor(n / 100); n = n % 100; out = (h === 1 ? 'cent' : FR_ONES[h] + ' cent') + (n === 0 && h > 1 ? 's' : ''); if (n > 0) out += ' '; }\n  if (n > 0 || out === '') out += frUnder100(n);\n  return out;\n}\nfunction spellFr(n) {\n  n = Math.floor(Number(n)); if (n === 0) return 'zéro';\n  var parts = [];\n  var b = Math.floor(n / 1000000000); if (b > 0) { parts.push((b === 1 ? 'un milliard' : frUnder1000(b) + ' milliards')); n = n % 1000000000; }\n  var m = Math.floor(n / 1000000); if (m > 0) { parts.push((m === 1 ? 'un million' : frUnder1000(m) + ' millions')); n = n % 1000000; }\n  var k = Math.floor(n / 1000); if (k > 0) { parts.push((k === 1 ? 'mille' : frUnder1000(k) + ' mille')); n = n % 1000; }\n  if (n > 0) parts.push(frUnder1000(n));\n  return parts.join(' ');\n}\nfunction spell(n, lang) { return isFr(lang) ? spellFr(n) : spellEn(n); }\nfunction skillBase(skill) { return LEVEL_BASE[skill.level] + Number(skill.diff || 0) * 250; }\nfunction predict(r, d) { return 1 / (1 + Math.pow(10, (d - r) / 400)); }\nfunction pickText(bi, lang) { if (!bi) return ''; if (typeof bi === 'string') return bi; return isFr(lang) ? (bi.fr || bi.en || '') : (bi.en || bi.fr || ''); }\n\nvar HUNT_ROUNDS = 5;\nvar HUNT_HELP_AFTER = 2;\nfunction huntCombos(n, k) {\n  var out = [];\n  function rec(start, chosen) { if (chosen.length === k) { out.push(chosen.slice()); return; } for (var i = start; i < n; i++) { chosen.push(i); rec(i + 1, chosen); chosen.pop(); } }\n  rec(0, []);\n  return out;\n}\nfunction huntValue(kind, values) {\n  var v = kind === 'mul2' ? 1 : 0;\n  for (var i = 0; i < values.length; i++) v = kind === 'mul2' ? v * values[i] : v + values[i];\n  return values.length ? v : 0;\n}\nfunction huntTry(kind, li) {\n  var count = kind === 'add3' ? 3 : 2;\n  var max = kind === 'add100' ? 90 : kind === 'mul2' ? 12 : li === 0 ? 15 : 30;\n  var all = huntCombos(16, count);\n  for (var attempt = 0; attempt < 400; attempt++) {\n    var cells = [];\n    for (var i = 0; i < 16; i++) cells.push(rnd(kind === 'mul2' ? 2 : 1, max));\n    var byValue = {};\n    for (var c = 0; c < all.length; c++) {\n      var v = huntValue(kind, all[c].map(function (k) { return cells[k]; }));\n      if (!byValue[v]) byValue[v] = [];\n      byValue[v].push(all[c]);\n    }\n    var goods = [];\n    for (var key in byValue) {\n      var t = Number(key), n = byValue[key].length;\n      if (n < 1 || n > 3) continue;\n      if (kind === 'add100' ? t === 100 : kind === 'mul2' ? t >= 12 : t >= 10) goods.push(t);\n    }\n    if (goods.length) { var target = pickOne(goods); return { kind: kind, count: count, cells: cells, target: target, ways: byValue[target] }; }\n  }\n  return null;\n}\nfunction huntGrid(level) {\n  var li = levelIndex(level);\n  // The kinds by level: add 2 / add 3 / multiply 2 / pairs to 100.\n  var kinds = li === 0 ? ['add2', 'add2', 'add3'] : li === 1 ? ['add2', 'add3', 'mul2'] : ['add3', 'mul2', 'add100', 'mul2'];\n  var grid = huntTry(pickOne(kinds), li) || huntTry('add2', li);\n  if (!grid) grid = { kind: 'add2', count: 2, cells: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], target: 31, ways: [[14, 15]] };\n  return grid;\n}\nvar HUNT_WORDS = { add2: { en: 'Pick 2 numbers that add up to ', fr: 'Choisis 2 nombres dont la somme fait ' }, add3: { en: 'Pick 3 numbers that add up to ', fr: 'Choisis 3 nombres dont la somme fait ' }, mul2: { en: 'Pick 2 numbers that multiply to ', fr: 'Choisis 2 nombres dont le produit fait ' }, add100: { en: 'Pick 2 numbers that make 100', fr: 'Choisis 2 nombres qui font 100' } };\nfunction huntInstruction(kind, target, lang) { return pickText(HUNT_WORDS[kind] || HUNT_WORDS.add2, lang) + (kind === 'add100' ? '' : fmtNum(target, lang)); }\nfunction huntSay(kind, values, lang) { return values.map(function (v) { return fmtNum(v, lang); }).join(kind === 'mul2' ? ' × ' : ' + ') + ' = ' + fmtNum(huntValue(kind, values), lang); }\nfunction huntKey(combo) { return combo.slice().sort(function (a, b) { return a - b; }).join('-'); }\nfunction huntHas(list, combo) { var k = huntKey(combo); for (var i = 0; i < list.length; i++) if (huntKey(list[i]) === k) return true; return false; }\nfunction huntGot(g) { var n = 0; for (var i = 0; i < g.ways.length; i++) if (huntHas(g.found, g.ways[i]) || huntHas(g.shown, g.ways[i])) n++; return n; }\n\nvar was = Inputs.game && typeof Inputs.game === 'object' ? Inputs.game : null;\nvar g = was ? JSON.parse(JSON.stringify(was)) : null;\nvar action = String(Inputs.action || 'tap');\nvar changed = false;\nif (g && Array.isArray(g.cells) && Array.isArray(g.ways) && g.ways.length && g.over !== true) {\n  ['found', 'shown', 'picked', 'missed', 'lately', 'said'].forEach(function (k) { if (!Array.isArray(g[k])) g[k] = []; });\n  var rounds = Number(g.rounds) || HUNT_ROUNDS;\n  var done = huntGot(g) === g.ways.length;\n  var index = Number(Inputs.index);\n  if (action === 'tap' && !done && Math.floor(index) === index && index >= 0 && index < g.cells.length) {\n    var at = g.picked.indexOf(index);\n    if (at >= 0) g.picked.splice(at, 1);\n    else g.picked.push(index);\n    // The shake and the pop belong to the move that made them: the next tap stills both.\n    g.missed = [];\n    g.lately = [];\n    if (g.picked.length >= (Number(g.count) || 2)) {\n      var combo = g.picked.slice().sort(function (a, b) { return a - b; });\n      var values = combo.map(function (k) { return g.cells[k]; });\n      g.said = values;\n      if (huntValue(g.kind, values) === g.target) {\n        if (huntHas(g.found, combo) || huntHas(g.shown, combo)) g.note = 'again';\n        else { g.found.push(combo); g.lately = combo; g.made = (Number(g.made) || 0) + 1; g.note = 'right'; }\n      } else {\n        g.missed = combo;\n        g.misses = (Number(g.misses) || 0) + 1;\n        g.gridMisses = (Number(g.gridMisses) || 0) + 1;\n        g.note = 'wrong';\n      }\n      g.picked = [];\n    }\n    changed = true;\n  } else if (action === 'show' && !done && (Number(g.gridMisses) || 0) >= HUNT_HELP_AFTER) {\n    for (var w = 0; w < g.ways.length && !changed; w++) {\n      if (huntHas(g.found, g.ways[w]) || huntHas(g.shown, g.ways[w])) continue;\n      g.shown.push(g.ways[w].slice());\n      g.lately = g.ways[w].slice();\n      g.helped = (Number(g.helped) || 0) + 1;\n      g.said = g.ways[w].map(function (k) { return g.cells[k]; });\n      g.note = 'shown';\n      g.picked = [];\n      g.missed = [];\n      changed = true;\n    }\n  } else if (action === 'next' && done && (Number(g.round) || 1) < rounds) {\n    var grid = huntGrid(g.level);\n    g.round = (Number(g.round) || 1) + 1;\n    g.kind = grid.kind; g.count = grid.count; g.cells = grid.cells; g.target = grid.target; g.ways = grid.ways;\n    g.found = []; g.shown = []; g.picked = []; g.missed = []; g.lately = []; g.said = [];\n    g.gridMisses = 0;\n    g.note = 'start';\n    changed = true;\n  }\n  if (changed) {\n    g.taps = (Number(g.taps) || 0) + 1;\n    if (huntGot(g) === g.ways.length && (Number(g.round) || 1) >= rounds) g.over = true;\n  }\n}\nOutputs.changed = changed;\nOutputs.note = g ? String(g.note || '') : '';\n// A fresh object every run, so the one Variable holding the hunt always publishes.\nOutputs.game = g || {};\n",
+        "runOnChange-in-game": false,
+        "runOnChange-in-action": false,
+        "runOnChange-in-index": false
+      },
+      "x": 40,
+      "y": 160,
+      "ports": [
+        {
+          "name": "in-game",
+          "displayName": "game",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-action",
+          "displayName": "action",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "in-index",
+          "displayName": "index",
+          "plug": "input",
+          "type": "*",
+          "group": "Inputs"
+        },
+        {
+          "name": "out-changed",
+          "displayName": "changed",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-note",
+          "displayName": "note",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        },
+        {
+          "name": "out-game",
+          "displayName": "game",
+          "plug": "output",
+          "type": "*",
+          "group": "Outputs"
+        }
+      ]
+    },
+    {
+      "id": "huntmoveOut",
+      "type": "Component Outputs",
+      "label": "What it answers",
+      "ports": [
+        {
+          "name": "game",
+          "plug": "input",
+          "type": "object"
+        },
+        {
+          "name": "changed",
+          "plug": "input",
+          "type": "boolean"
+        },
+        {
+          "name": "note",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "done",
+          "plug": "input",
+          "type": "signal"
+        }
+      ],
+      "x": 40,
+      "y": 280
+    }
+  ]
+}

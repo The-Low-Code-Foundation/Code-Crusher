@@ -127,6 +127,7 @@
     "template:landing": "ts-node -T -P ./scripts/tsconfig.json ./scripts/generate-landing-template.ts",
     "template:pixel": "ts-node -T -P ./scripts/tsconfig.json ./scripts/generate-pixel-template.ts",
     "template:story": "ts-node -T -P ./scripts/tsconfig.json ./scripts/generate-story-template.ts",
+    "template:rocket": "ts-node -T -P ./scripts/tsconfig.json ./scripts/generate-rocket-template.ts",
     "template:todo": "ts-node -T -P ./scripts/tsconfig.json ./scripts/generate-todo-template.ts"
   },
   "devDependencies": {

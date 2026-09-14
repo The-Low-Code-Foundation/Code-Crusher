@@ -1,0 +1,374 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "387a644c-f75e-5e40-8e75-e88c787fc2d1",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "rdIn",
+      "type": "Component Inputs",
+      "label": "The profile and the words",
+      "ports": [
+        {
+          "name": "ask",
+          "plug": "output",
+          "type": "signal"
+        },
+        {
+          "name": "abandon",
+          "plug": "output",
+          "type": "signal"
+        },
+        {
+          "name": "raceId",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "forB",
+          "plug": "output",
+          "type": "boolean"
+        },
+        {
+          "name": "level",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "lang",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "layout",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "mode",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "answerMode",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "model",
+          "plug": "output",
+          "type": "object"
+        },
+        {
+          "name": "curriculum",
+          "plug": "output",
+          "type": "array"
+        },
+        {
+          "name": "wordLists",
+          "plug": "output",
+          "type": "array"
+        },
+        {
+          "name": "timed",
+          "plug": "output",
+          "type": "boolean"
+        },
+        {
+          "name": "soundOn",
+          "plug": "output",
+          "type": "boolean"
+        },
+        {
+          "name": "placeholder",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "checkWord",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "fluentWord",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "correctWord",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "wrongWord",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "timeUpWord",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "nextWord",
+          "plug": "output",
+          "type": "string"
+        },
+        {
+          "name": "showMeWord",
+          "plug": "output",
+          "type": "string"
+        }
+      ],
+      "x": 350,
+      "y": 280
+    },
+    {
+      "id": "rdWrap",
+      "type": "Group",
+      "label": "The round",
+      "children": [
+        "rdClock",
+        "rdBox",
+        "rdBanner",
+        "rdKeys"
+      ],
+      "parameters": {
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "sizeMode": "contentHeight",
+        "flexDirection": "column",
+        "alignItems": "center",
+        "rowGap": "var(--space-3)"
+      },
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "rdClock",
+      "type": "/Game/Countdown bar",
+      "label": "The clock",
+      "parent": "rdWrap",
+      "x": 100,
+      "y": 160
+    },
+    {
+      "id": "rdBox",
+      "type": "/Game/Question box",
+      "label": "The question",
+      "parent": "rdWrap",
+      "x": 100,
+      "y": 280
+    },
+    {
+      "id": "rdBanner",
+      "type": "/Game/Feedback banner",
+      "label": "What happened",
+      "parent": "rdWrap",
+      "x": 100,
+      "y": 400
+    },
+    {
+      "id": "rdKeys",
+      "type": "/Game/Keyboard",
+      "label": "The keyboard",
+      "parent": "rdWrap",
+      "x": 100,
+      "y": 520
+    },
+    {
+      "id": "rdNonce",
+      "type": "Counter",
+      "label": "How many asked",
+      "parameters": {
+        "startValue": 0
+      },
+      "x": 350,
+      "y": 1360
+    },
+    {
+      "id": "rdPick",
+      "type": "/Logic/Pick next question",
+      "label": "Pick the next question",
+      "x": 350,
+      "y": 400
+    },
+    {
+      "id": "rdGrade",
+      "type": "/Logic/Grade answer",
+      "label": "Grade the answer",
+      "x": 350,
+      "y": 880
+    },
+    {
+      "id": "rdSounds",
+      "type": "/Logic/Play sounds",
+      "label": "The sounds",
+      "x": 350,
+      "y": 1480
+    },
+    {
+      "id": "rdNextKey",
+      "type": "Expression",
+      "label": "The next key to press",
+      "parameters": {
+        "expression": "((answer || '') + '').charAt(((typed || '') + '').length)"
+      },
+      "x": 350,
+      "y": 1120
+    },
+    {
+      "id": "rdExpected",
+      "type": "Expression",
+      "label": "The word the pad checks each key against",
+      "parameters": {
+        "expression": "isTyping === true ? ((answer || '') + '') : ''"
+      },
+      "x": 350,
+      "y": 520
+    },
+    {
+      "id": "rdShowKeys",
+      "type": "Expression",
+      "label": "Show the keyboard?",
+      "parameters": {
+        "expression": "isTyping === true && !open"
+      },
+      "x": 350,
+      "y": 1240
+    },
+    {
+      "id": "rdBoxOn",
+      "type": "Expression",
+      "label": "The box answers until the banner is up",
+      "parameters": {
+        "expression": "!open"
+      },
+      "x": 350,
+      "y": 640
+    },
+    {
+      "id": "rdCanTeach",
+      "type": "Expression",
+      "label": "Something to teach?",
+      "parameters": {
+        "expression": "correct !== true && ((teach || '') + '').length > 0"
+      },
+      "x": 350,
+      "y": 1000
+    },
+    {
+      "id": "rdRight",
+      "type": "Condition",
+      "label": "Right or wrong?",
+      "parameters": {
+        "runOnChange-condition": false
+      },
+      "x": 350,
+      "y": 1600
+    },
+    {
+      "id": "rdOut",
+      "type": "Component Outputs",
+      "label": "The verdict",
+      "ports": [
+        {
+          "name": "graded",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "correct",
+          "plug": "input",
+          "type": "boolean"
+        },
+        {
+          "name": "gain",
+          "plug": "input",
+          "type": "number"
+        },
+        {
+          "name": "cpuGain",
+          "plug": "input",
+          "type": "number"
+        },
+        {
+          "name": "model",
+          "plug": "input",
+          "type": "object"
+        },
+        {
+          "name": "outcome",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "teach",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "next",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "showMe",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "isTyping",
+          "plug": "input",
+          "type": "boolean"
+        },
+        {
+          "name": "nextKey",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "missCount",
+          "plug": "input",
+          "type": "number"
+        },
+        {
+          "name": "worked",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "prompt",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "layoutSeen",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "layoutSeenNow",
+          "plug": "input",
+          "type": "signal"
+        },
+        {
+          "name": "layoutPick",
+          "plug": "input",
+          "type": "string"
+        },
+        {
+          "name": "layoutPickNow",
+          "plug": "input",
+          "type": "signal"
+        }
+      ],
+      "x": 350,
+      "y": 760
+    }
+  ],
+  "visualRoots": [
+    "rdWrap"
+  ]
+}

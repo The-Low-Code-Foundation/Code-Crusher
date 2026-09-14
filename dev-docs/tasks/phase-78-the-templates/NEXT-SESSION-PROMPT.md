@@ -33,6 +33,29 @@
 > After any template change: `npm run template:todo`, the five suites, the deploy + `drive-tpl008-demo.js` (16 clauses), `ops/deploy.sh`.
 > `test:ci` / `test:main` not run this session.
 
+> ### 🟢 2026-09-12 (s4) — TPL-007 ROCKET SCHOOL: first cut BUILT, GATED, DEPLOYED, DRIVEN 17/17
+>
+> Richard ruled (all four games; "Rocket School"; DiceBear faces; stock lessons CE2→6e PLUS a visual
+> editor for a person's own question sets; every misconception we can find; **the latest MCP door,
+> the component way**). Built through **`create_plan → stage → apply_plan`** — the first template
+> through the plan door — and graded by phase 85's own instrument: **42 components, 95% / 38% / 0.19,
+> PASS ×3**. `npm run template:rocket` → `templates/rocket-school/` (50 components, one kit,
+> byte-identical builds). Gates: `tpl007GameKit` 13, `tpl007Engine` 115, `tpl007Template` 12 — 140/140.
+> Deployed with the production engine and driven: `scripts/devtools/drive-tpl007-rocket.js` **17/17,
+> 0 console errors**. Profiles, Home and the Rocket Race PLAY. Pictures: `tpl-007-shots/`.
+>
+> 🔴 **Five product defects filed, D53–D57, ALL with 0 console errors** — a kit React node as a
+> component ROOT draws nothing (wrap it in a Group); an `Expression` makes every identifier an input
+> (`String(n)` throws — write `'' + n`); an `Expression` with no delivered input never evaluates (do
+> not guard an optional `mounted` with one); `apply_plan` warns about the scroll setting it is about
+> to write; **a `Variable` is GLOBAL by name** — two banners on one page opened together (a States
+> node for local state; a repeater row needs an `id`).
+>
+> **NEXT, in order (TPL-007 §12):** Make Ten Merge page → Number Hunt page → Monster Gate → Teach
+> page + `showMe` → Progress + save code → the question-set editor (Richard's ruling 3) → answer
+> mode by level → publish to nodegx.io + Richard's look. Every Logic/ script the next pages need
+> already exists and is gated. 🔴 Nothing is committed: 20 new paths, listed in the task file's §11.
+
 > ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>
 >
 > Richard played it, said *"it works, it's awesome"*, and asked for a zip and a publish to the

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "63e9116c-e5cb-560c-894d-cc9f9cb64bc0",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "datahangarData",
+      "type": "Static Data",
+      "label": "EDIT — the hangar shelf — what a 🎁 pick can become",
+      "parameters": {
+        "type": "json",
+        "json": "[\n  {\n    \"id\": \"glasses\",\n    \"kind\": \"face\",\n    \"en\": \"Glasses\",\n    \"fr\": \"Lunettes\",\n    \"free\": true,\n    \"faces\": {\n      \"pixel-art\": {\n        \"part\": \"glasses\",\n        \"value\": \"light01\"\n      },\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"glasses\"\n      },\n      \"adventurer\": {\n        \"part\": \"glasses\",\n        \"value\": \"variant05\"\n      }\n    }\n  },\n  {\n    \"id\": \"sunglasses\",\n    \"kind\": \"face\",\n    \"en\": \"Sunglasses\",\n    \"fr\": \"Lunettes de soleil\",\n    \"faces\": {\n      \"pixel-art\": {\n        \"part\": \"glasses\",\n        \"value\": \"dark01\"\n      },\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"sunglasses\"\n      },\n      \"adventurer\": {\n        \"part\": \"glasses\",\n        \"value\": \"variant01\"\n      }\n    }\n  },\n  {\n    \"id\": \"crown\",\n    \"kind\": \"face\",\n    \"en\": \"Crown\",\n    \"fr\": \"Couronne\",\n    \"faces\": {\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"sailormoonCrown\"\n      }\n    }\n  },\n  {\n    \"id\": \"cat-ears\",\n    \"kind\": \"face\",\n    \"en\": \"Cat ears\",\n    \"fr\": \"Oreilles de chat\",\n    \"faces\": {\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"catEars\"\n      }\n    }\n  },\n  {\n    \"id\": \"moustache\",\n    \"kind\": \"face\",\n    \"en\": \"Moustache\",\n    \"fr\": \"Moustache\",\n    \"faces\": {\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"mustache\"\n      },\n      \"adventurer\": {\n        \"part\": \"features\",\n        \"value\": \"mustache\"\n      }\n    }\n  },\n  {\n    \"id\": \"clown-nose\",\n    \"kind\": \"face\",\n    \"en\": \"Clown nose\",\n    \"fr\": \"Nez de clown\",\n    \"faces\": {\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"clownNose\"\n      }\n    }\n  },\n  {\n    \"id\": \"sleep-mask\",\n    \"kind\": \"face\",\n    \"en\": \"Sleep mask\",\n    \"fr\": \"Masque de nuit\",\n    \"faces\": {\n      \"big-smile\": {\n        \"part\": \"accessories\",\n        \"value\": \"sleepMask\"\n      }\n    }\n  },\n  {\n    \"id\": \"woolly-hat\",\n    \"kind\": \"face\",\n    \"en\": \"Woolly hat\",\n    \"fr\": \"Bonnet\",\n    \"faces\": {\n      \"pixel-art\": {\n        \"part\": \"hat\",\n        \"value\": \"variant01\"\n      }\n    }\n  },\n  {\n    \"id\": \"cap\",\n    \"kind\": \"face\",\n    \"en\": \"Cap\",\n    \"fr\": \"Casquette\",\n    \"faces\": {\n      \"pixel-art\": {\n        \"part\": \"hat\",\n        \"value\": \"variant02\"\n      }\n    }\n  },\n  {\n    \"id\": \"hat\",\n    \"kind\": \"face\",\n    \"en\": \"Hat\",\n    \"fr\": \"Chapeau\",\n    \"faces\": {\n      \"pixel-art\": {\n        \"part\": \"hat\",\n        \"value\": \"variant06\"\n      }\n    }\n  },\n  {\n    \"id\": \"rosy-cheeks\",\n    \"kind\": \"face\",\n    \"en\": \"Rosy cheeks\",\n    \"fr\": \"Joues roses\",\n    \"faces\": {\n      \"adventurer\": {\n        \"part\": \"features\",\n        \"value\": \"blush\"\n      }\n    }\n  },\n  {\n    \"id\": \"freckles\",\n    \"kind\": \"face\",\n    \"en\": \"Freckles\",\n    \"fr\": \"Taches de rousseur\",\n    \"faces\": {\n      \"adventurer\": {\n        \"part\": \"features\",\n        \"value\": \"freckles\"\n      }\n    }\n  },\n  {\n    \"id\": \"paint-green\",\n    \"kind\": \"rocket\",\n    \"en\": \"Forest green\",\n    \"fr\": \"Vert forêt\",\n    \"free\": true,\n    \"paint\": \"var(--rocket-paint-green)\"\n  },\n  {\n    \"id\": \"paint-blue\",\n    \"kind\": \"rocket\",\n    \"en\": \"Sky blue\",\n    \"fr\": \"Bleu ciel\",\n    \"free\": true,\n    \"paint\": \"var(--rocket-paint-blue)\"\n  },\n  {\n    \"id\": \"paint-purple\",\n    \"kind\": \"rocket\",\n    \"en\": \"Purple\",\n    \"fr\": \"Violet\",\n    \"paint\": \"var(--rocket-paint-purple)\"\n  },\n  {\n    \"id\": \"paint-berry\",\n    \"kind\": \"rocket\",\n    \"en\": \"Berry\",\n    \"fr\": \"Framboise\",\n    \"paint\": \"var(--rocket-paint-berry)\"\n  },\n  {\n    \"id\": \"paint-orange\",\n    \"kind\": \"rocket\",\n    \"en\": \"Orange\",\n    \"fr\": \"Orange\",\n    \"paint\": \"var(--rocket-paint-orange)\"\n  },\n  {\n    \"id\": \"paint-midnight\",\n    \"kind\": \"rocket\",\n    \"en\": \"Midnight\",\n    \"fr\": \"Nuit\",\n    \"paint\": \"var(--rocket-paint-midnight)\"\n  }\n]"
+      },
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "datahangarOut",
+      "type": "Component Outputs",
+      "label": "What this source publishes",
+      "ports": [
+        {
+          "name": "items",
+          "plug": "input",
+          "type": "array"
+        },
+        {
+          "name": "count",
+          "plug": "input",
+          "type": "number"
+        }
+      ],
+      "x": 40,
+      "y": 160
+    }
+  ]
+}

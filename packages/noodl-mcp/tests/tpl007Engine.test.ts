@@ -1,0 +1,1629 @@
+/**
+ * TPL-007 — the gate over the engine: every Function script, run the way the
+ * node runs it (`Inputs` in, `Outputs` out), against the curriculum it ships.
+ *
+ * What it grades:
+ *
+ * - **Every skill generates a well-formed question, many times.** A generator
+ *   that throws on one seed in fifty is a game that stops one question in fifty.
+ * - **The answer is always among the options** when there are options, and the
+ *   trap options are present on the trap skills — the misconception's own
+ *   answer is on the buttons, which is the whole point of the trap.
+ * - **The number spellers are right** on the cases the programmes and the
+ *   misconception literature care about (230 million, 3 040, quatre-vingt-dix).
+ * - **The model moves the way the briefing says**: a fluent answer raises the
+ *   rating and doubles the half-life; a miss lowers it and halves it; two
+ *   misses demote; a due review is served first; the last skill is never
+ *   served twice running.
+ * - **The merge rule is the bond rule**: 7 and 3 join, 7 and 4 do not.
+ * - **A save code round-trips** a profile with its skills.
+ * - **The port names a graph will wire exist in the text** — the runtime mines
+ *   them from the script, so a port a wire names must be a port the text mints.
+ *
+ * @module noodl-mcp/tests/tpl007Engine.test
+ */
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { CURRICULUM, HANGAR_SHELF, TEACH_CARDS, WORD_KEYS, WORD_LISTS, LEVELS } from './tpl007Curriculum';
+import {
+  ACTIVE_PROFILE_SCRIPT,
+  BUILD_HUNT_SCRIPT,
+  CHECK_HUNT_SCRIPT,
+  CREATE_PROFILE_SCRIPT,
+  DECODE_SAVE_SCRIPT,
+  DELETE_PROFILE_SCRIPT,
+  DRAW_HUNT_SCRIPT,
+  DRAW_MERGE_SCRIPT,
+  ENCODE_SAVE_SCRIPT,
+  FINISH_HUNT_SCRIPT,
+  FINISH_MERGE_SCRIPT,
+  FINISH_RACE_SCRIPT,
+  HUNT_HELP_AFTER,
+  HUNT_MOVE_SCRIPT,
+  HUNT_ROUNDS,
+  HUNT_STAR_RULE,
+  NEW_HUNT_SCRIPT,
+  MERGE_MODES,
+  MERGE_POOL_GROUPS,
+  MERGE_STAR_RULE,
+  FUNCTION_SCRIPTS,
+  GRADE_ANSWER_SCRIPT,
+  HANGAR_EVERY,
+  HANGAR_MILESTONES,
+  HANGAR_SHELF_SCRIPT,
+  HELPERS,
+  LIST_PROFILES_SCRIPT,
+  LIST_SETS_SCRIPT,
+  MAX_PROFILES,
+  NEW_BOARD_SCRIPT,
+  PARSE_SET_SCRIPT,
+  PICK_ITEM_SCRIPT,
+  PICK_QUESTION_SCRIPT,
+  RACE_STEP,
+  SAVE_MODEL_SCRIPT,
+  SELECT_PROFILE_SCRIPT,
+  SLIDE_MERGE_SCRIPT,
+  STAR_RULE,
+  TEACH_CARD_SCRIPT,
+  TOGGLE_INDEX_SCRIPT,
+  TRANSLATE_SCRIPT,
+  UPDATE_SETTINGS_SCRIPT,
+  UPSERT_SET_SCRIPT,
+  WEAR_ITEM_SCRIPT,
+  portsOf,
+  runScript
+} from './tpl007Scripts';
+
+const WORD_ROWS = WORD_KEYS.map((key) => ({ key, ...require('./tpl007Curriculum').WORDS[key] }));
+const WORD_LIST_ROWS = [{ lang: 'en', words: WORD_LISTS.en }, { lang: 'fr', words: WORD_LISTS.fr }];
+
+/** Run a helper function out of HELPERS by name. */
+function helper<T>(name: string, ...args: unknown[]): T {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  const fn = new Function('args', `${HELPERS}; return ${name}.apply(null, args);`);
+  return fn(args) as T;
+}
+
+const freshModel = () => ({ rating: 0, skills: {} as Record<string, any>, lastSkill: '', answered: 0 });
+
+function pick(overrides: Record<string, unknown> = {}) {
+  return runScript(PICK_QUESTION_SCRIPT, {
+    curriculum: CURRICULUM,
+    model: freshModel(),
+    level: 'CM1',
+    lang: 'en',
+    layout: 'qwerty',
+    mode: 'maths',
+    answerMode: 'auto',
+    wordLists: WORD_LIST_ROWS,
+    nonce: 1,
+    ...overrides
+  });
+}
+
+function grade(q: Record<string, any>, typed: string, overrides: Record<string, unknown> = {}) {
+  return runScript(GRADE_ANSWER_SCRIPT, {
+    model: freshModel(),
+    skillId: q.skillId,
+    answer: q.answer,
+    typed,
+    shownAt: Date.now(),
+    fluentMs: q.fluentMs,
+    itemDiff: q.itemDiff,
+    level: 'CM1',
+    lang: 'en',
+    strategy: q.strategy,
+    timedOut: false,
+    ...overrides
+  });
+}
+
+describe('TPL-007 — the engine', () => {
+  describe('the number spellers', () => {
+    it.each([
+      [230000000, 'two hundred and thirty million', 'deux cent trente millions'],
+      [3040, 'three thousand and forty', 'trois mille quarante'],
+      [205000, 'two hundred and five thousand', 'deux cent cinq mille'],
+      [71, 'seventy-one', 'soixante et onze'],
+      [80, 'eighty', 'quatre-vingts'],
+      [81, 'eighty-one', 'quatre-vingt-un'],
+      [90, 'ninety', 'quatre-vingt-dix'],
+      [99, 'ninety-nine', 'quatre-vingt-dix-neuf'],
+      [21, 'twenty-one', 'vingt et un'],
+      [100, 'one hundred', 'cent'],
+      [200, 'two hundred', 'deux cents'],
+      [201, 'two hundred and one', 'deux cent un'],
+      [1000, 'one thousand', 'mille'],
+      [1001, 'one thousand and one', 'mille un'],
+      [2000000, 'two million', 'deux millions'],
+      [1000000000, 'one billion', 'un milliard'],
+      [3500000000, 'three billion five hundred million', 'trois milliards cinq cents millions'],
+      [999999999, 'nine hundred and ninety-nine million nine hundred and ninety-nine thousand nine hundred and ninety-nine', 'neuf cent quatre-vingt-dix-neuf millions neuf cent quatre-vingt-dix-neuf mille neuf cent quatre-vingt-dix-neuf']
+    ])('%i → EN "%s" / FR "%s"', (n, en, fr) => {
+      expect(helper<string>('spellEn', n)).toBe(en);
+      expect(helper<string>('spellFr', n)).toBe(fr);
+    });
+
+    it('formats numbers the way each language reads them', () => {
+      // RKT-003: French groups with a narrow no-break space, so a phone never breaks "8 266" across two lines.
+      expect(helper<string>('fmtNum', 1234567.5, 'fr')).toBe('1\u202f234\u202f567,5');
+      expect(helper<string>('fmtNum', 1234567.5, 'en')).toBe('1,234,567.5');
+      expect(helper<string>('fmtNum', 0.25, 'fr')).toBe('0,25');
+    });
+
+    it('a typed answer is compared as a number when it is one — spaces, commas and dots forgiven', () => {
+      expect(helper<boolean>('sameAnswer', '230 000 000', '230000000')).toBe(true);
+      // …and an answer copied from the screen, narrow no-break spaces and all, still grades.
+      expect(helper<boolean>('sameAnswer', '230\u202f000\u202f000', '230000000')).toBe(true);
+      expect(helper<boolean>('sameAnswer', '230,000,000', '230000000')).toBe(true);
+      expect(helper<boolean>('sameAnswer', '230.000.000', '230000000')).toBe(true);
+      expect(helper<boolean>('sameAnswer', '0,25', '0.25')).toBe(true);
+      expect(helper<boolean>('sameAnswer', '2,50', '25')).toBe(false);
+      expect(helper<boolean>('sameAnswer', ' Rocket ', 'rocket')).toBe(true);
+      expect(helper<boolean>('sameAnswer', '200300000', '230000000')).toBe(false);
+    });
+  });
+
+  describe('the curriculum', () => {
+    it('has every level, both strands of maths, typing, and at least ten traps', () => {
+      for (const level of LEVELS) expect(CURRICULUM.some((s) => s.level === level)).toBe(true);
+      expect(CURRICULUM.filter((s) => s.strand === 'typing').length).toBeGreaterThanOrEqual(6);
+      expect(CURRICULUM.filter((s) => s.trap).length).toBeGreaterThanOrEqual(10);
+      const ids = CURRICULUM.map((s) => s.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('every skill names a Teach card that exists, in both languages', () => {
+      const cardIds = new Set(TEACH_CARDS.map((c) => c.id));
+      for (const skill of CURRICULUM) {
+        expect({ skill: skill.id, teach: skill.teach, known: cardIds.has(skill.teach) }).toEqual({ skill: skill.id, teach: skill.teach, known: true });
+        expect(skill.name.en.length).toBeGreaterThan(2);
+        expect(skill.name.fr.length).toBeGreaterThan(2);
+        expect(skill.strategy.fr).not.toBe(skill.strategy.en);
+      }
+      for (const card of TEACH_CARDS) {
+        expect(card.steps).toHaveLength(3);
+        // Faded: each step shorter than the one before, in both languages.
+        expect(card.steps[1].en.length).toBeLessThan(card.steps[0].en.length);
+        expect(card.steps[2].en.length).toBeLessThan(card.steps[1].en.length);
+        expect(card.steps[1].fr.length).toBeLessThan(card.steps[0].fr.length);
+        expect(card.steps[2].fr.length).toBeLessThan(card.steps[1].fr.length);
+      }
+    });
+
+    /** RKT-004 AC2 — every skill whose card is missing, and every card missing a title, a step or its example in a language. */
+    const teachGaps = (curriculum: ReadonlyArray<{ id: string; teach: string }>, cards: typeof TEACH_CARDS): string[] => {
+      const ids = new Set(cards.map((c) => c.id));
+      const out = curriculum.filter((skill) => !ids.has(skill.teach)).map((skill) => `${skill.id} → ${skill.teach}`);
+      for (const card of cards) {
+        for (const lang of ['en', 'fr'] as const) {
+          if (!card.title[lang]) out.push(`${card.id}: no title (${lang})`);
+          if (card.steps.length !== 3 || card.steps.some((step) => !step[lang])) out.push(`${card.id}: not three steps (${lang})`);
+          if (!card.example[lang]) out.push(`${card.id}: no example (${lang})`);
+        }
+      }
+      return out;
+    };
+
+    it('🔴 RKT-004 AC2: every skill opens a card that exists, with a title, three steps and an example in both languages', () => {
+      expect(teachGaps(CURRICULUM, TEACH_CARDS)).toEqual([]);
+    });
+
+    it('RKT-004 AC2 sabotage arm: a skill pointing at a card that does not exist is named', () => {
+      expect(teachGaps([...CURRICULUM, { id: 'sabotage', teach: 'no-such-card' }], TEACH_CARDS)).toEqual(['sabotage → no-such-card']);
+    });
+
+    it.each(CURRICULUM.map((s) => [s.id, s] as const))('%s generates a sound question 60 times, in both languages, on both layouts', (_id, skill) => {
+      for (let i = 0; i < 60; i++) {
+        const lang = i % 2 ? 'fr' : 'en';
+        const q = pick({ curriculum: [skill], level: skill.level, lang, layout: lang === 'fr' ? 'azerty' : 'qwerty', mode: skill.strand === 'typing' ? 'typing' : 'maths' });
+        expect(q.skillId).toBe(skill.id);
+        expect(typeof q.prompt).toBe('string');
+        expect(q.prompt.length).toBeGreaterThan(0);
+        expect(typeof q.answer).toBe('string');
+        expect(q.answer.length).toBeGreaterThan(0);
+        expect(q.answer).not.toBe('NaN');
+        expect(q.answer).not.toContain('undefined');
+        expect(q.prompt).not.toContain('undefined');
+        expect(q.prompt).not.toContain('NaN');
+        if (q.kind === 'options') {
+          expect(q.options.length).toBeGreaterThanOrEqual(2);
+          expect(q.options.length).toBeLessThanOrEqual(4);
+          expect(q.optionValues).toHaveLength(q.options.length);
+          const hit = q.optionValues.some((v: string) => helper<boolean>('sameAnswer', v, q.answer));
+          expect({ prompt: q.prompt, answer: q.answer, options: q.optionValues, hit }).toEqual(expect.objectContaining({ hit: true }));
+          expect(new Set(q.optionValues.map((v: string) => helper<string>('normalise', v))).size).toBe(q.optionValues.length);
+        } else {
+          expect(q.options).toEqual([]);
+        }
+        expect(q.fluentMs).toBe(skill.fluentMs);
+        expect(q.limitMs).toBe(skill.fluentMs * 3);
+        expect(q.teach).toBe(skill.teach);
+        if (skill.strand === 'typing') {
+          expect(q.isTyping).toBe(true);
+          expect(q.nextKey).toBe(q.answer.charAt(0));
+        }
+      }
+    });
+
+    it('the big-number dictation is typed only, and the prompt is the number in words of the chosen language', () => {
+      const en = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'big-999999999'), level: 'CM2', lang: 'en' });
+      expect(en.kind).toBe('typed');
+      expect(en.prompt).toMatch(/^Write in digits: /);
+      expect(helper<string>('spellEn', Number(en.answer))).toBe(en.prompt.replace('Write in digits: ', ''));
+      const fr = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'big-999999999'), level: 'CM2', lang: 'fr' });
+      expect(fr.prompt).toMatch(/^Écris en chiffres : /);
+      expect(helper<string>('spellFr', Number(fr.answer))).toBe(fr.prompt.replace('Écris en chiffres : ', ''));
+    });
+
+    it('🔴 the trap options carry the misconception: 52 − 38 offers 26, 3 + 4 × 2 offers 14, 2.5 × 10 offers 2.50', () => {
+      let sawBug = false;
+      for (let i = 0; i < 80 && !sawBug; i++) {
+        const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'sub-borrow'), level: 'CM1', answerMode: 'options' });
+        const m = q.prompt.match(/^(\d+) − (\d+) = \?$/)!;
+        const a = Number(m[1]), b = Number(m[2]);
+        const bug = Math.abs(Math.floor(a / 10) - Math.floor(b / 10)) * 10 + Math.abs((a % 10) - (b % 10));
+        if (bug !== a - b) {
+          expect(q.optionValues).toContain(String(bug));
+          sawBug = true;
+        }
+      }
+      expect(sawBug).toBe(true);
+
+      const ops = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'order-ops'), level: 'CM2', answerMode: 'options' });
+      const om = ops.prompt.match(/^(\d+) \+ (\d+) × (\d+) = \?$/)!;
+      expect(ops.optionValues).toContain(String((Number(om[1]) + Number(om[2])) * Number(om[3])));
+      expect(ops.answer).toBe(String(Number(om[1]) + Number(om[2]) * Number(om[3])));
+
+      let sawAddZero = false;
+      for (let i = 0; i < 80 && !sawAddZero; i++) {
+        const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'dec-pow10'), level: 'CM2', answerMode: 'options', lang: 'en' });
+        const pm = q.prompt.match(/^([\d.]+) × (\d+) = \?$/);
+        if (pm && pm[1].includes('.')) {
+          expect(q.options).toContain(pm[1] + '0');
+          sawAddZero = true;
+        }
+      }
+      expect(sawAddZero).toBe(true);
+    });
+
+    it('decimal comparison never lets the whole-number reading win', () => {
+      for (let i = 0; i < 40; i++) {
+        const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'dec-compare-3'), level: 'CM2', lang: 'en' });
+        const [a, b] = q.optionValues.map(Number);
+        const wholeReading = Number(String(a).replace('.', '')) > Number(String(b).replace('.', '')) ? a : b;
+        expect(Number(q.answer)).toBe(Math.max(a, b));
+        expect(wholeReading).not.toBe(Math.max(a, b));
+      }
+    });
+  });
+
+  describe('picking', () => {
+    it('serves a due review before anything else, and never the same skill twice running', () => {
+      const model = freshModel();
+      model.skills['table-7'] = { d: 900, n: 12, streak: 3, miss: 0, last: [1, 1, 1], hl: 2, due: Date.now() - 1000, m: 2, best: 1500, fluentRun: 1 };
+      model.lastSkill = 'table-3';
+      const q = pick({ model, level: 'CE2' });
+      expect(q.skillId).toBe('table-7');
+      // Due but it was the last one: something else is served.
+      model.lastSkill = 'table-7';
+      for (let i = 0; i < 20; i++) expect(pick({ model, level: 'CE2' }).skillId).not.toBe('table-7');
+    });
+
+    it('a CE2 profile is never asked a CM2 skill, and a 6e profile draws from below too', () => {
+      const ce2Ids = new Set(CURRICULUM.filter((s) => s.level === 'CE2').map((s) => s.id));
+      for (let i = 0; i < 60; i++) expect(ce2Ids.has(pick({ level: 'CE2' }).skillId)).toBe(true);
+      const seen = new Set<string>();
+      for (let i = 0; i < 200; i++) {
+        const id = pick({ level: '6e' }).skillId;
+        seen.add(CURRICULUM.find((s) => s.id === id)!.level);
+      }
+      expect(seen.has('6e')).toBe(true);
+      expect(seen.has('CM2')).toBe(true);
+    });
+
+    it('typing mode serves only typing skills, maths mode never does', () => {
+      for (let i = 0; i < 40; i++) {
+        const typing = pick({ mode: 'typing', level: 'CM2' }).skillId;
+        const maths = pick({ mode: 'maths', level: 'CM2' }).skillId;
+        expect(CURRICULUM.find((s) => s.id === typing)!.strand).toBe('typing');
+        expect(CURRICULUM.find((s) => s.id === maths)!.strand).not.toBe('typing');
+      }
+    });
+
+    it('typing on AZERTY drills the AZERTY home row', () => {
+      for (let i = 0; i < 30; i++) {
+        const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'type-home'), level: 'CE2', mode: 'typing', layout: 'azerty' });
+        expect('qsdfjklm').toContain(q.answer);
+        const qw = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'type-home'), level: 'CE2', mode: 'typing', layout: 'qwerty' });
+        expect('asdfjkl').toContain(qw.answer);
+      }
+    });
+
+    it('custom mode serves the person’s own questions, with options when they gave some', () => {
+      const set = [{ q: 'Capital of France?', a: 'Paris', opts: ['Lyon', 'Paris', 'Nice'] }, { q: '7 × 6', a: '42' }];
+      for (let i = 0; i < 20; i++) {
+        const q = pick({ mode: 'custom', customSet: set });
+        expect(q.skillId).toBe('custom');
+        if (q.prompt === 'Capital of France?') {
+          expect(q.kind).toBe('options');
+          expect(q.optionValues.sort()).toEqual(['Lyon', 'Nice', 'Paris']);
+        } else {
+          expect(q.kind).toBe('typed');
+          expect(q.answer).toBe('42');
+        }
+      }
+    });
+  });
+
+  describe('grading', () => {
+    it('a fluent correct answer raises the rating, doubles the half-life ×2.5, and moves the rocket a full step', () => {
+      const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2' });
+      const g = grade(q, q.answer, { elapsedOverride: 1200 });
+      expect(g.correct).toBe(true);
+      expect(g.fluent).toBe(true);
+      expect(g.outcome).toBe('fluent');
+      expect(g.ratingDelta).toBeGreaterThan(0);
+      expect(g.model.skills['table-7'].hl).toBe(2.5);
+      expect(g.model.skills['table-7'].due).toBeGreaterThan(Date.now() + 2 * 86400000);
+      expect(g.gain).toBe(RACE_STEP);
+      expect(g.cpuGain).toBeGreaterThan(0);
+      expect(g.cpuGain).toBeLessThan(RACE_STEP);
+      expect(g.message).toBe('');
+      expect(g.model.lastSkill).toBe('table-7');
+      expect(g.model.answered).toBe(1);
+    });
+
+    it('a slow correct answer still counts, moves the rocket less, and is not fluent', () => {
+      const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2' });
+      const g = grade(q, q.answer, { elapsedOverride: q.fluentMs * 2.5 });
+      expect(g.correct).toBe(true);
+      expect(g.fluent).toBe(false);
+      expect(g.outcome).toBe('correct');
+      expect(g.gain).toBeGreaterThanOrEqual(RACE_STEP * 0.5);
+      expect(g.gain).toBeLessThan(RACE_STEP);
+    });
+
+    it('🔴 a wrong answer moves nothing, lowers the rating, halves the half-life, and says the answer with the strategy', () => {
+      const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2' });
+      const g = grade(q, 'nope', { elapsedOverride: 500 });
+      expect(g.correct).toBe(false);
+      expect(g.gain).toBe(0);
+      expect(g.ratingDelta).toBeLessThan(0);
+      expect(g.model.skills['table-7'].hl).toBe(0.5);
+      expect(g.message).toContain(`The answer was ${q.answer}.`);
+      expect(g.message).toContain(q.strategy);
+      // Fast and wrong is still wrong: speed never scores without accuracy.
+      expect(g.outcome).toBe('wrong');
+    });
+
+    it('🔴 RKT-012: a typing word is graded by the keys the pad refused: none as before, one or two never fluent, three a miss', () => {
+      const skill = CURRICULUM.find((s) => s.strand === 'typing')!;
+      const q = pick({ curriculum: [skill], level: skill.level, mode: 'typing' });
+      const at = (mistakes: number | undefined) => grade(q, q.answer, { elapsedOverride: 200, ...(mistakes === undefined ? {} : { mistakes }) });
+      expect([undefined, 0, 1, 2, 3, 7].map((m) => [m, at(m).outcome])).toEqual([[undefined, 'fluent'], [0, 'fluent'], [1, 'correct'], [2, 'correct'], [3, 'wrong'], [7, 'wrong']]);
+      const three = at(3);
+      expect(three.gain).toBe(0);
+      expect(three.message).toContain('3 wrong keys.');
+      // Spelled right, so the correction must not read "You answered rocket. The answer was rocket."
+      expect(three.message).not.toContain('The answer was');
+      expect(grade(q, q.answer, { elapsedOverride: 200, mistakes: 3, lang: 'fr' }).message).toContain('3 touches fausses.');
+      // Sabotage arm: a word NOT spelled right is still corrected with the answer, whatever the count.
+      expect(grade(q, 'zz', { elapsedOverride: 200, mistakes: 3 }).message).toContain('The answer was');
+    });
+
+    it('a timeout is graded as a miss even when the typed text happens to be right', () => {
+      const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2' });
+      const g = grade(q, q.answer, { timedOut: true });
+      expect(g.correct).toBe(false);
+      expect(g.outcome).toBe('timeout');
+    });
+
+    it('mastery climbs new → familiar → proficient → mastered on a due review, and demotes on two misses', () => {
+      const skill = CURRICULUM.find((s) => s.id === 'table-7')!;
+      let model = freshModel();
+      const q = () => pick({ curriculum: [skill], level: 'CE2', model });
+      const answerRight = (opts: Record<string, unknown> = {}) => {
+        const qq = q();
+        model = grade(qq, qq.answer, { model, elapsedOverride: 1000, ...opts }).model;
+        return model.skills['table-7'].m;
+      };
+      const answerWrong = () => {
+        const qq = q();
+        model = grade(qq, 'wrong', { model, elapsedOverride: 1000 }).model;
+        return model.skills['table-7'].m;
+      };
+      expect(answerRight()).toBe(0);
+      answerRight(); answerRight(); answerRight();
+      expect(answerRight()).toBe(1); // five in a row, ≥70% of the last ten
+      // Five correct in a row with three fluent — already true, so the next correct makes it proficient.
+      expect(answerRight()).toBe(2);
+      // Mastered only on a correct answer to a DUE review.
+      expect(answerRight()).toBe(2);
+      expect(answerRight({ wasDue: true })).toBe(3);
+      // Two misses in a row: one step down.
+      expect(answerWrong()).toBe(3);
+      expect(answerWrong()).toBe(2);
+    });
+
+    it('the CPU is faster against a stronger player, so a race stays winnable rather than free', () => {
+      const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2' });
+      const weak = grade(q, q.answer, { model: { ...freshModel(), rating: 700 }, elapsedOverride: 1000 });
+      const strong = grade(q, q.answer, { model: { ...freshModel(), rating: 1400 }, elapsedOverride: 1000 });
+      expect(strong.cpuGain).toBeGreaterThan(weak.cpuGain);
+      // Eight fluent answers reach the planet; the CPU needs more than eight rounds against anyone.
+      expect(1 / strong.cpuGain).toBeGreaterThan(8);
+    });
+  });
+
+  describe('Make Ten Merge', () => {
+    const slide = (board: number[], dir: string) => runScript(SLIDE_MERGE_SCRIPT, { board, dir, pool: [1] });
+
+    it('🔴 two tiles merge only when their sum is a multiple of ten', () => {
+      const r = slide([7, 3, 0, 0, 7, 4, 0, 0, 25, 25, 0, 0, 14, 6, 0, 0], 'left');
+      expect(r.board.slice(0, 2)).toEqual([10, 0].map((v, i) => (i === 0 ? 10 : r.board[1])));
+      expect(r.board[0]).toBe(10);
+      expect(r.board[4]).toBe(7);
+      expect(r.board[5]).toBe(4);
+      expect(r.board[8]).toBe(50);
+      expect(r.board[12]).toBe(20);
+      expect(r.merges).toBe(3);
+      expect(r.score).toBe(10 + 50 + 20);
+      expect(r.biggest).toBe(50);
+      expect(r.moved).toBe(true);
+    });
+
+    it('a slide that changes nothing spawns nothing and reports moved=false', () => {
+      const board = [7, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      const r = slide(board, 'left');
+      expect(r.moved).toBe(false);
+      expect(r.board).toEqual(board);
+    });
+
+    it('a moved board gains exactly one tile from the pool', () => {
+      const r = slide([0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 'left');
+      expect(r.board[0]).toBe(7);
+      expect(r.board.filter((v: number) => v > 0)).toHaveLength(2);
+      expect(r.board.filter((v: number) => v === 1)).toHaveLength(1);
+    });
+
+    it('game over when nothing can slide or merge; up and down work column-wise', () => {
+      const full = [1, 2, 1, 2, 2, 1, 2, 1, 1, 2, 1, 2, 2, 1, 2, 1];
+      expect(slide(full, 'left').gameOver).toBe(true);
+      const col = [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0];
+      const up = slide(col, 'up');
+      expect(up.board[0]).toBe(10);
+      const down = slide(col, 'down');
+      expect(down.board[12]).toBe(10);
+    });
+
+    it('a new board has two tiles', () => {
+      const r = runScript(NEW_BOARD_SCRIPT, { pool: [3, 7], nonce: 1 });
+      expect(r.board).toHaveLength(16);
+      expect(r.board.filter((v: number) => v > 0)).toHaveLength(2);
+      expect([r.game.board, r.game.over, r.game.made, r.game.landed.length]).toEqual([r.board, false, 0, 2]);
+      expect(r.game.id).toMatch(/^m\w+$/);
+      expect(runScript(NEW_BOARD_SCRIPT, { pool: [3, 7] }).game.id).not.toBe(r.game.id);
+    });
+
+    it('🔴 new tiles come from the bonds the child is on: single numbers at CE2, teens from CM1 or once pairs to 10 are proficient, fives from CM2, the weakest twice as often', () => {
+      const pool = (level: string, m: Record<string, number> = {}) =>
+        runScript(NEW_BOARD_SCRIPT, { level, model: { ...freshModel(), skills: Object.fromEntries(Object.entries(m).map(([k, v]) => [k, { m: v }])) } }).pool as number[];
+      const [ones, teens, fives] = MERGE_POOL_GROUPS.map((g) => [...g.tiles] as number[]);
+      const set = (p: number[]) => [...new Set(p)].sort((a, b) => a - b);
+      expect(set(pool('CE2'))).toEqual(ones);
+      expect(set(pool('CE2', { 'bond-10': 2 }))).toEqual(set([...ones, ...teens]));
+      expect(set(pool('CM1'))).toEqual(set([...ones, ...teens]));
+      expect(set(pool('CM2'))).toEqual(set([...ones, ...teens, ...fives]));
+      // At CM1 with pairs to 10 mastered, the teens are the weakest, so 13 is drawn twice as often as 3.
+      const cm1 = pool('CM1', { 'bond-10': 3 });
+      expect([cm1.filter((v) => v === 13).length, cm1.filter((v) => v === 3).length]).toEqual([2, 1]);
+      // Known-firing beside it: with nothing mastered the single numbers are the weakest.
+      expect([pool('CM1').filter((v) => v === 13).length, pool('CM1').filter((v) => v === 3).length]).toEqual([1, 2]);
+      // No drawn tile is dead on arrival: every tile in every pool has a partner in the same pool that makes a multiple of ten.
+      for (const p of [pool('CE2'), pool('CM1'), pool('CM2'), pool('6e')]) {
+        for (const v of p) expect({ v, partner: p.some((w) => (v + w) % 10 === 0) }).toEqual({ v, partner: true });
+      }
+      // Every group is a bond skill the curriculum really has.
+      for (const g of MERGE_POOL_GROUPS) expect({ skill: g.skill, inCurriculum: CURRICULUM.some((s) => s.id === g.skill) }).toEqual({ skill: g.skill, inCurriculum: true });
+    });
+
+    it('a slide carries the game: the id is kept, the totals add up, and the squares that joined and landed are named', () => {
+      const game = { id: 'm1', board: [7, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], pool: [1], score: 20, made: 2, biggest: 10, moves: 4, over: false };
+      const r = runScript(SLIDE_MERGE_SCRIPT, { game, dir: 'left' });
+      expect([r.game.id, r.game.score, r.game.made, r.game.moves, r.game.biggest, r.game.over, r.game.joined]).toEqual(['m1', 30, 3, 5, 10, false, [0]]);
+      expect(r.game.landed).toHaveLength(1);
+      expect(r.game.board[r.game.landed[0]]).toBe(1);
+      // A press that moves nothing keeps the totals, and names nothing to pop.
+      const still = runScript(SLIDE_MERGE_SCRIPT, { game: { ...r.game, board: [7, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, dir: 'left' });
+      expect([still.moved, still.game.moves, still.game.made, still.game.joined, still.game.landed]).toEqual([false, 5, 3, [], []]);
+    });
+
+    it('a board played to the end locks, and every square that joined on the way holds a multiple of ten', () => {
+      const dirs = ['left', 'up', 'right', 'down'];
+      for (let n = 0; n < 12; n++) {
+        let game = runScript(NEW_BOARD_SCRIPT, { level: n % 2 ? 'CM2' : 'CE2', model: freshModel() }).game;
+        let moves = 0;
+        while (!game.over && moves < 3000) {
+          const r = runScript(SLIDE_MERGE_SCRIPT, { game, dir: dirs[(moves + n) % 4] });
+          for (const i of r.game.joined) expect(r.game.board[i] % 10).toBe(0);
+          game = r.game;
+          moves++;
+        }
+        expect({ n, over: game.over }).toEqual({ n, over: true });
+      }
+    });
+
+    it('the drawn board is four rows of four, each square coloured by its kind, and the pop classes swap every move', () => {
+      const game = { board: [0, 7, 10, 30, 120, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1234], joined: [2], landed: [1], moves: 3, score: 40, made: 2, biggest: 1234, over: false };
+      const en = runScript(DRAW_MERGE_SCRIPT, { game, lang: 'en' });
+      expect(en.rows.map((r: any) => r.cells.length)).toEqual([4, 4, 4, 4]);
+      expect(en.rows[0].cells.map((c: any) => c.kind)).toEqual(['empty', 'unit', 'ten', 'tens']);
+      expect([en.rows[1].cells[0].kind, en.rows[1].cells[1].kind]).toEqual(['big', 'unit']);
+      expect(en.rows[0].cells.map((c: any) => c.fx)).toEqual(['rkt-merge-tile', 'rkt-merge-tile rkt-land-b', 'rkt-merge-tile rkt-join-b', 'rkt-merge-tile']);
+      expect(runScript(DRAW_MERGE_SCRIPT, { game: { ...game, moves: 4 }, lang: 'en' }).rows[0].cells[2].fx).toBe('rkt-merge-tile rkt-join-a');
+      expect([en.rows[3].cells[3].word, runScript(DRAW_MERGE_SCRIPT, { game, lang: 'fr' }).rows[3].cells[3].word]).toEqual(['1,234', '1 234']);
+      // A repeater row needs an id, or a re-run piles rows up.
+      expect(new Set(en.rows.flatMap((r: any) => [r.id, ...r.cells.map((c: any) => c.id)])).size).toBe(20);
+      expect([en.phase, en.over, runScript(DRAW_MERGE_SCRIPT, { game: { ...game, over: true }, lang: 'en' }).phase]).toEqual(['playing', false, 'over']);
+      expect(runScript(DRAW_MERGE_SCRIPT, {}).rows.flatMap((r: any) => r.cells.map((c: any) => c.kind))).toEqual(Array(16).fill('empty'));
+    });
+
+    it('🔴 Easy: a helper tile is the partner of a single number on the board; Hard draws from the pool alone (the modes are one constant)', () => {
+      expect(MERGE_MODES).toEqual({ easy: { helper: 0.5 }, hard: { helper: 0 } });
+      const one = (helper: number) =>
+        runScript(SLIDE_MERGE_SCRIPT, { game: { id: 'm', board: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], pool: [1, 2, 3, 4, 5, 6, 7, 8, 9], helper }, dir: 'right' }).game;
+      // The helper always on: the only single number on the board is 3, so the new tile is always 7.
+      for (let n = 0; n < 40; n++) {
+        const g = one(1);
+        expect([g.board[g.landed[0]], g.helper]).toEqual([7, 1]);
+      }
+      // Known-firing beside it: with no helper, the pool's other numbers land too.
+      expect(new Set(Array.from({ length: 200 }, () => { const g = one(0); return g.board[g.landed[0]]; })).size).toBeGreaterThan(3);
+      // A new board takes its mode's helper, Easy unless Hard is asked for, and a slide keeps it.
+      const easy = runScript(NEW_BOARD_SCRIPT, { level: 'CE2' }).game;
+      const hard = runScript(NEW_BOARD_SCRIPT, { level: 'CE2', mode: 'hard' }).game;
+      expect([easy.mode, easy.helper, hard.mode, hard.helper]).toEqual(['easy', MERGE_MODES.easy.helper, 'hard', MERGE_MODES.hard.helper]);
+      expect(runScript(SLIDE_MERGE_SCRIPT, { game: { ...hard, board: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }, dir: 'right' }).game).toMatchObject({ mode: 'hard', helper: 0 });
+    });
+
+    it('Easy is easier, measured: the same random player makes at least half as many joins again on Easy as on Hard', () => {
+      const dirs = ['left', 'up', 'right', 'down'];
+      const joinsOn = (mode: string) => {
+        let game = runScript(NEW_BOARD_SCRIPT, { level: 'CE2', mode }).game;
+        for (let moves = 0; !game.over && moves < 2000; moves++) {
+          let next = null;
+          for (const d of [...dirs].sort(() => Math.random() - 0.5)) {
+            const r = runScript(SLIDE_MERGE_SCRIPT, { game, dir: d });
+            if (r.moved) { next = r.game; break; }
+          }
+          if (!next) break;
+          game = next;
+        }
+        return game.made;
+      };
+      const mean = (mode: string) => Array.from({ length: 30 }, () => joinsOn(mode)).reduce((a, b) => a + b, 0) / 30;
+      const [easy, hard] = [mean('easy'), mean('hard')];
+      expect({ easy, hard, easier: easy >= 1.5 * hard }).toEqual({ easy, hard, easier: true });
+    });
+
+    it('a full board with a join still there is its own state, so the rule can give way to a hint; a locked board is not "full"', () => {
+      const full = [3, 7, 1, 2, 4, 5, 6, 8, 9, 1, 2, 3, 4, 5, 6, 8];
+      expect([
+        runScript(DRAW_MERGE_SCRIPT, { game: { board: full, over: false } }).fullness,
+        runScript(DRAW_MERGE_SCRIPT, { game: { board: full, over: true } }).fullness,
+        runScript(DRAW_MERGE_SCRIPT, { game: { board: [3, 0, ...Array(14).fill(1)], over: false } }).fullness
+      ]).toEqual(['full', 'roomy', 'roomy']);
+    });
+
+    it('the mode is kept on the player: Easy until Hard is chosen, and junk changes nothing', () => {
+      const app = runScript(CREATE_PROFILE_SCRIPT, { app: { profiles: [], activeId: '', sets: [] }, name: 'Léa', look: 'pixel-art', seed: 'L', level: 'CE2', lang: 'fr' }).app;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app }).mergeMode).toBe('easy');
+      const hard = runScript(UPDATE_SETTINGS_SCRIPT, { app: JSON.parse(JSON.stringify(app)), mergeMode: 'hard' }).app;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app: hard }).mergeMode).toBe('hard');
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app: runScript(UPDATE_SETTINGS_SCRIPT, { app: hard, mergeMode: 'medium' }).app }).mergeMode).toBe('hard');
+    });
+
+    it('🔴 D64: no row or square the board draws carries a field the runtime Model answers for itself (a For Each makes each one a Model)', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const loaded = require('../../noodl-runtime/src/model');
+      const RuntimeModel = loaded.default ?? loaded;
+      const reserved = new Set<string>(['data']);
+      for (let p = RuntimeModel.prototype; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) for (const n of Object.getOwnPropertyNames(p)) reserved.add(n);
+      // Known-firing: the name that bit the hangar is on the list.
+      expect([reserved.has('on'), reserved.has('get')]).toEqual([true, true]);
+      const rows = runScript(DRAW_MERGE_SCRIPT, { game: { board: [7, 3], moves: 1, joined: [0], landed: [1] }, lang: 'en' }).rows;
+      const keys = [...new Set([...rows.flatMap((r: any) => Object.keys(r)), ...rows.flatMap((r: any) => r.cells.flatMap((c: any) => Object.keys(c)))])].sort();
+      expect(keys).toEqual(['cells', 'fx', 'id', 'kind', 'word']);
+      expect(keys.filter((k) => reserved.has(k))).toEqual([]);
+    });
+
+    it('🔴 a finished board pays once: a star a join up to the cap, plus a landing’s five; a second Finish, or an abandoned board, pays nothing', () => {
+      const over = { id: 'm7', board: [], made: 6, biggest: 60, over: true };
+      const first = runScript(FINISH_MERGE_SCRIPT, { model: { ...freshModel(), stars: 10 }, game: over, lang: 'en' });
+      expect([first.paid, first.starsEarned, first.stars, first.starsText]).toEqual([true, 6 * MERGE_STAR_RULE.join + MERGE_STAR_RULE.finish, 21, '+11 ⭐']);
+      const again = runScript(FINISH_MERGE_SCRIPT, { model: first.model, game: over, lang: 'en' });
+      expect([again.paid, again.starsEarned, again.stars]).toEqual([false, 0, 21]);
+      const long = runScript(FINISH_MERGE_SCRIPT, { model: { ...freshModel(), stars: 0 }, game: { ...over, id: 'm8', made: 40 }, lang: 'fr' });
+      expect([long.starsEarned, long.why]).toEqual([MERGE_STAR_RULE.joinCap + MERGE_STAR_RULE.finish, expect.stringMatching(/le maximum/)]);
+      const abandoned = runScript(FINISH_MERGE_SCRIPT, { model: { ...freshModel(), stars: 3 }, game: { ...over, id: 'm9', over: false }, lang: 'en' });
+      expect([abandoned.paid, abandoned.stars]).toEqual([false, 3]);
+      // RKT-011: 10 → 21 crosses the first milestone and offers the pick; 20 → 31 crosses none.
+      expect(HANGAR_MILESTONES.slice(0, 2)).toEqual([15, 40]);
+      expect([first.earnedPick, runScript(FINISH_MERGE_SCRIPT, { model: { ...freshModel(), stars: 20 }, game: { ...over, id: 'm10' }, lang: 'en' }).earnedPick]).toEqual([true, false]);
+      // Sabotage arm: without the board id check, the second Finish pays again.
+      const doctored = FINISH_MERGE_SCRIPT.replace('model.lastMergeId !== id', 'true');
+      expect(doctored).not.toBe(FINISH_MERGE_SCRIPT);
+      expect(runScript(doctored, { model: first.model, game: over, lang: 'en' }).paid).toBe(true);
+    });
+  });
+
+  describe('Number Hunt', () => {
+    it.each(LEVELS)('%s builds a grid whose target has 1–3 solutions, and the checker agrees', (level) => {
+      for (let i = 0; i < 15; i++) {
+        const h = runScript(BUILD_HUNT_SCRIPT, { level, lang: i % 2 ? 'fr' : 'en', nonce: i });
+        expect(h.cells).toHaveLength(16);
+        expect(h.solutions).toBeGreaterThanOrEqual(1);
+        expect(h.solutions).toBeLessThanOrEqual(3);
+        expect(h.instruction).toContain(String(h.kind === 'add100' ? 100 : h.target));
+        // Count the solutions independently and check one with the checker.
+        const idx = [...Array(16).keys()];
+        const combos: number[][] = [];
+        const rec = (start: number, chosen: number[]) => {
+          if (chosen.length === h.count) { combos.push([...chosen]); return; }
+          for (let k = start; k < 16; k++) { chosen.push(idx[k]); rec(k + 1, chosen); chosen.pop(); }
+        };
+        rec(0, []);
+        const value = (c: number[]) => c.reduce((acc, j) => (h.kind === 'mul2' ? acc * h.cells[j].v : acc + h.cells[j].v), h.kind === 'mul2' ? 1 : 0);
+        const solutions = combos.filter((c) => value(c) === h.target);
+        expect(solutions).toHaveLength(h.solutions);
+        const check = runScript(CHECK_HUNT_SCRIPT, { cells: h.cells, selected: solutions[0], count: h.count, target: h.target, kind: h.kind });
+        expect(check.correct).toBe(true);
+        expect(check.complete).toBe(true);
+        const wrong = runScript(CHECK_HUNT_SCRIPT, { cells: h.cells, selected: solutions[0].slice(0, 1), count: h.count, target: h.target, kind: h.kind });
+        expect(wrong.complete).toBe(false);
+        expect(wrong.correct).toBe(false);
+      }
+    });
+
+    it('toggling an index adds it, toggling again removes it, and the cap holds', () => {
+      let r = runScript(TOGGLE_INDEX_SCRIPT, { list: [], index: 3, max: 2 });
+      expect(r.list).toEqual([3]);
+      r = runScript(TOGGLE_INDEX_SCRIPT, { list: r.list, index: 5, max: 2 });
+      expect(r.list).toEqual([3, 5]);
+      r = runScript(TOGGLE_INDEX_SCRIPT, { list: r.list, index: 9, max: 2 });
+      expect(r.list).toEqual([3, 5]);
+      r = runScript(TOGGLE_INDEX_SCRIPT, { list: r.list, index: 3, max: 2 });
+      expect(r.list).toEqual([5]);
+    });
+  });
+
+  describe('Number Hunt, the game (§12.2)', () => {
+    // A grid made by hand: the pairs that make 20 are exactly 3 + 17 (squares 0, 1) and 8 + 12 (squares 2, 3).
+    const CELLS = [3, 17, 8, 12, 1, 2, 4, 6, 25, 30, 40, 50, 60, 70, 80, 90];
+    const hunt = (over: Record<string, unknown> = {}): any => ({ id: 'h1', level: 'CE2', round: 1, rounds: HUNT_ROUNDS, kind: 'add2', count: 2, cells: CELLS, target: 20, ways: [[0, 1], [2, 3]], found: [], shown: [], picked: [], missed: [], lately: [], said: [], note: 'start', made: 0, helped: 0, misses: 0, gridMisses: 0, taps: 0, over: false, ...over });
+    const move = (game: any, action: string, index?: number) => runScript(HUNT_MOVE_SCRIPT, { game, action, index });
+    const taps = (game: any, ...indexes: number[]): any => indexes.reduce((g, i) => move(g, 'tap', i).game, game);
+    const draw = (game: any, lang = 'en') => runScript(DRAW_HUNT_SCRIPT, { game, lang });
+    const kinds = (d: any): string[] => d.rows.flatMap((r: any) => r.cells.map((c: any) => c.kind));
+    const fxRow = (d: any, r = 0): string[] => d.rows[r].cells.map((c: any) => c.fx);
+    const waysIn = (cells: number[], kind: string, count: number, target: number) => {
+      const out: number[][] = [];
+      const rec = (start: number, chosen: number[]) => {
+        if (chosen.length === count) {
+          const v = chosen.reduce((acc, j) => (kind === 'mul2' ? acc * cells[j] : acc + cells[j]), kind === 'mul2' ? 1 : 0);
+          if (v === target) out.push([...chosen]);
+          return;
+        }
+        for (let k = start; k < cells.length; k++) rec(k + 1, [...chosen, k]);
+      };
+      rec(0, []);
+      return out;
+    };
+
+    it.each(LEVELS)('%s: a new hunt is the first of five grids, and its ways are every set of squares that makes the target', (level) => {
+      expect(HUNT_ROUNDS).toBe(5);
+      const ids = new Set<string>();
+      for (let n = 0; n < 12; n++) {
+        const g = runScript(NEW_HUNT_SCRIPT, { level }).game;
+        expect([g.round, g.rounds, g.cells.length, g.over, g.made, g.found, g.picked]).toEqual([1, HUNT_ROUNDS, 16, false, 0, [], []]);
+        expect(g.ways.length).toBeGreaterThanOrEqual(1);
+        expect(g.ways.length).toBeLessThanOrEqual(3);
+        // Counted again here, independently: the grid's ways are ALL of them, so "there are 2 ways" is true.
+        expect(waysIn(g.cells, g.kind, g.count, g.target)).toEqual(g.ways);
+        expect(g.id).toMatch(/^h\w+$/);
+        ids.add(g.id);
+      }
+      expect(ids.size).toBe(12);
+    });
+
+    it('🔴 a tap grows the pick, and a full pick is checked at once and cleared: right is found and counted, wrong is a miss that says its sum', () => {
+      const one = move(hunt(), 'tap', 0);
+      expect([one.changed, one.game.picked, one.game.made]).toEqual([true, [0], 0]);
+      expect(move(one.game, 'tap', 0).game.picked).toEqual([]);
+      const right = taps(hunt(), 1, 0);
+      expect([right.picked, right.found, right.made, right.note, right.said]).toEqual([[], [[0, 1]], 1, 'right', [3, 17]]);
+      const wrong = taps(hunt(), 0, 2);
+      expect([wrong.picked, wrong.found, wrong.missed, wrong.misses, wrong.gridMisses, wrong.note]).toEqual([[], [], [0, 2], 1, 1, 'wrong']);
+      expect([draw(wrong).note, draw(wrong, 'fr').note]).toEqual(['3 + 8 = 11, not 20. Try again.', '3 + 8 = 11, pas 20. Essaie encore.']);
+      expect(draw(taps(hunt({ kind: 'mul2', target: 51, ways: [[0, 1]] }), 0, 2)).note).toBe('3 × 8 = 24, not 51. Try again.');
+      // The same way again pays nothing, and is not a miss either.
+      const again = taps(right, 0, 1);
+      expect([again.made, again.found.length, again.misses, again.note]).toEqual([1, 1, 0, 'again']);
+      expect(draw(again).note).toBe('You already found 3 + 17 = 20.');
+      // The game the node was given is never changed in place.
+      const before = hunt();
+      move(before, 'tap', 3);
+      expect(before.picked).toEqual([]);
+      // A tap on no square changes nothing (known-firing beside it: square 15 does).
+      expect([move(hunt(), 'tap', 16).changed, move(hunt(), 'tap', 1.5).changed, move(hunt(), 'tap').changed, move(hunt(), 'tap', 15).changed]).toEqual([false, false, false, true]);
+    });
+
+    it('🔴 Show me one: refused until two misses on this grid, then it shows a way not found yet, pays nothing, and the grid counts it', () => {
+      expect(HUNT_HELP_AFTER).toBe(2);
+      const oneMiss = taps(hunt(), 0, 2);
+      expect([move(oneMiss, 'show').changed, draw(oneMiss).canShow]).toEqual([false, false]);
+      const twoMisses = taps(oneMiss, 0, 2);
+      expect([draw(twoMisses).canShow, twoMisses.gridMisses]).toEqual([true, 2]);
+      const shown = move(taps(twoMisses, 0, 1), 'show').game;
+      expect([shown.shown, shown.helped, shown.made, shown.note]).toEqual([[[2, 3]], 1, 1, 'shown']);
+      expect([draw(shown).note, draw(shown, 'fr').note]).toEqual(['Here is one: 8 + 12 = 20. That was the last one.', 'En voici une : 8 + 12 = 20. C’était la dernière.']);
+      expect([draw(shown).phase, draw(shown).canShow, kinds(draw(shown)).slice(0, 4)]).toEqual(['found', false, ['found', 'found', 'shown', 'shown']]);
+      // Finding a shown way afterwards pays nothing.
+      expect(taps({ ...shown, over: false, ways: [[0, 1], [2, 3], [4, 7]] }, 3, 2).made).toBe(1);
+    });
+
+    it('🔴 Next grid comes only once every way is found; the totals carry; the last grid’s last way ends the hunt, and nothing moves after', () => {
+      expect(move(taps(hunt(), 0, 1), 'next').changed).toBe(false);
+      const cleared = taps(hunt({ gridMisses: 1, misses: 1 }), 0, 1, 2, 3);
+      expect([draw(cleared).phase, cleared.over, draw(cleared).note, draw(cleared, 'fr').note]).toEqual(['found', false, '✅ 8 + 12 = 20 · all 2 found!', '✅ 8 + 12 = 20 · toutes trouvées !']);
+      expect(move(cleared, 'tap', 5).changed).toBe(false);
+      const next = move(cleared, 'next').game;
+      expect([next.round, next.made, next.misses, next.gridMisses, next.found, next.note, next.id]).toEqual([2, 2, 1, 0, [], 'start', 'h1']);
+      expect(waysIn(next.cells, next.kind, next.count, next.target)).toEqual(next.ways);
+      const last = taps(hunt({ round: HUNT_ROUNDS }), 0, 1, 2, 3);
+      expect([last.over, draw(last).phase, draw(last).over]).toEqual([true, 'over', true]);
+      expect([move(last, 'tap', 4).changed, move(last, 'next').changed, move(last, 'show').changed]).toEqual([false, false, false]);
+      // Known-firing beside it: the same grid one before the last is not the end.
+      expect(taps(hunt({ round: HUNT_ROUNDS - 1 }), 0, 1, 2, 3).over).toBe(false);
+    });
+
+    it('a hunt played through by a child who finds every way ends over, on the last grid, with every way counted', () => {
+      for (let n = 0; n < 8; n++) {
+        let g = runScript(NEW_HUNT_SCRIPT, { level: LEVELS[n % LEVELS.length] }).game;
+        let ways = 0;
+        for (let guard = 0; guard < 50 && !g.over; guard++) {
+          ways += g.ways.length;
+          for (const way of g.ways) g = taps(g, ...way);
+          if (!g.over) g = move(g, 'next').game;
+        }
+        expect({ n, over: g.over, round: g.round, made: g.made, helped: g.helped }).toEqual({ n, over: true, round: HUNT_ROUNDS, made: ways, helped: 0 });
+      }
+    });
+
+    it('the drawn hunt is four rows of four: each number shows where it stands, a way just found pops, a wrong pick shakes, and the next tap stills both', () => {
+      const d = draw(taps(hunt(), 0, 1, 2));
+      expect(d.rows.map((r: any) => r.cells.length)).toEqual([4, 4, 4, 4]);
+      expect(kinds(d).slice(0, 4)).toEqual(['found', 'found', 'picked', 'idle']);
+      const justFound = taps(hunt(), 0, 1);
+      expect(fxRow(draw(justFound))).toEqual(['rkt-hunt-tile rkt-hunt-found rkt-join-a', 'rkt-hunt-tile rkt-hunt-found rkt-join-a', 'rkt-hunt-tile rkt-hunt-idle', 'rkt-hunt-tile rkt-hunt-idle']);
+      expect(fxRow(draw(move(justFound, 'tap', 2).game))).toEqual(['rkt-hunt-tile rkt-hunt-found', 'rkt-hunt-tile rkt-hunt-found', 'rkt-hunt-tile rkt-hunt-picked', 'rkt-hunt-tile rkt-hunt-idle']);
+      const shaken = taps(hunt(), 0, 2);
+      expect([fxRow(draw(shaken))[0], fxRow(draw(move(shaken, 'tap', 4).game))[0]]).toEqual(['rkt-hunt-tile rkt-hunt-wrong rkt-shake-a', 'rkt-hunt-tile rkt-hunt-idle']);
+      // The two names swap with the move count, so a pop on the very next move restarts.
+      expect(fxRow(draw({ ...justFound, taps: 3 }))[0]).toBe('rkt-hunt-tile rkt-hunt-found rkt-join-b');
+      expect([d.rows[3].cells[3].word, d.rows[3].cells[3].at, d.rows[0].cells[1].word]).toEqual(['90', 15, '17']);
+      // A repeater row needs an id, or a re-run piles rows up.
+      expect(new Set(d.rows.flatMap((r: any) => [r.id, ...r.cells.map((c: any) => c.id)])).size).toBe(20);
+      const empty = runScript(DRAW_HUNT_SCRIPT, {});
+      expect([kinds(empty), empty.phase, empty.note, empty.instruction]).toEqual([Array(16).fill('idle'), 'playing', '', '']);
+    });
+
+    it('the words: the instruction, the progress, and the note, in both languages', () => {
+      expect([draw(hunt()).instruction, draw(hunt(), 'fr').instruction]).toEqual(['Pick 2 numbers that add up to 20', 'Choisis 2 nombres dont la somme fait 20']);
+      expect([draw(hunt()).progress, draw(hunt({ round: 3 }), 'fr').progress]).toEqual(['Grid 1 of 5 · found 0 of 2', 'Grille 3 sur 5 · trouvées : 0 sur 2']);
+      expect([draw(hunt()).note, draw(hunt(), 'fr').note, draw(hunt({ ways: [[0, 1]], count: 2 })).note]).toEqual(['There are 2 ways. Tap 2 numbers.', 'Il y a 2 façons. Touche 2 nombres.', 'There is 1 way. Tap 2 numbers.']);
+      expect([draw(taps(hunt(), 0, 1)).note, draw(taps(hunt(), 0, 1), 'fr').note, draw(taps(hunt(), 0, 1)).noteKind]).toEqual(['✅ 3 + 17 = 20 · 1 more to find', '✅ 3 + 17 = 20 · encore 1 à trouver', 'right']);
+      expect([draw(hunt()).noteKind, draw(taps(hunt(), 0, 2)).noteKind]).toEqual(['quiet', 'wrong']);
+    });
+
+    it('🔴 D64: no row or number the grid draws carries a field the runtime Model answers for itself', () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const loaded = require('../../noodl-runtime/src/model');
+      const RuntimeModel = loaded.default ?? loaded;
+      const reserved = new Set<string>(['data']);
+      for (let p = RuntimeModel.prototype; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) for (const n of Object.getOwnPropertyNames(p)) reserved.add(n);
+      expect([reserved.has('on'), reserved.has('get')]).toEqual([true, true]);
+      const rows = draw(taps(hunt(), 0, 1)).rows;
+      const keys = [...new Set([...rows.flatMap((r: any) => Object.keys(r)), ...rows.flatMap((r: any) => r.cells.flatMap((c: any) => Object.keys(c)))])].sort();
+      expect(keys).toEqual(['at', 'cells', 'fx', 'id', 'kind', 'word']);
+      expect(keys.filter((k) => reserved.has(k))).toEqual([]);
+    });
+
+    it('🔴 a finished hunt pays once: a star a way found up to the cap, plus a landing’s five; a way shown pays nothing; a second Finish, or a hunt left unfinished, pays nothing', () => {
+      expect(HUNT_STAR_RULE).toEqual({ way: 1, wayCap: 15, finish: STAR_RULE.finish });
+      const over = { id: 'h7', made: 6, helped: 2, over: true };
+      const first = runScript(FINISH_HUNT_SCRIPT, { model: { ...freshModel(), stars: 10 }, game: over, lang: 'en' });
+      expect([first.paid, first.starsEarned, first.stars, first.starsText, first.why, first.line, first.headline]).toEqual([true, 11, 21, '+11 ⭐', 'ways found +6 · hunt finished +5', '6 ways found · 2 shown', 'Hunt complete!']);
+      const again = runScript(FINISH_HUNT_SCRIPT, { model: first.model, game: over, lang: 'en' });
+      expect([again.paid, again.starsEarned, again.stars]).toEqual([false, 0, 21]);
+      const long = runScript(FINISH_HUNT_SCRIPT, { model: freshModel(), game: { ...over, id: 'h8', made: 40, helped: 0 }, lang: 'fr' });
+      expect([long.starsEarned, long.why, long.line, long.headline]).toEqual([HUNT_STAR_RULE.wayCap + HUNT_STAR_RULE.finish, 'trouvées +15 (le maximum) · chasse finie +5', '40 trouvées', 'Chasse terminée !']);
+      const left = runScript(FINISH_HUNT_SCRIPT, { model: { ...freshModel(), stars: 3 }, game: { ...over, id: 'h9', over: false }, lang: 'en' });
+      expect([left.paid, left.stars]).toEqual([false, 3]);
+      // RKT-011: 10 → 21 crosses the first milestone and offers the pick; 20 → 31 crosses none.
+      expect([first.earnedPick, runScript(FINISH_HUNT_SCRIPT, { model: { ...freshModel(), stars: 20 }, game: { ...over, id: 'h10' }, lang: 'en' }).earnedPick]).toEqual([true, false]);
+      // The hunt's id is its own: a Make Ten board paid with the same id does not stop the hunt paying.
+      expect(runScript(FINISH_HUNT_SCRIPT, { model: { ...freshModel(), lastMergeId: 'h7' }, game: over, lang: 'en' }).paid).toBe(true);
+      // Sabotage arm: without the hunt id check, the second Finish pays again.
+      const doctored = FINISH_HUNT_SCRIPT.replace('model.lastHuntId !== id', 'true');
+      expect(doctored).not.toBe(FINISH_HUNT_SCRIPT);
+      expect(runScript(doctored, { model: first.model, game: over, lang: 'en' }).paid).toBe(true);
+    });
+  });
+
+  describe('profiles in the store', () => {
+    it('create, select, save a model, list, delete — and the cap of six', () => {
+      let app: any = undefined;
+      app = runScript(CREATE_PROFILE_SCRIPT, { app, name: 'Léa', look: 'thumbs', seed: 'Léa', level: 'CM1', lang: 'fr' }).app;
+      app = runScript(CREATE_PROFILE_SCRIPT, { app, name: 'Sam', look: 'pixel-art', seed: 'Sam', level: 'CE2', lang: 'en' }).app;
+      expect(app.profiles).toHaveLength(2);
+      expect(app.activeId).toBe(app.profiles[1].id);
+      expect(app.profiles[0].layout).toBe('azerty');
+      expect(app.profiles[1].layout).toBe('qwerty');
+
+      app = runScript(SELECT_PROFILE_SCRIPT, { app, profileId: app.profiles[0].id }).app;
+      const active = runScript(ACTIVE_PROFILE_SCRIPT, { app });
+      expect(active.name).toBe('Léa');
+      expect(active.hasProfile).toBe(true);
+      expect(active.lang).toBe('fr');
+      expect(active.due).toBe(0);
+
+      const model = { ...freshModel(), rating: 1111, answered: 3 };
+      app = runScript(SAVE_MODEL_SCRIPT, { app, profileId: app.activeId, model }).app;
+      const list = runScript(LIST_PROFILES_SCRIPT, { app });
+      expect(list.count).toBe(2);
+      expect(list.profiles[0].answered).toBe(3);
+      expect(list.profiles[0].days7).toBe(1);
+      expect(list.profiles[0].selected).toBe(true);
+      expect(list.canAdd).toBe(true);
+
+      for (let i = 0; i < 10; i++) app = runScript(CREATE_PROFILE_SCRIPT, { app, name: `Kid ${i}` }).app;
+      expect(app.profiles).toHaveLength(MAX_PROFILES);
+      expect(runScript(LIST_PROFILES_SCRIPT, { app }).canAdd).toBe(false);
+
+      app = runScript(DELETE_PROFILE_SCRIPT, { app, profileId: app.profiles[0].id }).app;
+      expect(app.profiles).toHaveLength(MAX_PROFILES - 1);
+      expect(app.profiles.some((p: any) => p.name === 'Léa')).toBe(false);
+    });
+
+    it('🔴 RKT-008 AC1: Update settings renames under Create’s rules (trimmed, 24 characters), and an empty name is refused', () => {
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa', look: 'thumbs', seed: 'Léa', level: 'CM1', lang: 'fr' }).app;
+      app = runScript(CREATE_PROFILE_SCRIPT, { app, name: 'Sam', level: 'CE2', lang: 'en' }).app;
+      const lea = app.profiles[0].id;
+      const rename = (a: any, name: unknown, script = UPDATE_SETTINGS_SCRIPT) => runScript(script, { app: a, profileId: lea, name }).app;
+      const next = rename(app, '  Zoé  ');
+      expect(next.profiles[0].name).toBe('Zoé');
+      expect(rename(app, 'Maximilienne-Alexandrine Dupont').profiles[0].name).toBe('Maximilienne-Alexandrine');
+      // A form that was never typed in sends nothing, and a cleared box sends blanks: either way the name stays.
+      for (const blank of ['', '   ', undefined, null]) expect(rename(app, blank).profiles[0].name).toBe('Léa');
+      // Only that player, and only the name: Sam and the rest of Léa are as they were.
+      expect(next.profiles[1]).toEqual(app.profiles[1]);
+      expect({ ...next.profiles[0], name: 'Léa' }).toEqual(app.profiles[0]);
+      // Sabotage: without the trim and the empty check, a blank box renames Léa to spaces.
+      const sabotaged = UPDATE_SETTINGS_SCRIPT.replace(/var name = .*\n/, 'var name = String(Inputs.name);\n');
+      expect(sabotaged).not.toBe(UPDATE_SETTINGS_SCRIPT);
+      expect(rename(app, '   ', sabotaged).profiles[0].name).not.toBe('Léa');
+    });
+
+    it('RKT-008: the menu’s sound pills write the profile’s true/false, and Active profile says which pill is on', () => {
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa', lang: 'fr' }).app;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app }).soundMode).toBe('on');
+      app = runScript(UPDATE_SETTINGS_SCRIPT, { app, soundMode: 'off' }).app;
+      expect(app.profiles[0].sound).toBe(false);
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app }).soundMode).toBe('off');
+      expect(runScript(UPDATE_SETTINGS_SCRIPT, { app, soundMode: 'loud' }).app.profiles[0].sound).toBe(false);
+      expect(runScript(UPDATE_SETTINGS_SCRIPT, { app, soundMode: 'on' }).app.profiles[0].sound).toBe(true);
+    });
+
+    it('🔴 RKT-008 AC7: a keyboard a key press reports is stored once, and never over one the child picked', () => {
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Sam', lang: 'en' }).app;
+      expect(app.profiles[0].layout).toBe('qwerty');
+      const seen = (a: any, layoutSeen: string, script = UPDATE_SETTINGS_SCRIPT) => runScript(script, { app: a, layoutSeen }).app;
+      // An English player on a French keyboard: one telling key, and the profile is AZERTY, still unpicked.
+      app = seen(app, 'azerty');
+      expect([app.profiles[0].layout, app.profiles[0].layoutPicked]).toEqual(['azerty', undefined]);
+      // The same keyboard again writes nothing new.
+      expect(seen(app, 'azerty')).toEqual(app);
+      // The child picks UK beside the map: kept, and no later key press undoes it (UK and US are one QWERTY to a key press).
+      app = runScript(UPDATE_SETTINGS_SCRIPT, { app, layout: 'qwerty-uk' }).app;
+      expect([app.profiles[0].layout, app.profiles[0].layoutPicked]).toEqual(['qwerty-uk', true]);
+      expect(seen(app, 'azerty').profiles[0].layout).toBe('qwerty-uk');
+      expect(seen(app, 'qwerty').profiles[0].layout).toBe('qwerty-uk');
+      // Sabotage: without the picked check, one key press undoes the child's choice.
+      const sabotaged = UPDATE_SETTINGS_SCRIPT.replace('app.profiles[i].layoutPicked !== true && ', '');
+      expect(sabotaged).not.toBe(UPDATE_SETTINGS_SCRIPT);
+      expect(seen(app, 'azerty', sabotaged).profiles[0].layout).toBe('azerty');
+    });
+
+    it('with no profile, the active profile is an honest empty', () => {
+      const a = runScript(ACTIVE_PROFILE_SCRIPT, { app: null });
+      expect(a.hasProfile).toBe(false);
+      expect(a.profileId).toBe('');
+    });
+
+    it('🔴 a save code round-trips a profile and its skills, and a bad code is refused without touching the store', () => {
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa', look: 'thumbs', seed: 'Léa', level: 'CM1', lang: 'fr' }).app;
+      const model = { rating: 1120, answered: 9, lastSkill: 'table-7', skills: { 'table-7': { d: 905, n: 9, streak: 4, miss: 0, last: [1, 1], hl: 4, due: Date.now() + 86400000 * 4, m: 2, best: 1400, fluentRun: 3 } } };
+      app = runScript(SAVE_MODEL_SCRIPT, { app, model }).app;
+      const enc = runScript(ENCODE_SAVE_SCRIPT, { app });
+      expect(enc.code).toMatch(/^RS1\.[A-Za-z0-9_-]+$/);
+      expect(enc.length).toBeLessThan(400);
+
+      let other: any = { profiles: [], activeId: '', sets: [] };
+      const dec = runScript(DECODE_SAVE_SCRIPT, { app: other, code: enc.code });
+      expect(dec.ok).toBe(true);
+      const back = runScript(ACTIVE_PROFILE_SCRIPT, { app: dec.app });
+      expect(back.name).toBe('Léa');
+      expect(back.level).toBe('CM1');
+      expect(back.lang).toBe('fr');
+      expect(back.layout).toBe('azerty');
+      expect(back.model.rating).toBe(1120);
+      expect(back.model.answered).toBe(9);
+      expect(back.model.skills['table-7'].m).toBe(2);
+      expect(back.model.skills['table-7'].hl).toBe(4);
+      expect(Math.abs(back.model.skills['table-7'].due - model.skills['table-7'].due)).toBeLessThan(3600000);
+
+      const bad = runScript(DECODE_SAVE_SCRIPT, { app: other, code: 'RS1.notacode' });
+      expect(bad.ok).toBe(false);
+      expect(bad.error).toBe('bad');
+      expect(bad.app.profiles).toHaveLength(0);
+    });
+
+    it('question sets: parse rows or JSON, save, list, and serve', () => {
+      const parsed = runScript(PARSE_SET_SCRIPT, { json: '[{"q":"2+2","a":"4"},["3+3","6",["5","6"]]]' });
+      expect(parsed.valid).toBe(true);
+      expect(parsed.items).toEqual([{ q: '2+2', a: '4' }, { q: '3+3', a: '6', opts: ['5', '6'] }]);
+      expect(runScript(PARSE_SET_SCRIPT, { json: 'not json' }).valid).toBe(false);
+      expect(runScript(PARSE_SET_SCRIPT, { rows: [{ q: ' a ', a: ' b ' }, { q: '', a: 'x' }] }).items).toEqual([{ q: 'a', a: 'b' }]);
+
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa' }).app;
+      const saved = runScript(UPSERT_SET_SCRIPT, { app, name: 'Capitals', items: parsed.items });
+      app = saved.app;
+      const list = runScript(LIST_SETS_SCRIPT, { app, setId: saved.setId });
+      expect(list.count).toBe(1);
+      expect(list.chosenName).toBe('Capitals');
+      expect(list.chosenItems).toHaveLength(2);
+      const q = pick({ mode: 'custom', customSet: list.chosenItems });
+      expect(['2+2', '3+3']).toContain(q.prompt);
+    });
+  });
+
+  describe('words and cards', () => {
+    it('translate publishes every word key as an output, in the chosen language', () => {
+      const en = runScript(TRANSLATE_SCRIPT, { lang: 'en', words: WORD_ROWS });
+      const fr = runScript(TRANSLATE_SCRIPT, { lang: 'fr', words: WORD_ROWS });
+      expect(en.gameRace).toBe('Rocket Race');
+      expect(fr.gameRace).toBe('Course de fusées');
+      expect(fr.isFr).toBe(true);
+      for (const key of WORD_KEYS) {
+        expect(typeof en[key]).toBe('string');
+        expect(en[key].length).toBeGreaterThan(0);
+      }
+      const ports = portsOf(TRANSLATE_SCRIPT).outputs;
+      for (const key of WORD_KEYS) expect(ports).toContain(key);
+    });
+
+    it('a Teach card fades: step 0 says the most, step 2 the least', () => {
+      const s0 = runScript(TEACH_CARD_SCRIPT, { cards: TEACH_CARDS, teachId: 'place-value', lang: 'fr', step: 0 });
+      const s2 = runScript(TEACH_CARD_SCRIPT, { cards: TEACH_CARDS, teachId: 'place-value', lang: 'fr', step: 2 });
+      expect(s0.found).toBe(true);
+      expect(s0.isFaded).toBe(false);
+      expect(s2.isFaded).toBe(true);
+      expect(s2.text.length).toBeLessThan(s0.text.length);
+      expect(s0.example).toContain('230 000 000');
+      expect(runScript(TEACH_CARD_SCRIPT, { cards: TEACH_CARDS, teachId: 'nope', lang: 'en', step: 0 }).found).toBe(false);
+    });
+  });
+
+  describe('RKT-004 — the correction works through the question that was asked', () => {
+    const flat = (text: string) => text.replace(/[\s  ]/g, '');
+    const MATHS = CURRICULUM.filter((skill) => skill.strand !== 'typing');
+
+    /** For each maths skill, the first question whose worked line is empty, leaves out a number of the prompt, or never shows the answer. */
+    const workedGaps = (script: string): string[] => {
+      const out = new Map<string, string>();
+      for (const skill of MATHS) {
+        for (let i = 0; i < 40 && !out.has(skill.id); i++) {
+          const lang = i % 2 ? 'fr' : 'en';
+          const q = runScript(script, { curriculum: [skill], model: freshModel(), level: skill.level, lang, layout: 'qwerty', mode: 'maths', answerMode: 'auto', wordLists: WORD_LIST_ROWS, nonce: 1 });
+          const worked = flat(String(q.worked || ''));
+          const answered = worked.includes(flat(q.answer)) || worked.includes(flat(helper<string>('fmtNum', Number(q.answer), lang)));
+          const left = (flat(q.prompt).match(/\d+/g) ?? []).filter((digits) => !worked.includes(digits));
+          if (!worked || !answered || left.length) out.set(skill.id, `${skill.id} (${lang}): "${q.prompt}" → "${q.worked}"`);
+        }
+      }
+      return [...out.values()];
+    };
+
+    it('🔴 every maths skill works its own numbers through to the answer (40 questions each, EN and FR)', () => {
+      expect(workedGaps(PICK_QUESTION_SCRIPT)).toEqual([]);
+    });
+
+    it('sabotage arm: a picker that drops the worked line has every maths skill named', () => {
+      const bare = PICK_QUESTION_SCRIPT.replace("Outputs.worked = String(q.worked || '')", "Outputs.worked = String('')");
+      expect(bare).not.toBe(PICK_QUESTION_SCRIPT);
+      expect(workedGaps(bare)).toHaveLength(MATHS.length);
+    });
+
+    it('the correction says the worked line, never the skill’s fixed example; a typing tip is said as before', () => {
+      const bridge = CURRICULUM.find((skill) => skill.id === 'add-bridge')!;
+      const q = pick({ curriculum: [bridge], level: 'CE2', lang: 'fr' });
+      const graded = grade(q, '1', { lang: 'fr', worked: q.worked });
+      expect(graded.message).toBe(`Tu as répondu 1. La réponse était ${q.answer}. ${q.worked}`);
+      expect(graded.message).not.toContain(q.strategy);
+      // An equals sign never ends a line: it is held to both neighbours with no-break spaces.
+      expect(q.worked).not.toMatch(/ =|= /);
+      expect(q.worked).toContain('\u00a0=\u00a0');
+      const typing = CURRICULUM.find((skill) => skill.strand === 'typing')!;
+      const t = pick({ curriculum: [typing], level: typing.level, mode: 'typing' });
+      expect(t.worked).toBe('');
+      expect(grade(t, 'zzz', { worked: t.worked }).message).toBe(`You answered zzz. The answer was ${t.answer}.` + (t.strategy ? ` ${t.strategy}` : ''));
+    });
+
+    it('a decimal is rounded half up, so the worked line’s “5 or more, so up” agrees with the answer', () => {
+      const skill = CURRICULUM.find((s) => s.id === 'round-dec')!;
+      for (let i = 0; i < 300; i++) {
+        const q = pick({ curriculum: [skill], level: skill.level, lang: 'en' });
+        const m = q.prompt.match(/^Round (\d+(?:\.\d+)?) to the nearest (whole|tenth)$/);
+        expect({ prompt: q.prompt, parsed: !!m }).toEqual({ prompt: q.prompt, parsed: true });
+        const cents = Math.round(Number(m![1]) * 100);
+        const expected = m![2] === 'whole' ? Math.floor((cents + 50) / 100) : Math.floor((cents + 5) / 10) / 10;
+        expect({ prompt: q.prompt, answer: Number(q.answer) }).toEqual({ prompt: q.prompt, answer: expected });
+      }
+    });
+
+    it('🔴 the stage drive’s worst-case correction is still at least as long as the longest real one (RKT-003 foldWorst)', () => {
+      const drive = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'scripts', 'devtools', 'drive-rkt003-stage.js'), 'utf8');
+      for (const lang of ['fr', 'en'] as const) {
+        const worst = drive.match(new RegExp(`${lang}: \\{\\s*prompt: '[^']*',\\s*message: '([^']*)'`))![1];
+        let longest = '';
+        for (const skill of CURRICULUM) {
+          for (let i = 0; i < 40; i++) {
+            const q = pick({ curriculum: [skill], level: skill.level, lang, mode: skill.strand === 'typing' ? 'typing' : 'maths' });
+            // RKT-005: the correction now starts with the child's own answer, cut at twelve characters — so the longest one is a long entry.
+            const message = String(grade(q, 'x'.repeat(40), { lang, worked: q.worked }).message);
+            if (message.length > longest.length) longest = message;
+          }
+        }
+        expect({ lang, longest, fits: longest.length <= worst.length }).toEqual({ lang, longest, fits: true });
+      }
+    });
+  });
+
+  describe('RKT-005 — the answer pad’s keys, and a correction in the child’s own terms', () => {
+    const MATHS = CURRICULUM.filter((skill) => skill.strand !== 'typing');
+    const TYPING = CURRICULUM.filter((skill) => skill.strand === 'typing');
+    /** The accents in a word list, by the picker's own rule: a letter with a capital that is not a–z. */
+    const accentsOf = (words: ReadonlyArray<string>) =>
+      [...new Set(words.join('').toLowerCase().split('').filter((c) => c !== c.toUpperCase() && !/[a-z]/.test(c)))].sort().join('');
+
+    it('🔴 AC4: a French typing question’s strip is exactly the accents its word list uses; English has none', () => {
+      expect(accentsOf(WORD_LISTS.fr)).toBe('âèéê');
+      for (const skill of TYPING) {
+        const fr = pick({ curriculum: [skill], level: skill.level, lang: 'fr', layout: 'azerty', mode: 'typing' });
+        const en = pick({ curriculum: [skill], level: skill.level, lang: 'en', mode: 'typing' });
+        expect({ skill: skill.id, fr: [fr.padKeys, fr.padNumeric], en: [en.padKeys, en.padNumeric] }).toEqual({ skill: skill.id, fr: [accentsOf(WORD_LISTS.fr), false], en: ['', false] });
+      }
+    });
+
+    it('AC4 sabotage arm: a French word with ÿ grows the strip by exactly ÿ', () => {
+      const skill = CURRICULUM.find((s) => s.id === 'type-words-short')!;
+      const lists = [{ lang: 'en', words: WORD_LISTS.en }, { lang: 'fr', words: [...WORD_LISTS.fr, 'ÿack'] }];
+      const q = pick({ curriculum: [skill], level: skill.level, lang: 'fr', mode: 'typing', wordLists: lists });
+      expect(q.padKeys).toBe(accentsOf([...WORD_LISTS.fr, 'ÿ']));
+      expect(q.padKeys.length).toBe(accentsOf(WORD_LISTS.fr).length + 1);
+    });
+
+    /** Skills with a typed answer the pad cannot enter, or that does not grade right once entered; and the decimal skills seen. */
+    const padGaps = (script: string) => {
+      const gaps = new Map<string, string>();
+      const decimals = new Set<string>();
+      for (const skill of MATHS) {
+        for (let i = 0; i < 60; i++) {
+          const lang = i % 2 ? 'fr' : 'en';
+          const q = runScript(script, { curriculum: [skill], model: freshModel(), level: skill.level, lang, layout: 'qwerty', mode: 'maths', answerMode: 'typed', wordLists: WORD_LIST_ROWS, nonce: 1 });
+          if (q.kind !== 'typed') continue;
+          const entry = lang === 'fr' ? String(q.answer).replace('.', ',') : String(q.answer);
+          if (/[.,]/.test(entry)) decimals.add(`${skill.id} (${lang})`);
+          const missing = [...entry].filter((c) => !String(q.padKeys).includes(c));
+          const right = grade(q, entry, { lang }).correct;
+          if (!q.padNumeric || missing.length || !right) gaps.set(skill.id, `${skill.id} (${lang}): answer ${q.answer}, keys "${q.padKeys}", numeric ${q.padNumeric}, missing "${missing.join('')}", graded right ${right}`);
+        }
+      }
+      return { gaps: [...gaps.values()], decimals: [...decimals].sort() };
+    };
+
+    it('🔴 AC1/AC3: every typed maths answer can be entered from its pad, and grades right as entered (60 questions a skill, EN and FR)', () => {
+      const { gaps, decimals } = padGaps(PICK_QUESTION_SCRIPT);
+      expect(gaps).toEqual([]);
+      // The known-firing signal beside the absence: decimal answers were among them, in both languages.
+      expect(decimals.some((d) => d.endsWith('(fr)')) && decimals.some((d) => d.endsWith('(en)'))).toBe(true);
+      const q = pick({ curriculum: [CURRICULUM.find((s) => s.id === 'add-to-20')!], level: 'CE2', lang: 'fr' });
+      expect([q.padKeys, pick({ curriculum: [CURRICULUM.find((s) => s.id === 'add-to-20')!], level: 'CE2', lang: 'en' }).padKeys]).toEqual(['1234567890,', '1234567890.']);
+    });
+
+    it('AC3 sabotage arm: a French pad given the English decimal point names every skill with a French decimal answer', () => {
+      const bare = PICK_QUESTION_SCRIPT.replace("'1234567890' + (isFr(lang) ? ',' : '.')", "'1234567890' + '.'");
+      expect(bare).not.toBe(PICK_QUESTION_SCRIPT);
+      const frDecimalSkills = padGaps(PICK_QUESTION_SCRIPT).decimals.filter((d) => d.endsWith('(fr)')).map((d) => d.split(' ')[0]);
+      const named = padGaps(bare).gaps.map((g) => g.split(' ')[0]);
+      expect(frDecimalSkills.length).toBeGreaterThan(0);
+      expect(named.sort()).toEqual([...new Set(frDecimalSkills)].sort());
+    });
+
+    it('🔴 a French correction writes its decimal the way the French pad does, after the child’s own answer', () => {
+      const skill = CURRICULUM.find((s) => s.id === 'dec-pow10')!;
+      const decimalQuestion = (lang: string) => {
+        for (let i = 0; i < 400; i++) {
+          const q = pick({ curriculum: [skill], level: skill.level, lang });
+          if (/^\d{1,3}\.\d+$/.test(q.answer)) return q;
+        }
+        throw new Error(`no decimal ${lang} question in 400 draws`);
+      };
+      const fr = decimalQuestion('fr');
+      expect(grade(fr, '98765', { lang: 'fr', worked: fr.worked }).message).toBe(`Tu as répondu 98765. La réponse était ${fr.answer.replace('.', ',')}. ${fr.worked}`);
+      const en = decimalQuestion('en');
+      expect(grade(en, '98765', { lang: 'en', worked: en.worked }).message).toBe(`You answered 98765. The answer was ${en.answer}. ${en.worked}`);
+      // An option's value carries a dot; said to a French child, it wears a comma.
+      expect(grade(fr, '2.5', { lang: 'fr' }).message.startsWith('Tu as répondu 2,5. ')).toBe(true);
+    });
+
+    it('a timeout says no answer of the child’s; a long entry is cut to twelve characters; a big answer is grouped', () => {
+      const add = pick({ curriculum: [CURRICULUM.find((s) => s.id === 'add-to-20')!], level: 'CE2', lang: 'en' });
+      expect(grade(add, '12', { lang: 'en', timedOut: true }).message.startsWith('The answer was ')).toBe(true);
+      expect(grade(add, 'x'.repeat(40), { lang: 'en' }).message.startsWith(`You answered ${'x'.repeat(11)}…. `)).toBe(true);
+      const big = pick({ curriculum: [CURRICULUM.find((s) => s.id === 'big-999999999')!], level: 'CM2', lang: 'fr' });
+      expect(grade(big, '1', { lang: 'fr' }).message).toContain(`La réponse était ${helper<string>('fmtNum', Number(big.answer), 'fr')}.`);
+    });
+  });
+
+  describe('RKT-007 — the boost the child is shown is the speed that moved the rocket', () => {
+    /** Every way the line, the speed and the gain disagree, over a sweep of answer times, in both languages. */
+    function disagreements(script: string): string[] {
+      const out: string[] = [];
+      for (const lang of ['en', 'fr']) {
+        const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2', lang });
+        const f = Number(q.fluentMs);
+        for (const elapsed of [400, f * 0.9, f, f + 1, f * 1.2, f * 1.5, f * 1.8, f * 2, f * 2.5, f * 4]) {
+          const g = runScript(script, { model: freshModel(), skillId: q.skillId, answer: q.answer, typed: q.answer, shownAt: Date.now(), fluentMs: f, itemDiff: q.itemDiff, level: 'CE2', lang, strategy: q.strategy, timedOut: false, elapsedOverride: elapsed });
+          const said = String(g.boost);
+          const pct = said.match(/(\d+)\s?%/);
+          const shown = g.fluent ? (said.includes(lang === 'fr' ? 'turbo à fond' : 'full boost') ? 100 : NaN) : pct ? Number(pct[1]) : NaN;
+          const tag = `${lang} ${Math.round(elapsed)} ms: "${said}", speed ${g.speed}, gain ${g.gain}`;
+          if (shown !== Math.round(g.speed * 100)) out.push(`${tag} — the line says ${shown}%`);
+          if (g.boostPct !== Math.round(g.speed * 100)) out.push(`${tag} — the meter says ${g.boostPct}%`);
+          if (Math.abs(g.gain - RACE_STEP * g.speed) > 0.001) out.push(`${tag} — the rocket moved ${g.gain}, not ${RACE_STEP} × speed`);
+          if (!(g.speed >= 0.5 && g.speed <= 1)) out.push(`${tag} — speed is outside 0.5–1`);
+        }
+      }
+      return out;
+    }
+
+    it('🔴 AC1: over every answer time, the percentage said is the grader’s speed, and the rocket moved one step × that speed', () => {
+      expect(disagreements(GRADE_ANSWER_SCRIPT)).toEqual([]);
+    });
+
+    it('sabotage arm: the line works out its own percentage (a second formula), and the gate names the times it lies', () => {
+      const sabotaged = GRADE_ANSWER_SCRIPT.replace('var boostPct = Math.round(speed * 100);', 'var boostPct = Math.round(Math.max(0.5, 1 - (elapsed - fluentMs) / (3 * fluentMs)) * 100);');
+      expect(sabotaged).not.toBe(GRADE_ANSWER_SCRIPT);
+      expect(disagreements(sabotaged).length).toBeGreaterThan(0);
+    });
+
+    it('sabotage arm: the rocket moves by a formula of its own, and the gate names it', () => {
+      const sabotaged = GRADE_ANSWER_SCRIPT.replace(`var gain = correct ? ${RACE_STEP} * speed : 0;`, `var gain = correct ? ${RACE_STEP} * (elapsed <= fluentMs ? 1 : 0.5) : 0;`);
+      expect(sabotaged).not.toBe(GRADE_ANSWER_SCRIPT);
+      expect(disagreements(sabotaged).length).toBeGreaterThan(0);
+    });
+
+    it('the four lines, in both languages: seconds with the local decimal mark, and nothing for speed when the answer earned nothing', () => {
+      const q = pick({ curriculum: CURRICULUM.filter((s) => s.id === 'table-7'), level: 'CE2' });
+      const f = Number(q.fluentMs);
+      const line = (lang: string, typed: string, extra: Record<string, unknown>) => grade(q, typed, { lang, ...extra });
+      expect(line('fr', q.answer, { elapsedOverride: 2140 }).boost).toBe('⚡ 2,1 s · turbo à fond');
+      expect(line('en', q.answer, { elapsedOverride: 2140 }).boost).toBe('⚡ 2.1 s · full boost');
+      const slow = line('fr', q.answer, { elapsedOverride: f * 1.5 });
+      expect(slow.boost).toBe(`${String(Math.round(f * 1.5 / 100) / 10).replace('.', ',')} s · turbo 75 %`);
+      expect(slow.speed).toBe(0.75);
+      const wrong = line('en', 'nope', { elapsedOverride: 500 });
+      expect([wrong.boost, wrong.speed, wrong.gain, wrong.boostPct]).toEqual(['No boost', 0, 0, 0]);
+      const late = line('fr', q.answer, { timedOut: true });
+      expect([late.boost, late.speed, late.gain, late.boostPct]).toEqual(['Ta fusée ne bouge pas', 0, 0, 0]);
+    });
+  });
+
+  describe('RKT-010 — stars that add up', () => {
+    const fresh = () => freshModel();
+    /** One answer, graded the way Race/Round grades it: right fast, right slow, wrong, or out of time. */
+    const answerOn = (model: any, skillId: string, how: 'fluent' | 'slow' | 'wrong' | 'timeout', extra: Record<string, unknown> = {}, script = GRADE_ANSWER_SCRIPT) =>
+      runScript(script, { model, skillId, answer: '42', typed: how === 'wrong' ? '41' : '42', shownAt: Date.now(), fluentMs: 4000, itemDiff: 1000, level: 'CE2', lang: 'en', timedOut: how === 'timeout', elapsedOverride: how === 'slow' ? 7000 : 800, raceId: 'r1', ...extra });
+    /** A race of right (1) and wrong (0) answers under one id, each on a skill of its own (so no mastery moves), then Finished. */
+    const race = (model: any, raceId: string, pattern: number[], timed: boolean, grade: string, finish: string) => {
+      let m = model;
+      pattern.forEach((right, i) => (m = answerOn(m, `${raceId}-${i}`, right ? 'fluent' : 'wrong', { raceId }, grade).model));
+      return runScript(finish, { model: m, raceId, timed, lang: 'en' });
+    };
+
+    /** Every row of RKT-010 §3.1 the scripts disagree with, by name. */
+    function table(grade = GRADE_ANSWER_SCRIPT, finish = FINISH_RACE_SCRIPT): string[] {
+      const out: string[] = [];
+      const said = (row: string, got: unknown, want: unknown) => {
+        if (JSON.stringify(got) !== JSON.stringify(want)) out.push(`${row}: ${JSON.stringify(got)}, not ${JSON.stringify(want)}`);
+      };
+      said('a fluent right answer', answerOn(fresh(), 'a', 'fluent', {}, grade).starsEarned, STAR_RULE.right);
+      said('a slow right answer pays the same as a fluent one', answerOn(fresh(), 'a', 'slow', {}, grade).starsEarned, STAR_RULE.right);
+      said('a wrong answer', answerOn(fresh(), 'a', 'wrong', {}, grade).starsEarned, 0);
+      said('a timeout', answerOn(fresh(), 'a', 'timeout', {}, grade).starsEarned, 0);
+      said('player two’s right answer', answerOn(fresh(), 'a', 'fluent', { forB: true }, grade).starsEarned, 0);
+      let m: any = fresh();
+      const paid: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const g = answerOn(m, 'a', 'fluent', {}, grade);
+        paid.push(g.starsEarned);
+        m = g.model;
+      }
+      said('five fluent answers: the fifth makes the skill familiar and pays the level', { paid, mastery: m.skills.a.m }, { paid: [1, 1, 1, 1, 1 + STAR_RULE.level], mastery: 1 });
+      const first = race(fresh(), 'race1', [1, 1, 1, 0], false, grade, finish);
+      said('a landing pays, and the first race sets the record without paying for it', { earned: first.starsEarned, best: first.model.bests.practice, newBest: first.newBest }, { earned: STAR_RULE.finish, best: 3, newBest: false });
+      const second = race(first.model, 'race2', [1, 1, 1, 1, 0], false, grade, finish);
+      said('a longer run in a row is a new best', { earned: second.starsEarned, best: second.model.bests.practice, newBest: second.newBest }, { earned: STAR_RULE.finish + STAR_RULE.best, best: 4, newBest: true });
+      const third = race(second.model, 'race3', [1, 0, 1, 0], false, grade, finish);
+      said('a shorter run pays the landing only', { earned: third.starsEarned, best: third.model.bests.practice }, { earned: STAR_RULE.finish, best: 4 });
+      const defi = race(third.model, 'race4', [1, 1, 1, 1, 1, 1], true, grade, finish);
+      said('Défi keeps a record of its own, set without pay by its first race', { earned: defi.starsEarned, bests: defi.model.bests }, { earned: STAR_RULE.finish, bests: { practice: 4, defi: 6 } });
+      const take = 4 * STAR_RULE.right + STAR_RULE.finish + STAR_RULE.best;
+      said('the race says its whole take', { total: second.raceStars, text: second.starsText, why: second.why }, { total: take, text: `+${take} ⭐`, why: 'New best! · right answers +4 · landed +5 · new best +5' });
+      // A win and a loss pay the same landing because the script is never told which it was.
+      said('the landing reads nothing about who won', portsOf(finish).inputs.filter((i) => /win|won|lost|lose/i.test(i)), []);
+      return out;
+    }
+
+    it('🔴 AC2: every row of the earning table holds', () => {
+      expect(table()).toEqual([]);
+    });
+
+    it.each([
+      ['a slow answer pays less', 'grade', 'var rightStars = correct ? STAR_RULE.right : 0;', 'var rightStars = fluent ? STAR_RULE.right : 0;', 'a slow right answer pays the same'],
+      ['a timeout pays', 'grade', 'var rightStars = correct ? STAR_RULE.right : 0;', 'var rightStars = (correct || timedOut) ? STAR_RULE.right : 0;', 'a timeout'],
+      ['a loss pays a smaller landing', 'finish', 'race.finishStars = STAR_RULE.finish;', 'race.finishStars = Inputs.won === true ? STAR_RULE.finish : 2;', 'the landing reads nothing about who won'],
+      ['the first race pays a record', 'finish', "if (typeof had !== 'number') model.bests[mode] = race.bestRun;", "if (typeof had !== 'number') { model.bests[mode] = race.bestRun; race.bestStars = STAR_RULE.best; }", 'the first race sets the record without paying']
+    ])('AC2 sabotage arm: %s, and the gate names the row', (_what, which, from, to, row) => {
+      const grade = which === 'grade' ? GRADE_ANSWER_SCRIPT.replace(from, to) : GRADE_ANSWER_SCRIPT;
+      const finish = which === 'finish' ? FINISH_RACE_SCRIPT.replace(from, to) : FINISH_RACE_SCRIPT;
+      expect(grade + finish).not.toBe(GRADE_ANSWER_SCRIPT + FINISH_RACE_SCRIPT);
+      expect(table(grade, finish).join('\n')).toContain(row);
+    });
+
+    /** 1,000 seeded answers over three skills, a third of them wrong, so mastery rises, falls and rises again. */
+    function monotonic(script: string) {
+      let seed = 20260913;
+      const rand = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+      let model: any = fresh();
+      let before = 0;
+      const drops: string[] = [];
+      const levelPaid: Record<string, number> = {};
+      const highest: Record<string, number> = {};
+      let repromotions = 0;
+      for (let i = 0; i < 1000; i++) {
+        const skill = `s${Math.floor(rand() * 3)}`;
+        const was = model.skills[skill]?.m ?? 0;
+        const how = rand() < 1 / 3 ? 'wrong' : 'fluent';
+        const g = answerOn(model, skill, how, { wasDue: rand() < 0.5, raceId: `r${Math.floor(i / 12)}` }, script);
+        if (g.stars < before) drops.push(`answer ${i}: ${before} → ${g.stars}`);
+        before = g.stars;
+        const now = g.model.skills[skill].m;
+        levelPaid[skill] = (levelPaid[skill] ?? 0) + g.starsEarned - (how === 'fluent' ? STAR_RULE.right : 0);
+        if (now > was && now <= (highest[skill] ?? 0)) repromotions++;
+        highest[skill] = Math.max(highest[skill] ?? 0, now);
+        model = g.model;
+      }
+      const overpaid = Object.keys(levelPaid).filter((s) => levelPaid[s] !== STAR_RULE.level * highest[s]).map((s) => `${s}: paid ${levelPaid[s]} for a highest level of ${highest[s]}`);
+      return { drops, overpaid, repromotions, highest };
+    }
+
+    it('🔴 AC3: over 1,000 seeded answers the total never drops, and each level of each skill is paid once however often it is re-reached', () => {
+      const run = monotonic(GRADE_ANSWER_SCRIPT);
+      expect({ drops: run.drops, overpaid: run.overpaid }).toEqual({ drops: [], overpaid: [] });
+      // Known-firing: the run really did demote and re-promote, and reached past the first level, so "paid once" was tested.
+      expect(run.repromotions).toBeGreaterThan(0);
+      expect(Math.max(...Object.values(run.highest))).toBeGreaterThanOrEqual(2);
+    });
+
+    it('AC3 sabotage arm: a demotion lowers the paid level, so a re-promotion pays again, and the gate names the skill', () => {
+      const sabotaged = GRADE_ANSWER_SCRIPT.replace('if (st.miss >= 2 && m > 0) m -= 1;', 'if (st.miss >= 2 && m > 0) { m -= 1; st.paid = m; }');
+      expect(sabotaged).not.toBe(GRADE_ANSWER_SCRIPT);
+      expect(monotonic(sabotaged).overpaid.length).toBeGreaterThan(0);
+    });
+
+    it('🔴 AC4: the same graded model saved twice, and the same race finished twice, each pay once', () => {
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa', lang: 'fr' }).app;
+      const g = answerOn(fresh(), 'a', 'fluent', { raceId: 'r9' });
+      app = runScript(SAVE_MODEL_SCRIPT, { app, model: g.model }).app;
+      app = runScript(SAVE_MODEL_SCRIPT, { app, model: g.model }).app;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app }).stars).toBe(STAR_RULE.right);
+      const once = runScript(FINISH_RACE_SCRIPT, { model: g.model, raceId: 'r9', timed: false, lang: 'fr' });
+      const twice = runScript(FINISH_RACE_SCRIPT, { model: once.model, raceId: 'r9', timed: false, lang: 'fr' });
+      const take = STAR_RULE.right + STAR_RULE.finish;
+      expect([once.starsEarned, twice.starsEarned, twice.stars, twice.raceStars, twice.starsText, twice.why]).toEqual([STAR_RULE.finish, 0, take, take, `+${take} ⭐`, 'bonnes réponses +1 · arrivée +5']);
+      // A race with no id (a mint that never ran) pays no landing, rather than one for every Finished.
+      expect(runScript(FINISH_RACE_SCRIPT, { model: g.model, raceId: '', timed: false }).starsEarned).toBe(0);
+      // Sabotage: a landing added at save time pays twice when the same model is saved twice.
+      const addsAtSave = SAVE_MODEL_SCRIPT.replace('if (model) app.profiles[i].model = model;', 'if (model) { model.stars = (model.stars || 0) + 5; app.profiles[i].model = model; }');
+      expect(addsAtSave).not.toBe(SAVE_MODEL_SCRIPT);
+      let bad: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa' }).app;
+      const g2 = answerOn(fresh(), 'a', 'fluent', { raceId: 'r9' });
+      bad = runScript(addsAtSave, { app: bad, model: g2.model }).app;
+      bad = runScript(addsAtSave, { app: bad, model: g2.model }).app;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app: bad }).stars).not.toBe(STAR_RULE.right + 5);
+    });
+
+    it('🔴 AC5: a profile from before stars is granted 10 per level reached and not paid for them again; v2 codes round-trip; a v1 code still decodes', () => {
+      const oldSkill = (m: number) => ({ d: 900, n: 12, streak: 0, miss: 0, last: [1, 1, 1], hl: 4, due: Date.now() + 86400000, m, best: 1200, fluentRun: 0 });
+      const v1Model = { rating: 1100, answered: 40, lastSkill: '', skills: { a: oldSkill(2), b: oldSkill(3), c: oldSkill(0) } };
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa', lang: 'fr' }).app;
+      app = runScript(SAVE_MODEL_SCRIPT, { app, model: v1Model }).app;
+      const grant = STAR_RULE.level * 5;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app }).stars).toBe(grant);
+      // Not paid again: a right answer that leaves the proficient skill proficient pays the answer only.
+      const g = answerOn(v1Model, 'a', 'fluent', { wasDue: false });
+      expect([g.starsEarned, g.stars, g.model.skills.a.paid, g.model.skills.a.m]).toEqual([STAR_RULE.right, grant + STAR_RULE.right, 2, 2]);
+      // Sabotage: the migration grants but does not mark the levels paid, and the next answer pays them a second time.
+      const unmarked = GRADE_ANSWER_SCRIPT.replace('model.skills[id].paid = lv;', '');
+      expect(unmarked).not.toBe(GRADE_ANSWER_SCRIPT);
+      expect(answerOn(v1Model, 'a', 'fluent', { wasDue: false }, unmarked).starsEarned).not.toBe(STAR_RULE.right);
+
+      app = runScript(SAVE_MODEL_SCRIPT, { app, model: { ...g.model, bests: { practice: 4, defi: 6 } } }).app;
+      const enc = runScript(ENCODE_SAVE_SCRIPT, { app });
+      const dec = runScript(DECODE_SAVE_SCRIPT, { app: { profiles: [], activeId: '', sets: [] }, code: enc.code });
+      expect(dec.ok).toBe(true);
+      const back = runScript(ACTIVE_PROFILE_SCRIPT, { app: dec.app });
+      const paidOf = (model: any) => Object.fromEntries(Object.entries(model.skills).map(([k, s]: [string, any]) => [k, s.paid]));
+      expect({ stars: back.stars, paid: paidOf(back.model), bests: back.model.bests }).toEqual({ stars: grant + STAR_RULE.right, paid: { a: 2, b: 3, c: 0 }, bests: { practice: 4, defi: 6 } });
+
+      const v1Code = 'RS1.' + Buffer.from(JSON.stringify({ v: 1, n: 'Sam', k: 'thumbs', s: 'Sam', l: 'CM1', g: 'en', y: 'qwerty', r: 1000, a: 9, d: [], sk: { a: [900, 9, 4, 16, 0, 2, 1400, 0] } }), 'utf8').toString('base64url');
+      const old = runScript(DECODE_SAVE_SCRIPT, { app: { profiles: [], activeId: '', sets: [] }, code: v1Code });
+      expect(old.ok).toBe(true);
+      const sam = runScript(ACTIVE_PROFILE_SCRIPT, { app: old.app });
+      expect([sam.name, sam.stars, answerOn(sam.model, 'a', 'fluent').starsEarned]).toEqual(['Sam', STAR_RULE.level * 2, STAR_RULE.right]);
+    });
+
+    it('the profile list, which Game/Profile card repeats over, carries no stars (AC6’s other half)', () => {
+      let app: any = runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa' }).app;
+      app = runScript(SAVE_MODEL_SCRIPT, { app, model: answerOn(fresh(), 'a', 'fluent').model }).app;
+      const row = runScript(LIST_PROFILES_SCRIPT, { app }).profiles[0];
+      expect(Object.keys(row).filter((k) => /star/i.test(k))).toEqual([]);
+      // Known-firing: the same filter finds the field in the profile itself.
+      expect(Object.keys(row.model).filter((k) => /star/i.test(k))).toEqual(['stars']);
+    });
+  });
+
+  describe('RKT-011 — the hangar: picks follow the curve, and nothing owned is ever taken away', () => {
+    const shelf = HANGAR_SHELF;
+    const me = (app: any) => app.profiles.find((p: any) => p.id === app.activeId);
+    const newPlayer = (look: string) => runScript(CREATE_PROFILE_SCRIPT, { app: undefined, name: 'Léa', lang: 'fr', look }).app;
+    const withTotal = (app: any, stars: number) => runScript(SAVE_MODEL_SCRIPT, { app, model: { ...(me(app).model || {}), stars } }).app;
+    /** The ruled curve, worked out from RKT-011 §3.1's words rather than from the script: a pick at each milestone, then one every HANGAR_EVERY. */
+    const onCurve = (stars: number) => {
+      const last = HANGAR_MILESTONES[HANGAR_MILESTONES.length - 1];
+      const early = HANGAR_MILESTONES.filter((m) => m <= stars).length;
+      return stars < last ? early : early + Math.floor((stars - last) / HANGAR_EVERY);
+    };
+
+    /** 60 seeded races at about 20 ⭐ each. After each one the child changes face now and then, and taps every item on the shelf. */
+    function sixtyRaces(pickScript: string) {
+      let seed = 20260913;
+      const rand = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+      const LOOKS = ['big-smile', 'pixel-art', 'adventurer', 'thumbs'];
+      let app: any = newPlayer('big-smile');
+      let stars = 0;
+      let before = { stars: 0, owned: [] as string[] };
+      const faults: string[] = [];
+      let picked = 0;
+      let retappedOwned = 0;
+      let lookChanges = 0;
+      for (let race = 1; race <= 60; race++) {
+        stars += 13 + Math.floor(rand() * 15);
+        app = withTotal(app, stars);
+        if (rand() < 0.2) {
+          app = runScript(UPDATE_SETTINGS_SCRIPT, { app, look: LOOKS[Math.floor(rand() * LOOKS.length)] }).app;
+          lookChanges++;
+        }
+        const shown = runScript(ACTIVE_PROFILE_SCRIPT, { app });
+        const ownedNow: string[] = me(app).owned || [];
+        if (shown.stars < before.stars) faults.push(`race ${race}: the total dropped, ${before.stars} → ${shown.stars}`);
+        if (shown.picks + ownedNow.length !== onCurve(stars)) faults.push(`race ${race}: ${shown.picks} picks waiting + ${ownedNow.length} owned at ${stars} ⭐, but the curve gives ${onCurve(stars)}`);
+        for (const item of shelf) {
+          const was: string[] = me(app).owned || [];
+          const left = runScript(ACTIVE_PROFILE_SCRIPT, { app }).picks;
+          const r = runScript(pickScript, { app, itemId: item.id, shelf });
+          const now: string[] = me(r.app).owned || [];
+          if (was.includes(item.id)) {
+            retappedOwned++;
+            if (r.picked) faults.push(`race ${race}: ${item.id} was already owned, and a pick was spent on it again`);
+          }
+          if (r.picked) {
+            picked++;
+            const leftAfter = runScript(ACTIVE_PROFILE_SCRIPT, { app: r.app }).picks;
+            if (now.length !== was.length + 1 || leftAfter !== left - 1) faults.push(`race ${race}: picking ${item.id} took owned ${was.length} → ${now.length} and picks ${left} → ${leftAfter}`);
+          } else if (JSON.stringify(now) !== JSON.stringify(was)) faults.push(`race ${race}: a refused pick of ${item.id} (${r.why}) changed what is owned`);
+          if (new Set(now).size !== now.length) faults.push(`race ${race}: owned lists an item twice: ${now.join(', ')}`);
+          app = r.app;
+        }
+        const ownedAfter: string[] = me(app).owned || [];
+        const lost = before.owned.filter((id) => !ownedAfter.includes(id));
+        if (lost.length) faults.push(`race ${race}: lost ${lost.join(', ')}`);
+        before = { stars: runScript(ACTIVE_PROFILE_SCRIPT, { app }).stars, owned: ownedAfter };
+      }
+      return { faults: [...new Set(faults)], picked, retappedOwned, lookChanges, stars, owned: before.owned.length };
+    }
+
+    it('🔴 AC5: over 60 seeded races the picks follow the ruled curve, the total never drops, owned only grows, and a pick is spent once', () => {
+      const run = sixtyRaces(PICK_ITEM_SCRIPT);
+      expect(run.faults).toEqual([]);
+      // Known-firing: picks were really spent, owned items really were tapped again, and the face really changed between races.
+      expect(run.picked).toBeGreaterThanOrEqual(10);
+      expect(run.retappedOwned).toBeGreaterThan(0);
+      expect(run.lookChanges).toBeGreaterThan(0);
+      expect(run.stars).toBeGreaterThan(HANGAR_MILESTONES[HANGAR_MILESTONES.length - 1] + 2 * HANGAR_EVERY);
+    });
+
+    it('AC5 sabotage arm: a pick that does not check what is already owned spends twice, and the gate names the race', () => {
+      const doctored = PICK_ITEM_SCRIPT.replace("else if (owned.indexOf(item.id) !== -1) why = 'owned';", '');
+      expect(doctored).not.toBe(PICK_ITEM_SCRIPT);
+      expect(sixtyRaces(doctored).faults.join('\n')).toMatch(/already owned, and a pick was spent on it again/);
+    });
+
+    it('a pick is refused, changing nothing, for a free item, an owned one, one that does not fit, and with none left; what it buys is worn at once', () => {
+      let app: any = withTotal(newPlayer('big-smile'), 15);
+      const tryPick = (id: string) => runScript(PICK_ITEM_SCRIPT, { app, itemId: id, shelf });
+      expect([tryPick('glasses').why, tryPick('cap').why, tryPick('nothing-here').why]).toEqual(['free', 'fits', 'unknown']);
+      const got = tryPick('crown');
+      expect([got.picked, me(got.app).owned, me(got.app).wear]).toEqual([true, ['crown'], { face: { 'big-smile': { accessories: 'sailormoonCrown' } }, paint: '' }]);
+      app = got.app;
+      expect([tryPick('crown').why, tryPick('cat-ears').why]).toEqual(['owned', 'noPick']);
+      // A free paint goes on, and off again, and the rocket is tomato once more.
+      const on = runScript(WEAR_ITEM_SCRIPT, { app, itemId: 'paint-green', shelf });
+      expect([on.worn, runScript(ACTIVE_PROFILE_SCRIPT, { app: on.app }).paint]).toEqual([true, 'var(--rocket-paint-green)']);
+      const off = runScript(WEAR_ITEM_SCRIPT, { app: on.app, itemId: 'paint-green', shelf });
+      expect([off.worn, runScript(ACTIVE_PROFILE_SCRIPT, { app: off.app }).paint]).toEqual([false, 'var(--primary)']);
+      // What is not owned cannot be worn.
+      expect(runScript(WEAR_ITEM_SCRIPT, { app, itemId: 'cat-ears', shelf }).changed).toBe(false);
+    });
+
+    it('🔴 AC6: a face the worn item does not fit draws without it and keeps it owned, and going back wears it again', () => {
+      let app: any = runScript(PICK_ITEM_SCRIPT, { app: withTotal(newPlayer('big-smile'), 15), itemId: 'crown', shelf }).app;
+      const on = runScript(ACTIVE_PROFILE_SCRIPT, { app });
+      expect(on.faceOptions).toEqual({ accessories: ['sailormoonCrown'], accessoriesProbability: 100 });
+      app = runScript(UPDATE_SETTINGS_SCRIPT, { app, look: 'pixel-art' }).app;
+      const away = runScript(ACTIVE_PROFILE_SCRIPT, { app });
+      expect([away.look, away.faceOptions, me(app).owned]).toEqual(['pixel-art', {}, ['crown']]);
+      // The shelf still shows the crown, greyed, on a face it fits, saying which one; and it cannot be put on this face.
+      const row = runScript(HANGAR_SHELF_SCRIPT, { app, shelf, tab: 'face' }).rows.find((r: any) => r.id === 'crown');
+      expect(row).toMatchObject({ dim: true, canWear: false, canPick: false, worn: false, look: 'big-smile', note: 'Va avec les têtes Smile' });
+      expect(runScript(WEAR_ITEM_SCRIPT, { app, itemId: 'crown', shelf }).changed).toBe(false);
+      app = runScript(UPDATE_SETTINGS_SCRIPT, { app, look: 'big-smile' }).app;
+      expect(runScript(ACTIVE_PROFILE_SCRIPT, { app }).faceOptions).toEqual(on.faceOptions);
+      // The siblings' list draws the same face the child wears (wearing is fine there; the stars never are).
+      expect(runScript(LIST_PROFILES_SCRIPT, { app }).profiles[0].faceOptions).toEqual(on.faceOptions);
+    });
+
+    it('the shelf shows every item of a tab, and says what a tap does: wear it, pick it, or how far to the next pick', () => {
+      const app: any = withTotal(newPlayer('pixel-art'), 20);
+      const rows = runScript(HANGAR_SHELF_SCRIPT, { app, shelf, tab: 'face' }).rows;
+      expect(rows.map((r: any) => r.id)).toEqual(shelf.filter((i) => i.kind === 'face').map((i) => i.id));
+      const by = (id: string) => rows.find((r: any) => r.id === id);
+      expect([by('glasses').note, by('cap').note, by('crown').note]).toEqual(['À toi · touche pour mettre', '🎁 Touche pour choisir', 'Va avec les têtes Smile']);
+      expect(runScript(HANGAR_SHELF_SCRIPT, { app: withTotal(app, 10), shelf, tab: 'face' }).rows.find((r: any) => r.id === 'cap').note).toBe('🔒 Prochain 🎁 à 15 ⭐');
+      const paints = runScript(HANGAR_SHELF_SCRIPT, { app, shelf, tab: 'rocket' }).rows;
+      expect(paints.map((r: any) => [r.id, r.isFace, r.paint.startsWith('var(--rocket-paint-')])).toEqual(shelf.filter((i) => i.kind === 'rocket').map((i) => [i.id, false, true]));
+    });
+
+    it('Home’s line: how far to the next 🎁 in the child’s language, then the picks waiting once there are some', () => {
+      const app = withTotal(newPlayer('pixel-art'), 12);
+      const saving = runScript(ACTIVE_PROFILE_SCRIPT, { app });
+      expect([saving.picks, saving.hasPicks, saving.nextAt, saving.nextPct, saving.nextText]).toEqual([0, false, 15, 80, 'Prochain 🎁 dans 3 ⭐']);
+      const two = runScript(ACTIVE_PROFILE_SCRIPT, { app: withTotal(app, 41) });
+      expect([two.picks, two.hasPicks, two.nextAt, two.nextPct, two.nextText]).toEqual([2, true, 75, 3, '🎁 2 choix à faire au hangar']);
+    });
+
+    it('🔴 a race whose take crosses a milestone says so; a race that stays between two milestones does not', () => {
+      const finishFrom = (stars: number) => {
+        let m: any = { ...freshModel(), stars };
+        for (let i = 0; i < 8; i++) m = runScript(GRADE_ANSWER_SCRIPT, { model: m, skillId: `k${i}`, answer: '4', typed: '4', shownAt: Date.now(), fluentMs: 4000, itemDiff: 1000, level: 'CE2', lang: 'en', timedOut: false, elapsedOverride: 800, raceId: 'rX' }).model;
+        const f = runScript(FINISH_RACE_SCRIPT, { model: m, raceId: 'rX', timed: false, lang: 'en' });
+        return [f.stars, f.earnedPick];
+      };
+      expect([finishFrom(0), finishFrom(10), finishFrom(16), finishFrom(30)]).toEqual([[13, false], [23, true], [29, false], [43, true]]);
+    });
+
+    /**
+     * 🔴 Session 10: every arm above passes the shelf as a plain array, and the browser never does. Static Data hands a Function a
+     * runtime Collection whose rows are Models, and a Model answers its own member names itself. With the field called `on`, the shelf
+     * script threw ("reading 'part'"), picking refused every item as not fitting, and the hangar drew no tile, with every gate green.
+     */
+    const asRuntime = (rows: unknown[]) => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const RuntimeCollection = require('../../noodl-runtime/src/collection');
+      const c = RuntimeCollection.get();
+      c.set(JSON.parse(JSON.stringify(rows)));
+      return c;
+    };
+
+    it('🔴 the shelf works as the runtime hands it over: a Collection of Models gives the same tiles, and picking and wearing work', () => {
+      const app = withTotal(newPlayer('pixel-art'), 45);
+      const runtimeShelf = asRuntime(HANGAR_SHELF as unknown[]);
+      // Known-firing: this really is the runtime's shape, not an array that happens to behave.
+      expect([Array.isArray(runtimeShelf), typeof runtimeShelf.find((r: any) => r.id === 'crown').on]).toEqual([true, 'function']);
+      for (const tab of ['face', 'rocket']) {
+        expect(runScript(HANGAR_SHELF_SCRIPT, { app, shelf: runtimeShelf, tab }).rows).toEqual(runScript(HANGAR_SHELF_SCRIPT, { app, shelf, tab }).rows);
+      }
+      expect(runScript(PICK_ITEM_SCRIPT, { app, itemId: 'cap', shelf: runtimeShelf })).toMatchObject({ picked: true, why: '' });
+      expect(runScript(WEAR_ITEM_SCRIPT, { app, itemId: 'paint-green', shelf: runtimeShelf })).toMatchObject({ worn: true, changed: true });
+    });
+
+    it('sabotage arm: the old field name, `on`, throws in a runtime Collection exactly as the browser did, while a plain array hides it', () => {
+      const doctoredRows = HANGAR_SHELF.map((i) => {
+        if (!i.faces) return i;
+        const { faces, ...rest } = i;
+        return { ...rest, on: faces };
+      });
+      const doctoredScript = HANGAR_SHELF_SCRIPT.split('item.faces').join('item.on');
+      expect(doctoredScript).not.toBe(HANGAR_SHELF_SCRIPT);
+      const app = withTotal(newPlayer('pixel-art'), 45);
+      expect(runScript(doctoredScript, { app, shelf: doctoredRows, tab: 'face' }).rows.length).toBe(12);
+      expect(() => runScript(doctoredScript, { app, shelf: asRuntime(doctoredRows), tab: 'face' })).toThrow(/reading 'part'/);
+    });
+
+    it('the save code carries what the child owns and wears', () => {
+      let app: any = runScript(PICK_ITEM_SCRIPT, { app: withTotal(newPlayer('big-smile'), 40), itemId: 'crown', shelf }).app;
+      app = runScript(WEAR_ITEM_SCRIPT, { app, itemId: 'paint-blue', shelf }).app;
+      const code = runScript(ENCODE_SAVE_SCRIPT, { app }).code;
+      const back = runScript(DECODE_SAVE_SCRIPT, { app: { profiles: [], activeId: '', sets: [] }, code }).app;
+      expect([me(back).owned, me(back).wear, runScript(ACTIVE_PROFILE_SCRIPT, { app: back }).picks]).toEqual([['crown'], { face: { 'big-smile': { accessories: 'sailormoonCrown' } }, paint: 'var(--rocket-paint-blue)' }, 1]);
+    });
+  });
+
+  describe('the ports the graph wires', () => {
+    it('every script mints the outputs its component publishes', () => {
+      const expected: Record<string, string[]> = {
+        'Logic/Pick next question': ['skillId', 'prompt', 'answer', 'options', 'optionValues', 'kind', 'isTyping', 'nextKey', 'fluentMs', 'limitMs', 'strategy', 'teach', 'itemDiff', 'shownAt', 'skillName', 'predicted', 'worked', 'padKeys', 'padNumeric'],
+        'Logic/Grade answer': ['correct', 'fluent', 'outcome', 'elapsedMs', 'model', 'gain', 'cpuGain', 'message', 'mastery', 'ratingDelta', 'streak', 'missCount', 'starsEarned', 'stars'],
+        'Logic/Finish race': ['model', 'starsEarned', 'raceStars', 'starsText', 'why', 'newBest', 'stars', 'earnedPick'],
+        'Logic/Pick item': ['app', 'picked', 'why'],
+        'Logic/Wear item': ['app', 'worn', 'changed'],
+        'Logic/Hangar shelf': ['rows', 'count', 'picks', 'hasPicks'],
+        'Logic/Slide and merge': ['board', 'moved', 'score', 'merges', 'biggest', 'gameOver', 'game'],
+        'Logic/New merge board': ['board', 'pool', 'game', 'mode'],
+        'Logic/Draw merge board': ['rows', 'score', 'made', 'biggest', 'over', 'phase', 'scoreLine', 'fullness'],
+        'Logic/Finish merge': ['paid', 'model', 'starsEarned', 'stars', 'earnedPick', 'won', 'starsText', 'why', 'headline', 'line'],
+        'Logic/Build number hunt': ['cells', 'target', 'count', 'kind', 'solutions', 'instruction'],
+        'Logic/Check hunt pick': ['value', 'picked', 'complete', 'correct'],
+        'Logic/New hunt': ['game', 'rounds'],
+        'Logic/Hunt move': ['game', 'changed', 'note'],
+        'Logic/Draw hunt': ['rows', 'instruction', 'progress', 'note', 'noteKind', 'phase', 'over', 'canShow', 'made', 'helped', 'round'],
+        'Logic/Finish hunt': ['paid', 'model', 'starsEarned', 'stars', 'earnedPick', 'won', 'starsText', 'why', 'headline', 'line'],
+        'Logic/Active profile': ['hasProfile', 'profileId', 'name', 'look', 'seed', 'level', 'lang', 'layout', 'sound', 'answerMode', 'mergeMode', 'model', 'due', 'days7', 'answered', 'stars', 'faceOptions', 'paint', 'picks', 'hasPicks', 'nextAt', 'nextPct', 'nextText', 'sets'],
+        'Logic/Encode save code': ['code', 'length'],
+        'Logic/Decode save code': ['app', 'ok', 'error', 'profileId']
+      };
+      for (const { component, script } of FUNCTION_SCRIPTS) {
+        const ports = portsOf(script);
+        for (const name of expected[component] ?? []) expect({ component, port: name, has: ports.outputs.includes(name) }).toEqual({ component, port: name, has: true });
+        // Nothing mints a port by accident from prose: every input read is a real one.
+        for (const input of ports.inputs) expect(input).toMatch(/^[a-z][A-Za-z]*$/);
+      }
+      expect(FUNCTION_SCRIPTS.map((f) => f.component)).toHaveLength(new Set(FUNCTION_SCRIPTS.map((f) => f.component)).size);
+    });
+  });
+});

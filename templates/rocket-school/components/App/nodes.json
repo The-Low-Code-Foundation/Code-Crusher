@@ -1,0 +1,64 @@
+{
+  "$schema": "https://opennoodl.dev/schemas/nodes-v2.json",
+  "componentId": "9339f5a8-d925-537a-8791-c8637c186a86",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "app_root",
+      "type": "Group",
+      "label": "App",
+      "children": [
+        "app_router"
+      ],
+      "parameters": {
+        "sizeMode": "explicit",
+        "width": {
+          "value": 100,
+          "unit": "%"
+        },
+        "height": {
+          "value": 100,
+          "unit": "%"
+        },
+        "backgroundColor": "var(--background)"
+      },
+      "x": 40,
+      "y": 40
+    },
+    {
+      "id": "app_router",
+      "type": "Router",
+      "label": "Main router",
+      "parent": "app_root",
+      "parameters": {
+        "name": "Main",
+        "pages": {
+          "startPage": "/Pages/Profiles",
+          "routes": [
+            "/Pages/Profiles",
+            "/Pages/Home",
+            "/Pages/Race",
+            "/Pages/Hangar",
+            "/Pages/Merge",
+            "/Pages/Hunt"
+          ]
+        }
+      },
+      "x": 100,
+      "y": 160
+    },
+    {
+      "id": "app_css",
+      "type": "CSS Definition",
+      "label": "The page ground and the pointer",
+      "parameters": {
+        "style": "/* Rocket School — the few things a node port cannot say. */\nhtml, body { background: var(--background); }\n.pressable { cursor: pointer; }\n.pressable, .game-card { transition: transform 90ms ease-out; }\n.game-card:hover { transform: translateY(-2px); }\n.pressable:active { transform: translate(2px, 3px); }\n/* RKT-002 AC4: the result screen pops in and its glyph cheers. The burst and the landing are the kit's own. */\n@keyframes rkt-pop { 0% { transform: scale(0.7); opacity: 0; } 60% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }\n@keyframes rkt-cheer { 0%, 100% { transform: rotate(0deg) scale(1); } 30% { transform: rotate(-14deg) scale(1.25); } 65% { transform: rotate(10deg) scale(1.15); } }\n.rkt-result { animation: rkt-pop 480ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }\n.rkt-result-glyph { animation: rkt-cheer 900ms ease-in-out 400ms 2 both; }\n/* RKT-007: the last three seconds of a Défi question pulse. Under reduced motion only their colour says so. */\n@keyframes rkt-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }\n.rkt-clock-last { display: inline-block; animation: rkt-pulse 1000ms ease-in-out infinite; }\n/* RKT-010: the race's stars pop in a beat after the result card. Under reduced motion the number is simply there. */\n.rkt-stars { animation: rkt-pop 480ms cubic-bezier(0.2, 0.9, 0.3, 1.25) 700ms both; }\n/* RKT-011: the hangar's preview pops when something goes on. Two names, so the class swap on each change restarts it. */\n@keyframes rkt-wear-a { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.12); } }\n@keyframes rkt-wear-b { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.12); } }\n.rkt-wear-a { animation: rkt-wear-a 420ms ease-out both; }\n.rkt-wear-b { animation: rkt-wear-b 420ms ease-out both; }\n/* TPL-007 Make Ten Merge: a square that just joined pops, and a new one grows in. Two names each, so the same square pops again on the next move. */\n@keyframes rkt-join-a { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.16); } }\n@keyframes rkt-join-b { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.16); } }\n@keyframes rkt-land-a { 0% { transform: scale(0.3); } 100% { transform: scale(1); } }\n@keyframes rkt-land-b { 0% { transform: scale(0.3); } 100% { transform: scale(1); } }\n.rkt-join-a { animation: rkt-join-a 240ms ease-out both; }\n.rkt-join-b { animation: rkt-join-b 240ms ease-out both; }\n.rkt-land-a { animation: rkt-land-a 200ms ease-out both; }\n.rkt-land-b { animation: rkt-land-b 200ms ease-out both; }\n/* The lock: the board greys out (its opacity comes from the graph) over a short fade. */\n.rkt-merge-board { transition: opacity 400ms ease-out; }\n/* TPL-007 Number Hunt: a wrong pick shakes (a way found pops with rkt-join-a/b). Two names, so the next wrong pick shakes again. */\n@keyframes rkt-shake-a { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }\n@keyframes rkt-shake-b { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }\n.rkt-shake-a { animation: rkt-shake-a 320ms ease-in-out both; }\n.rkt-shake-b { animation: rkt-shake-b 320ms ease-in-out both; }\n@media (prefers-reduced-motion: reduce) {\n  .pressable, .game-card { transition: none; }\n  .game-card:hover, .pressable:active { transform: none; }\n  .rkt-result, .rkt-result-glyph, .rkt-clock-last, .rkt-stars, .rkt-wear-a, .rkt-wear-b, .rkt-join-a, .rkt-join-b, .rkt-land-a, .rkt-land-b, .rkt-shake-a, .rkt-shake-b { animation: none; }\n  .rkt-merge-board { transition: none; }\n}"
+      },
+      "x": 350,
+      "y": 40
+    }
+  ],
+  "visualRoots": [
+    "app_root"
+  ]
+}

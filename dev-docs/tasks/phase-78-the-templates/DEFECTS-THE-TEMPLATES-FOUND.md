@@ -2950,3 +2950,25 @@ ISO date, `today` or `tomorrow`, and anything else is refused with *"Use a date 
 **Where it bites:** every form that asks for a date — a deadline, a booking, a meeting (TPL-001's Post page has the same shape),
 a birthday. On a phone the native picker is what a person expects. **Cheapest door:** add `date`, `time` and `datetime-local` to
 Text Input's `type`, with Value as the ISO string. Owner `NONE`.
+
+## D74 — 🔴 Under `--base-url`, path navigation leaves the base: every page after the first is a 404 on reload
+
+**Recorded 2026-09-14** ([TPL-007 §15](TPL-007-THE-MATHS-AND-TYPING-GAME.md), publishing Rocket School to `nodegx.io/templates/rocket-school/`).
+A multi-page project built with `nodegx-deploy.cjs --base-url /templates/<slug>/` and `navigationPathType: "path"` (what the MCP
+door's project skeleton writes) loads its first page, and the first navigation pushes **`https://nodegx.io/home`** — outside the base.
+Reload, or share the link, and the host answers 404. Measured on the live host: the drive's reload after making a player landed on
+`nodegx.io/home`, "HTTP ERROR 404", NOT REACHED.
+
+**The cause, read in `packages/noodl-viewer-react/src/nodes/navigation/router.tsx`:** `_getLocationPath` strips `Noodl.Env['BaseUrl']`
+when it READS the path (line ~689), but `_getCompleteUrlToPage` never adds it back when it WRITES one (line ~816), and
+`_updateUrlWithTopPage` pushes that bare path. Every other asset path in the deployed engine does prefix `BaseUrl` (bundles, fonts,
+images, video). **Second half, on the host:** nodegx.io's Caddy block is a plain `file_server` with no fallback, so even a correct
+`/templates/<slug>/home` would 404 on reload (`/templates/rocket-school/home` and `/templates/todo-list/sign-in` both 404).
+
+**Also bites:** the live todo-list demo (`/templates/todo-list/`, two pages) — its sign-in route is the same shape; not driven here.
+Single-page demos (story engine, pixel dungeon) never navigate, so never showed it.
+
+**Workaround used:** the published Rocket School is built from a copy with `navigationPathType: "hash"` (`#`-routes are relative, so a
+reload stays under the base and the plain file server answers it); the template itself is unchanged. Driven locally under the path
+(16/16) and on the public URL (TPL-007 §15). **Cheapest door:** prefix `BaseUrl` in `_getCompleteUrlToPage` for path mode, and have
+`nodegx-deploy.cjs --base-url` either warn about a multi-page path-mode project or write the host fallback it needs. Owner `NONE`.
