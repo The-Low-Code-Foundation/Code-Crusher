@@ -13325,6 +13325,9 @@ function planComponent(
     const easeParam = literalParam(node, 'easingCurve') ?? 'easeOut';
     if (!(ANIMATE_EASE_NAMES as readonly unknown[]).includes(easeParam)) return refuse(`its Easing Curve "${String(easeParam)}" is not a curve the node knows`);
     for (const wire of component.connections.filter((c) => c.toId === node.id)) {
+      // GAM-008: the node has these two, and the hook does not translate them yet. The engine does
+      // (`jumpTo`/`carryOn` in animateLib, graded by A4), so the refusal names the port honestly.
+      if (wire.toProperty === 'jumpTo' || wire.toProperty === 'jumpValue') return refuse(`its ${wire.toProperty === 'jumpTo' ? 'Jump To' : 'Jump Value'} input is wired, and the export does not translate a jump yet`);
       if (!['targetValue', 'duration', 'delay', 'easingCurve'].includes(wire.toProperty)) return refuse(`its ${wire.toProperty} input is not a port this node has`);
     }
     for (const wire of component.connections.filter((c) => c.fromId === node.id)) {

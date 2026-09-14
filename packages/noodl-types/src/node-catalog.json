@@ -39522,6 +39522,29 @@
           "description": "Shape of the movement between where the value is and Target Value"
         },
         {
+          "name": "jumpTo",
+          "displayName": "Jump To",
+          "group": "Jump",
+          "plug": "input",
+          "type": {
+            "name": "signal",
+            "allowConnectionsOnly": true
+          },
+          "isSignal": true,
+          "description": "Puts Current Value at Jump Value at once, then carries on towards Target Value; a jump is not an arrival, so At Target Value does not fire for it"
+        },
+        {
+          "name": "jumpValue",
+          "displayName": "Jump Value",
+          "group": "Jump",
+          "plug": "input",
+          "type": {
+            "name": "number"
+          },
+          "isSignal": false,
+          "description": "Where Jump To puts Current Value"
+        },
+        {
           "name": "targetValue",
           "displayName": "Target Value",
           "group": "Target Value",
@@ -39530,7 +39553,7 @@
             "name": "number"
           },
           "isSignal": false,
-          "description": "Value to move towards; the first one to arrive is adopted outright rather than animated to"
+          "description": "Value to move towards; the first one to arrive is adopted outright rather than animated to. Two targets in one update make one move, from wherever the value is: to jump first, use Jump To"
         }
       ],
       "outputs": [

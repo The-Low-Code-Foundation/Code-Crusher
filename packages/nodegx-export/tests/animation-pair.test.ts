@@ -130,6 +130,8 @@ interface AnimateLib {
   runFrame(run: Run, now: number): void;
   createAnimatedValue(target: unknown, duration?: number, delay?: number, ease?: unknown): { run: Run; current: number };
   animateTo(anim: { run: Run; current: number }, target: unknown, publish: (v: number) => void, onArrive?: () => void): void;
+  jumpTo(anim: { run: Run; current: number }, value: unknown, publish: (v: number) => void): boolean;
+  carryOn(anim: { run: Run; current: number }, publish: (v: number) => void, onArrive?: () => void): void;
   useAnimatedValue: unknown;
 }
 type Listeners = { stateChanged?: () => void; reached?: Record<string, () => void>; done?: () => void; unchanged?: () => void; failure?: () => void };
@@ -277,12 +279,14 @@ describe('§A the run engine against timerscheduler.ts, frame by frame', () => {
 });
 
 describe('§A Animate To Value against animate-to-value.ts, frame by frame', () => {
-  type Step = { at: number; target?: unknown; duration?: number; delay?: number; ease?: string };
+  // GAM-008: `jump` fires Jump To with that Jump Value, before the step's target unless `jumpAfter`.
+  type Step = { at: number; target?: unknown; duration?: number; delay?: number; ease?: string; jump?: unknown; jumpAfter?: boolean };
   type Trace = { values: Array<[number, number]>; arrived: number[] };
   const interpreter = (steps: Step[]): Trace => {
     const trace: Trace = { values: [], arrived: [] };
     let now = 0;
     const scheduler = new SchedulerCtor(() => undefined);
+    const afterInputs: Array<(this: unknown) => void> = [];
     const inst: Record<string, unknown> = {
       _internal: {},
       context: { timerScheduler: scheduler },
@@ -290,15 +294,23 @@ describe('§A Animate To Value against animate-to-value.ts, frame by frame', () 
       sendSignalOnOutput: (name: string) => {
         if (name === 'atTargetValue') trace.arrived.push(now);
       },
-      addDeleteListener: () => undefined
+      addDeleteListener: () => undefined,
+      scheduleAfterInputsHaveUpdated: (callback: (this: unknown) => void) => afterInputs.push(callback)
     };
     AnimateNode.initialize.call(inst);
+    const jump = (value: unknown) => {
+      AnimateNode.inputs.jumpValue.set!.call(inst, value);
+      AnimateNode.inputs.jumpTo.valueChangedToTrue!.call(inst);
+    };
     for (const step of steps) {
       now = step.at;
       if (step.duration !== undefined) AnimateNode.inputs.duration.set!.call(inst, step.duration);
       if (step.delay !== undefined) AnimateNode.inputs.delay.set!.call(inst, step.delay);
       if (step.ease !== undefined) AnimateNode.inputs.easingCurve.set!.call(inst, step.ease);
+      if ('jump' in step && !step.jumpAfter) jump(step.jump);
       if ('target' in step) AnimateNode.inputs.targetValue.set!.call(inst, step.target);
+      if ('jump' in step && step.jumpAfter) jump(step.jump);
+      for (const callback of afterInputs.splice(0)) callback.call(inst);
       scheduler.runTimers(now);
       trace.values.push([now, AnimateNode.outputs.currentValue.getter!.call(inst) as number]);
     }
@@ -313,7 +325,11 @@ describe('§A Animate To Value against animate-to-value.ts, frame by frame', () 
       if (step.duration !== undefined) anim.run.duration = step.duration;
       if (step.delay !== undefined) anim.run.delay = step.delay;
       if (step.ease !== undefined) (anim as unknown as { ease: unknown }).ease = lib.eases[step.ease];
+      let jumped = false;
+      if ('jump' in step && !step.jumpAfter) jumped = lib.jumpTo(anim, step.jump, () => undefined);
       if ('target' in step) lib.animateTo(anim, step.target, () => undefined, () => trace.arrived.push(now));
+      if ('jump' in step && step.jumpAfter) jumped = lib.jumpTo(anim, step.jump, () => undefined);
+      if (jumped) lib.carryOn(anim, () => undefined, () => trace.arrived.push(now));
       lib.runFrame(anim.run, now);
       trace.values.push([now, anim.current]);
     }
@@ -327,7 +343,15 @@ describe('§A Animate To Value against animate-to-value.ts, frame by frame', () 
     ['booleans are 1 and 0', withFrames({ 0: { target: false, duration: 300, ease: 'linear' }, 50: { target: true } })],
     ['a NaN is ignored, a numeric string is a number', withFrames({ 0: { target: 'x', duration: 300, ease: 'linear' }, 50: { target: '4' }, 100: { target: 'nope' }, 150: { target: 8 } })],
     ['a delay before the move, easeInOut', withFrames({ 0: { target: 1, duration: 400, delay: 150, ease: 'easeInOut' }, 50: { target: 2 } })],
-    ['a zero duration settles on the first frame', withFrames({ 0: { target: 1, duration: 0, ease: 'easeIn' }, 50: { target: 2 } })]
+    ['a zero duration settles on the first frame', withFrames({ 0: { target: 1, duration: 0, ease: 'easeIn' }, 50: { target: 2 } })],
+    // GAM-008 (P88): Jump To. The value moves now, then carries on towards the target; a jump is not an arrival.
+    ['Jump To mid-run refills, then carries on towards the target (the countdown)', withFrames({ 0: { target: 100, duration: 500, ease: 'linear' }, 50: { target: 0 }, 300: { jump: 100 } })],
+    ['a jump then a target in one pass: refill, then glide to the new target', withFrames({ 0: { target: 100, duration: 500, ease: 'linear' }, 50: { target: 0 }, 300: { jump: 100, target: 40 } })],
+    ['a jump then the same end in one pass: the equal target is ignored, and the jump still carries on', withFrames({ 0: { target: 100, duration: 500, ease: 'linear' }, 50: { target: 0 }, 300: { jump: 100, target: 0 } })],
+    ['a target then a jump in one pass: the jump overtakes, then glides to that target', withFrames({ 0: { target: 100, duration: 500, ease: 'linear' }, 50: { target: 0 }, 300: { target: 40, jump: 100, jumpAfter: true } })],
+    ['a jump before any target sits there', withFrames({ 0: { jump: 7, duration: 300, ease: 'easeOut' }, 100: { target: 7 }, 150: { target: 9 } })],
+    ['a jump onto the end is not an arrival', withFrames({ 0: { target: 10, duration: 300, ease: 'linear' }, 50: { target: 20 }, 100: { jump: 20 } })],
+    ['a NaN jump is ignored', withFrames({ 0: { target: 10, duration: 300, ease: 'linear' }, 50: { target: 20 }, 100: { jump: 'nope' } })]
   ];
   beforeAll(() => jest.useFakeTimers());
   afterAll(() => jest.useRealTimers());
@@ -354,6 +378,15 @@ describe('§A Animate To Value against animate-to-value.ts, frame by frame', () 
   test('A4 CONTROL — a copy that does not skip an unchanged target restarts the tween and disagrees', () => {
     const broken = loadAnimateLib(animateLibSource().replace('  if (numeric === anim.end) return;\n', ''));
     const steps = withFrames({ 0: { target: 10, duration: 500, ease: 'easeOut' }, 100: { target: 20 }, 200: { target: 20 } });
+    expect(emitted(broken, steps).values).not.toEqual(interpreter(steps).values);
+  });
+
+  test('A4 CONTROL (GAM-008) — a copy whose jump does not carry on disagrees on the countdown row', () => {
+    const source = animateLibSource();
+    const marker = '  if (anim.end === anim.current) return;\n';
+    expect(source).toContain(marker);
+    const broken = loadAnimateLib(source.replace(marker, '  return;\n'));
+    const steps = withFrames({ 0: { target: 100, duration: 500, ease: 'linear' }, 50: { target: 0 }, 300: { jump: 100 } });
     expect(emitted(broken, steps).values).not.toEqual(interpreter(steps).values);
   });
 });
@@ -857,6 +890,17 @@ describe('§B the translation — the fixture, then graphs mutated one fact at a
     const stray = cloneIr();
     wire(stray, GLOW, 'fade', 'progress', 'fadeText', 'text');
     expect(emitApp(stray, catalog).notes.join('\n')).toContain('its progress output is consumed, and this node publishes only Current Value and At Target Value');
+
+    // GAM-008 (P88): the node has Jump To and Jump Value now. The engine carries the jump (A4 above);
+    // the hook does not, so a wired jump is refused by its own name, not as a port the node lacks.
+    const jumpValue = cloneIr();
+    wire(jumpValue, GLOW, 'changes', 'currentCount', 'fade', 'jumpValue');
+    const jumpNotes = emitApp(jumpValue, catalog).notes.join('\n');
+    expect(jumpNotes).toContain('its Jump Value input is wired, and the export does not translate a jump yet');
+    expect(jumpNotes).not.toContain('is not a port this node has');
+    const jumpTo = cloneIr();
+    wire(jumpTo, GLOW, 'changes', 'currentCount', 'fade', 'jumpTo', 'signal');
+    expect(emitApp(jumpTo, catalog).notes.join('\n')).toContain('its Jump To input is wired, and the export does not translate a jump yet');
 
     // The Counter's count is a number-typed row (the fixture's Variables are untyped — a Set
     // Variable's value is not a typed writer, EXP-011 §10), so it is the source that typechecks.

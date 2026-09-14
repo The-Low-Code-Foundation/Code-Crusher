@@ -75,6 +75,20 @@
  *  - The parity is graded in `animation-pair.test.ts`: the delayed-colour A5 row goes red with step
  *    1's export hunk reverted, and the token row goes red with step 2's reader bypassed.
  *
+ * ✅ **Regenerated a FIFTH time by GAM-008 (P88), and the red run was counted before the golden was touched.**
+ *
+ * GAM-008 gives Animate To Value a `Jump To` action (P78 D67: a countdown never refilled), so the
+ * emitted `animateLib` gained `jumpTo` and `carryOn` in step, and it *is* allowed to move bytes.
+ *
+ *  - The full suite's red run named **2** differing files, `board-desk/src/lib/animate.ts` and
+ *    `glow-desk/src/lib/animate.ts`: the two projects that emit the animate library.
+ *  - With HEAD's `animateLib.ts` put back (snapshot, then restored and `cmp`-checked), this gate
+ *    was green again, 4/4. The move was that file and nothing else in the tree.
+ *  - Regenerating moved **2** hash lines in the golden, those two files.
+ *  - 🔴 The parity is graded elsewhere: `animation-pair.test.ts` A4 runs the runtime's real node
+ *    and the emitted library over 7 jump scripts, plus a CONTROL that disagrees when `carryOn`
+ *    is disabled.
+ *
  * ✅ **Regenerated a FOURTH time by GAM-006 (P88), and the red run was counted before the golden was touched.**
  *
  * GAM-006 (b) makes a States colour transition end on the value its state names instead of the
