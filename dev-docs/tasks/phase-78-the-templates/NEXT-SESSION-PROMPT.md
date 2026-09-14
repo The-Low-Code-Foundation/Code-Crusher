@@ -1,6 +1,6 @@
 # Phase 78 — next session
 
-> ### 🟢 2026-09-14 — TPL-008 TODO LIST (Richard's own): BUILT, GATED 19/19, DRIVEN 11/11
+> ### 🟢 2026-09-14 (s2) — TPL-008 TODO LIST (Richard's own): D72 FIXED, PAGE SPLIT, COMMITTED — gate 20/20, drive 12/12
 >
 > Richard asked for *"the simplest todo list ever"* for himself: one list ordered only by what you will do next, nothing
 > ever deleted, and every move, note, close and tick kept as history. Two mockups (Artifacts), rulings R1–R8 in
@@ -13,9 +13,14 @@
 > clicking any row moved a task. Filed with D72 (icon-only Button has no accessible name) and D73 (no date Text Input),
 > **all owner `NONE`**.
 >
-> **NEXT:** Richard runs it (a NEW local backend, see `docs/START-HERE.md`) and rules AC8, the demo question (§6.1) and
-> whether ticking a next action should keep asking for a note (§6.2). Optional: factor `Pages/Todo` (70 nodes, §7).
-> **Nothing is committed** — the TPL-008 paths are listed in §7's hand-off.
+> **s2:** Richard ruled **R9 — the nodegx.io demo is browser-only** and deferred the tick note until he has used it. Icon
+> buttons now have names (D72 worked around in the template, measured in Chrome's accessibility tree); `Pages/Todo` split
+> 71 → 51 into `Logic/Todo data` + `Todo/Dialog flow`. Committed `2ad64ccee`, `7b6f7c650`, `189c9029f`. A localhost backend
+> and a project copy are set up for him (TPL-008 §7 s2); **the phone half was denied by the classifier and is his call.**
+> 🔴 Deploying it found **D44 is wider**: the devtool drops every `For Each` item output and `DbCollection2` `storageFetch`.
+>
+> **NEXT:** build **AC10, the browser-only demo** (defaults in §6.3) — `Logic/Todo data` is now the only reader, so a demo
+> data layer swaps one component plus the writes in `Commands/`. Drive reopen and untick. AC8 stays Richard's.
 
 > ### 🟢 2026-09-12 (s3) — TPL-006 IS **PUBLISHED**: <https://nodegx.io/templates/story-engine/>
 >

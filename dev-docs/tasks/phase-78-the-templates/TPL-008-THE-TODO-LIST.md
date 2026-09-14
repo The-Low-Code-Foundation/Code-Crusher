@@ -165,3 +165,23 @@ so the list's close and the detail pane's close still never share a value port. 
 `refresh` signal input. `Pages/Todo` **71 → 51 nodes**; the door still says `oversized-page` (the 15 command placements are
 the page's job). Re-gated 20/20, re-driven 12/12 with 0 console errors; the drive closes from the list and ticks a next
 action through the new flow. ⚠️ **Reopen and untick are not driven** — same wiring shape, unclicked.
+
+**Set up for Richard to use (his ask), localhost only:**
+- Project copy: `~/vscode_projects/NodeGX test projects/Todo list` (starter assets placed, `cloudservices` →
+  `{appId: todo-list, endpoint: http://localhost:8690, type: nodegx}`).
+- Backend: `~/.noodl/todo-list/data`, the todo-list policy installed before first start, **ENFORCED**, persistent. Started from
+  the repo with `node packages/nodegx-backend/bin/nodegx-backend.js serve --data-dir ~/.noodl/todo-list/data --port 8690
+  --backend-id todo-list --backend-name "Todo list"`. Outside `~/.noodl/backends/`, so the editor's supervisor never starts a
+  second copy. It is a process of the session that started it — re-run the command after a reboot.
+- 🔴 **The phone half was NOT done.** Binding the backend to `0.0.0.0` (the backend's own LAN mode: sessions for data, the
+  admin credential for admin) was **denied by the auto-mode classifier as "Expose Local Services"**. That is Richard's call.
+
+**🔴 Found while deploying it: the deploy devtool gutted the list — D44, two more port families.** `deploy-from-disk.cjs`
+(rebuilt from source first: the gitignored copy was 09-12, its entry 09-14) exited 0 with **24 of 628 wires dropped by the
+health filter**, and the diff against the project names every one: all 18 `For Each` `itemOutput-*` / `itemOutputSignal-*`
+wires into a list's `Component Outputs` (row open, up, down, close, tick, untick, describe — the whole list is inert) and 6
+into `DbCollection2` (`storageFetch` ×5, `qp-taskId`). Neither family is in D44's table. The site was **not** served to
+Richard and was deleted. The editor's **Run** is unaffected (it renders, it does not export); the editor's Deploy button is
+still D44's unmeasured hypothesis. Recorded on D44 (owner GAM-024, P88). Also: the devtool must run with cwd
+`packages/noodl-editor` (it reads `src/external/deploy/index.json` from the cwd), and it copies `nodegx.security.json` into
+the site while excluding `components/` and `docs/`.

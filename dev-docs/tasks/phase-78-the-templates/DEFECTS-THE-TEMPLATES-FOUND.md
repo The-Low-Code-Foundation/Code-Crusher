@@ -2058,6 +2058,12 @@ the projection looks up, which is cheaper anyway — the States shape was three 
 tile, 324 for one board.
 ## D44 — 🔴 The headless deploy silently drops every connection into a dynamically-ported node, and exits 0
 
+> **2026-09-14 (TPL-008 s2): two more families, 24 wires, exit 0.** `deploy-from-disk.cjs` rebuilt from source (19:14), run on
+> the todo list: **24 of 628 dropped**, diffed wire by wire against the project. **18 are `For Each` `itemOutput-*` /
+> `itemOutputSignal-*` into a list's `Component Outputs`** — every row click in every list — and **6 are `DbCollection2`
+> `storageFetch` (×5) and `qp-taskId`**. Neither family is in the table below. Not served, not driven (the bundle simply lacks
+> the wires). Editor Run unaffected; the editor's Deploy button still unmeasured. [TPL-008 §7 s2](TPL-008-THE-TODO-LIST.md).
+
 **Measured 2026-09-11**, publishing TPL-005's demo page. 🔴 **It blocks that page and it is the
 reason nothing was published.**
 
