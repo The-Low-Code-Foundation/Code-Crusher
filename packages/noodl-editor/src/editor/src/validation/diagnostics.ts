@@ -1176,7 +1176,19 @@ export enum DiagnosticCode {
    * Reported at the holder, from the holder's validation and from its placer's,
    * as one identical diagnostic (`repeatedComponentVariable.ts`).
    */
-  VariableInRepeatedComponent = 'variable-in-repeated-component'
+  VariableInRepeatedComponent = 'variable-in-repeated-component',
+  /**
+   * GAM-007 (P78 D64): a Static Data row field named like one of a Noodl
+   * Object's own members (`on`, `get`, `data`, `toString`…). Each row reaches
+   * the graph as a Noodl Object, whose proxy answers that name with the member,
+   * so the data is unreachable by name and `Object.keys` still lists it: Rocket
+   * School's hangar drew no tiles, with every gate green.
+   *
+   * 🔒 Warning (R8, Richard 2026-09-14: C, reserve loudly now, data wins later).
+   * `Collection.set` raises `collection/reserved-field-name` for the same rows at
+   * runtime. The list is pinned to the runtime (`reservedRowField.ts`).
+   */
+  ReservedRowField = 'reserved-row-field'
 }
 
 // ─── Location ─────────────────────────────────────────────────────────────────

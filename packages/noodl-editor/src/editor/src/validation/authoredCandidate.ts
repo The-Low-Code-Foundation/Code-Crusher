@@ -64,6 +64,7 @@ import {
 } from './componentInterface';
 import { DiagnosticCode, type Diagnostic } from './diagnostics';
 import { checkImageSources } from './imageSource';
+import { checkReservedRowFields } from './reservedRowField';
 import { checkUnrealisedMeasure } from './unrealisedMeasure';
 import { checkPageScroll } from './pageScroll';
 import { checkFunctionNodePorts, checkScriptNodeRunnable, type FunctionWireLike } from './functionPorts';
@@ -605,6 +606,9 @@ export function authoredPreconditionDiagnostics(options: AuthoredPreconditionOpt
     // named for its image shipping without one. Reads `connections` rather than `wires` because
     // the question is "is this input fed", which is exactly what that set answers.
     ...checkImageSources(nodes, { component, catalog, connectedInputs: connections }),
+    // GAM-007 (P78 D64) — a Static Data row field named like a Noodl Object member reads as the
+    // member at runtime. Warning, R8's B; `Collection.set` says the same at runtime.
+    ...checkReservedRowFields(nodes, { component }),
     // VIB-007 / register V29 — a shell whose declared measure no child can draw to. 🔴 The row
     // names "a maxWidth on a Text"; the render says twelve of that shape's thirteen corpus
     // instances are CORRECT, three of them on the WORTHY page, and the one defect is a property of
