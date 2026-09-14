@@ -104,6 +104,9 @@ failure this file's first house rule exists to prevent.
 | **D68** | 🔴 open (registered 09-14, from P87 RKT-003) — a Text Input's Focus signal sent on mount leaves it unfocused after a remount | **GAM-012** (P88) | product (node library) | every keyboard-only person in a form that mounts and focuses a field |
 | **D69** | 🔴 open (registered 09-14, from P87 RKT-002) — a style preset names a font that nothing ships, so a deployed app renders the fallback | **GAM-016** (P88) | product (presets / deploy) | every app styled with a preset |
 | **D70** | 🔴 open (registered 09-14, from P87 RKT-002/003) — a kit React node cannot take a signal, and gets no size ports | **GAM-017** (P88) | product (kit bridge) | every kit author whose node should react to an event or be sized in the graph |
+| **D71** | 🔴 open (09-14, TPL-008 drive) — the node reference tells an agent that wiring a Function's `run` makes it signal-only; the runtime still runs it on every ticked input, and the todo list moved tasks nobody asked to move | `NONE` | product (node catalog / validator) | every agent authoring a Function through the MCP door, which reads that sentence before writing one |
+| **D72** | 🔴 open (09-14, TPL-008 build, from the catalog and source) — a Button has no accessible-name port, so an icon-only button (move up, move down, tick) is announced as nothing | `NONE` | product (node library / a11y) | every screen-reader user of any list with icon buttons |
+| **D73** | ⚠️ open (09-14, TPL-008 build) — a Text Input has no date type, so a deadline is typed as `YYYY-MM-DD` and parsed by a script | `NONE` | product (node library) | every form that asks for a date: deadlines, bookings, birthdays |
 
 🔴 **D18/D19/D20 are the first rows created since the sweep, and they were already unowned within a
 day of the process being put in place.** That is the argument for the column, not an argument
@@ -2844,3 +2847,57 @@ re-measured at registration:** [GAM-017](../phase-88-the-defects-the-games-found
 **GAM-017**.
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** ⚠️ **narrower than recorded.** Only a signal declared under `inputProps` is refused, and the message is logged when the kit registers (`react-component-node.ts:2000-2011`); it stays wireable with a no-op setter. A signal under `inputs` with `valueChangedToTrue` works, as Text Input uses it. `frame` is not dead: nothing sets it, but it registers size ports (`react-component-node.ts:903-917`), untested. The React export reads only `inputProps` and `inputs` (`kitSource.ts:269-300`).
+
+## D71 — 🔴 The node reference says a wired `run` makes a Function signal-only. It does not.
+
+**Measured 2026-09-14** ([TPL-008](TPL-008-THE-TODO-LIST.md) §7, driven, then read from source).
+- **What the door tells an agent:** `get_node_type JavaScriptFunction` returns the antiPattern *"Relying on auto-run while also
+  connecting `run`; once `run` is connected, only the signal executes the script."* Source:
+  `docs/node-catalog/enrichment/javascriptfunction.json:21`, generated into `packages/noodl-types/src/node-catalog-enriched.json`.
+- **What the runtime does:** `simplejavascript.ts:594` runs the script whenever an input with Run On Value Change ticked changes,
+  whether `run` is connected or not (NDA-017 §2 replaced the old `if (!this.isInputConnected('run'))`). Only the load-time auto-run
+  (`:248`) still checks `run`. Every input is ticked by default. This is the same fact as the 08-26 memory *"`Run` is ADDITIVE"*,
+  and the catalog was never corrected.
+- **Seen:** the todo list's `Commands/Move task` had `run` wired and one input, `in-itemId`, wired from outside its guard list with
+  the box still ticked. Clicking ANY row published a new id into it, so the up, down and top instances each re-ran and moved
+  that task. The first drive (`tpl008-todo-drive.test.ts`) found **three `moved` lines where one was expected**, and a close
+  logged "Closed from #3" for a task at #2. There were 0 console errors and every screen looked right.
+
+**Fixed in the template:** `runOnChange-in-itemId: false`, and `tpl008Template.test.ts` §3 now fails on any Function whose `run`
+is wired and which has a wired `in-*` input left ticked.
+
+**Where it bites:** every agent authoring a Function through the MCP door. It reads this sentence and believes the node waits for
+its signal, which is exactly the shape of a command (validate, then write). The failure writes data twice or on the wrong
+event and renders perfectly.
+
+**Cheapest door:** correct the antiPattern to say the opposite: *"Connecting `run` does not stop value changes from running the
+script — untick Run On Value Change on each input (`runOnChange-in-<name>: false`)."* A stronger door is a validator info when a
+Function has `run` wired and a wired `in-*` input still ticked, which is the rule the TPL-008 gate now carries. Owner `NONE`.
+
+## D72 — 🔴 An icon-only Button has no accessible name, and nothing in the graph can give it one
+
+**Recorded 2026-09-14** ([TPL-008](TPL-008-THE-TODO-LIST.md), read from the catalog and source; **not measured with a screen reader**).
+- `get_node_type net.noodl.controls.button` lists no `aria-label`, `title` or accessible-name port, and
+  `grep -n "aria-label\|ariaLabel"` over `nodes/controls/button.ts` and `components/controls/Button.tsx` has 0 hits.
+- The todo list's move-up, move-down and tick buttons are `useIcon: true` with `label: ''`, so each renders a `<button>` with no
+  text. **The drive itself could not find them by name**: `tpl008-todo-drive.test.ts` locates them by POSITION inside the row
+  (`clickButtonBeside`), which is exactly the position a screen-reader user does not have.
+
+**Workaround in the template:** none. The row's title is the nearest words, and they are not the button's name.
+
+**Where it bites:** every screen-reader user of any list, toolbar or card with icon buttons — delete, edit, move, close, play.
+**Cheapest door:** an `Accessible Label` string input on Button (emitting `aria-label`), and a door warning when a Button has
+`useIcon` on and an empty `label` with no accessible label. Related: D59 (Button has no Focus input). Owner `NONE`.
+
+## D73 — ⚠️ A Text Input has no date type
+
+**Recorded 2026-09-14** ([TPL-008](TPL-008-THE-TODO-LIST.md), from the catalog). `type` is `text | textArea | email | number |
+password | url` — no `date`, `time` or `datetime-local`, and no date-picker node in the library (`list_node_types` query
+"date" returns only date *utilities*).
+
+**Workaround in the template:** the deadline is a text field with placeholder `YYYY-MM-DD`; `Commands/Set deadline` accepts an
+ISO date, `today` or `tomorrow`, and anything else is refused with *"Use a date like 2026-09-30, or leave it empty."* Driven.
+
+**Where it bites:** every form that asks for a date — a deadline, a booking, a meeting (TPL-001's Post page has the same shape),
+a birthday. On a phone the native picker is what a person expects. **Cheapest door:** add `date`, `time` and `datetime-local` to
+Text Input's `type`, with Value as the ISO string. Owner `NONE`.
