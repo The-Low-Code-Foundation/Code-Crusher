@@ -221,14 +221,11 @@
         "color": "var(--foreground)",
         "borderStyle": "none",
         "borderRadius": "var(--radius-md)",
-        "paddingLeft": "var(--space-2)",
-        "paddingRight": "var(--space-2)",
         "paddingTop": "var(--space-2)",
         "paddingBottom": "var(--space-2)",
-        "fontSize": "var(--text-sm)",
-        "fontWeight": "var(--font-medium)",
         "sizeMode": "contentSize",
-        "label": "",
+        "label": "Move up",
+        "styleCss": "font-size: 0;",
         "useIcon": true,
         "iconSourceType": "icon",
         "iconIconSource": {
@@ -238,7 +235,9 @@
         },
         "iconSize": 16,
         "iconSpacing": 0,
-        "iconColor": "var(--muted-foreground)"
+        "iconColor": "var(--muted-foreground)",
+        "paddingLeft": "var(--space-2)",
+        "paddingRight": "var(--space-2)"
       },
       "x": 100,
       "y": 640
@@ -253,14 +252,11 @@
         "color": "var(--foreground)",
         "borderStyle": "none",
         "borderRadius": "var(--radius-md)",
-        "paddingLeft": "var(--space-2)",
-        "paddingRight": "var(--space-2)",
         "paddingTop": "var(--space-2)",
         "paddingBottom": "var(--space-2)",
-        "fontSize": "var(--text-sm)",
-        "fontWeight": "var(--font-medium)",
         "sizeMode": "contentSize",
-        "label": "",
+        "label": "Move down",
+        "styleCss": "font-size: 0;",
         "useIcon": true,
         "iconSourceType": "icon",
         "iconIconSource": {
@@ -270,7 +266,9 @@
         },
         "iconSize": 16,
         "iconSpacing": 0,
-        "iconColor": "var(--muted-foreground)"
+        "iconColor": "var(--muted-foreground)",
+        "paddingLeft": "var(--space-2)",
+        "paddingRight": "var(--space-2)"
       },
       "x": 100,
       "y": 760
@@ -281,7 +279,7 @@
       "label": "Close it",
       "parent": "trRow",
       "parameters": {
-        "label": "",
+        "styleCss": "font-size: 0;",
         "useIcon": true,
         "iconSourceType": "icon",
         "iconIconSource": {
@@ -310,6 +308,7 @@
         "paddingRight": "var(--space-0)",
         "paddingTop": "var(--space-0)",
         "paddingBottom": "var(--space-0)",
+        "label": "Close this task",
         "marginLeft": "var(--space-1)"
       },
       "x": 100,

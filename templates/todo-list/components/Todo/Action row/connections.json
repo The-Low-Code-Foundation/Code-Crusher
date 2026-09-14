@@ -89,6 +89,12 @@
     },
     {
       "fromId": "arIn",
+      "fromProperty": "checkLabel",
+      "toId": "arCheck",
+      "toProperty": "label"
+    },
+    {
+      "fromId": "arIn",
       "fromProperty": "done",
       "toId": "arWhich",
       "toProperty": "condition"

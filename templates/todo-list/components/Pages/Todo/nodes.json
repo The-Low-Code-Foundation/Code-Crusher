@@ -317,7 +317,7 @@
     },
     {
       "id": "tdDialog",
-      "type": "/Todo/Note dialog",
+      "type": "/Todo/Dialog flow",
       "label": "What happened?",
       "parent": "tdRoot",
       "x": 160,
@@ -328,7 +328,7 @@
       "type": "net.noodl.user.User",
       "label": "Who is signed in",
       "x": 650,
-      "y": 4960
+      "y": 3640
     },
     {
       "id": "tdAuth",
@@ -349,7 +349,7 @@
         "target": "/Pages/Sign in"
       },
       "x": 650,
-      "y": 5080
+      "y": 3760
     },
     {
       "id": "tdLogOut",
@@ -359,144 +359,11 @@
       "y": 400
     },
     {
-      "id": "tdTasks",
-      "type": "DbCollection2",
-      "label": "Your tasks",
-      "parameters": {
-        "runOnChange-records": true,
-        "runOnChange-search": true,
-        "collectionName": "Task",
-        "runOnChange-collectionName": false,
-        "runOnChange-querySettings": false,
-        "storageEnableLimit": true,
-        "storageLimit": 1000,
-        "visualSort": [
-          {
-            "property": "position",
-            "order": "ascending"
-          }
-        ]
-      },
+      "id": "tdData",
+      "type": "/Logic/Todo data",
+      "label": "Your list, from the backend",
       "x": 650,
-      "y": 5200
-    },
-    {
-      "id": "tdActions",
-      "type": "DbCollection2",
-      "label": "Your next actions",
-      "parameters": {
-        "runOnChange-records": true,
-        "runOnChange-search": true,
-        "collectionName": "Action",
-        "runOnChange-collectionName": false,
-        "runOnChange-querySettings": false,
-        "storageEnableLimit": true,
-        "storageLimit": 1000,
-        "visualSort": [
-          {
-            "property": "position",
-            "order": "ascending"
-          }
-        ]
-      },
-      "x": 650,
-      "y": 5320
-    },
-    {
-      "id": "tdEvents",
-      "type": "DbCollection2",
-      "label": "The selected task’s history",
-      "parameters": {
-        "runOnChange-records": true,
-        "runOnChange-search": true,
-        "collectionName": "Event",
-        "runOnChange-collectionName": false,
-        "runOnChange-querySettings": false,
-        "storageEnableLimit": true,
-        "runOnChange-qp-taskId": false,
-        "storageLimit": 1000,
-        "visualFilter": {
-          "combinator": "and",
-          "rules": [
-            {
-              "property": "taskId",
-              "operator": "equal to",
-              "input": "taskId"
-            }
-          ]
-        },
-        "visualSort": [
-          {
-            "property": "at",
-            "order": "descending"
-          }
-        ]
-      },
-      "x": 650,
-      "y": 5440
-    },
-    {
-      "id": "tdRecent",
-      "type": "DbCollection2",
-      "label": "Recent history, all tasks",
-      "parameters": {
-        "runOnChange-records": true,
-        "runOnChange-search": true,
-        "collectionName": "Event",
-        "runOnChange-collectionName": false,
-        "runOnChange-querySettings": false,
-        "storageEnableLimit": true,
-        "storageLimit": 300,
-        "visualSort": [
-          {
-            "property": "at",
-            "order": "descending"
-          }
-        ]
-      },
-      "x": 650,
-      "y": 5560
-    },
-    {
-      "id": "tdRefresh",
-      "type": "JavaScriptFunction",
-      "label": "Load everything again",
-      "parameters": {
-        "functionScript": "Outputs.go();"
-      },
-      "x": 650,
-      "y": 5680,
-      "ports": [
-        {
-          "name": "out-go",
-          "displayName": "go",
-          "plug": "output",
-          "type": "signal",
-          "group": "Outputs"
-        }
-      ]
-    },
-    {
-      "id": "tdHasTask",
-      "type": "Condition",
-      "label": "Is a task selected?",
-      "parameters": {
-        "runOnChange-condition": false
-      },
-      "x": 650,
-      "y": 5800
-    },
-    {
-      "id": "tdLoadProblem",
-      "type": "Set Variable",
-      "label": "Say the list did not load",
-      "parameters": {
-        "name": "todoProblem",
-        "setWith": "string",
-        "value": "Your list could not be loaded. Check that the backend is running, then sign in again."
-      },
-      "x": 650,
-      "y": 5920
+      "y": 3880
     },
     {
       "id": "tdRows",
@@ -510,21 +377,21 @@
       "type": "/Logic/Selected task",
       "label": "The selected task",
       "x": 650,
-      "y": 2080
+      "y": 1840
     },
     {
       "id": "tdLogRows",
       "type": "/Logic/Log rows",
       "label": "The log lines",
       "x": 650,
-      "y": 1840
+      "y": 1600
     },
     {
       "id": "tdScreen",
       "type": "Screen Resolution",
       "label": "How wide the screen is",
       "x": 650,
-      "y": 6040
+      "y": 4000
     },
     {
       "id": "tdLayout",
@@ -593,7 +460,7 @@
         "name": "todoSelected"
       },
       "x": 650,
-      "y": 6160
+      "y": 3040
     },
     {
       "id": "tdSelectFromList",
@@ -615,7 +482,7 @@
         "setWith": "string"
       },
       "x": 650,
-      "y": 1720
+      "y": 1480
     },
     {
       "id": "tdSelectFromLog",
@@ -626,7 +493,7 @@
         "setWith": "string"
       },
       "x": 650,
-      "y": 1960
+      "y": 1720
     },
     {
       "id": "tdDeselect",
@@ -637,184 +504,14 @@
         "setWith": "emptyString"
       },
       "x": 650,
-      "y": 2200
-    },
-    {
-      "id": "tdMode",
-      "type": "States",
-      "label": "What the dialog is asking",
-      "parameters": {
-        "states": "none,close,reopen,tick,untick",
-        "currentState": "none",
-        "values": "open,heading,help,ok",
-        "type-open": "boolean",
-        "type-heading": "string",
-        "type-help": "string",
-        "type-ok": "string",
-        "value-none-open": false,
-        "value-close-open": true,
-        "value-close-heading": "What happened?",
-        "value-close-help": "Every task keeps a record. One line is enough, even “not needed, dropping it”.",
-        "value-close-ok": "Close task",
-        "value-reopen-open": true,
-        "value-reopen-heading": "Why is it back?",
-        "value-reopen-help": "It goes back in at the bottom of the list.",
-        "value-reopen-ok": "Reopen",
-        "value-tick-open": true,
-        "value-tick-heading": "What happened?",
-        "value-tick-help": "A line is enough.",
-        "value-tick-ok": "Tick off",
-        "value-untick-open": true,
-        "value-untick-heading": "Why is it back?",
-        "value-untick-help": "It goes back in at the bottom of the next actions.",
-        "value-untick-ok": "Untick",
-        "useTransitions": false
-      },
-      "x": 650,
-      "y": 3760
-    },
-    {
-      "id": "tdDialogTask",
-      "type": "Variable2",
-      "label": "Which task the dialog is about",
-      "parameters": {
-        "name": "todoDialogTask"
-      },
-      "x": 650,
-      "y": 6280
-    },
-    {
-      "id": "tdDialogTaskFromList",
-      "type": "Set Variable",
-      "label": "From the list",
-      "parameters": {
-        "name": "todoDialogTask",
-        "setWith": "string"
-      },
-      "x": 650,
-      "y": 1120
-    },
-    {
-      "id": "tdDialogTaskFromDetail",
-      "type": "Set Variable",
-      "label": "From the detail pane",
-      "parameters": {
-        "name": "todoDialogTask",
-        "setWith": "string"
-      },
-      "x": 650,
-      "y": 2320
-    },
-    {
-      "id": "tdDialogAction",
-      "type": "Variable2",
-      "label": "Which next action",
-      "parameters": {
-        "name": "todoDialogAction"
-      },
-      "x": 650,
-      "y": 6400
-    },
-    {
-      "id": "tdDialogActionSet",
-      "type": "Set Variable",
-      "label": "From the next actions",
-      "parameters": {
-        "name": "todoDialogAction",
-        "setWith": "string"
-      },
-      "x": 650,
-      "y": 2920
-    },
-    {
-      "id": "tdSubject",
-      "type": "Variable2",
-      "label": "What the dialog names",
-      "parameters": {
-        "name": "todoDialogSubject"
-      },
-      "x": 650,
-      "y": 3880
-    },
-    {
-      "id": "tdSubjectFromList",
-      "type": "Set Variable",
-      "label": "Name it from the list",
-      "parameters": {
-        "name": "todoDialogSubject",
-        "setWith": "string"
-      },
-      "x": 650,
-      "y": 1240
-    },
-    {
-      "id": "tdSubjectFromDetail",
-      "type": "Set Variable",
-      "label": "Name it from the detail pane",
-      "parameters": {
-        "name": "todoDialogSubject",
-        "setWith": "string"
-      },
-      "x": 650,
-      "y": 2440
-    },
-    {
-      "id": "tdSubjectFromAction",
-      "type": "Set Variable",
-      "label": "Name the next action",
-      "parameters": {
-        "name": "todoDialogSubject",
-        "setWith": "string"
-      },
-      "x": 650,
-      "y": 3040
-    },
-    {
-      "id": "tdIfClose",
-      "type": "Condition",
-      "label": "Was it closing?",
-      "parameters": {
-        "runOnChange-condition": false
-      },
-      "x": 650,
-      "y": 4000
-    },
-    {
-      "id": "tdIfReopen",
-      "type": "Condition",
-      "label": "Was it reopening?",
-      "parameters": {
-        "runOnChange-condition": false
-      },
-      "x": 650,
-      "y": 4120
-    },
-    {
-      "id": "tdIfTick",
-      "type": "Condition",
-      "label": "Was it ticking?",
-      "parameters": {
-        "runOnChange-condition": false
-      },
-      "x": 650,
-      "y": 4240
-    },
-    {
-      "id": "tdIfUntick",
-      "type": "Condition",
-      "label": "Was it unticking?",
-      "parameters": {
-        "runOnChange-condition": false
-      },
-      "x": 650,
-      "y": 4360
+      "y": 1960
     },
     {
       "id": "cmdAdd",
       "type": "/Commands/Add task",
       "label": "Add",
       "x": 650,
-      "y": 1360
+      "y": 1120
     },
     {
       "id": "cmdUp",
@@ -824,7 +521,7 @@
         "direction": "up"
       },
       "x": 650,
-      "y": 1480
+      "y": 1240
     },
     {
       "id": "cmdDown",
@@ -834,7 +531,7 @@
         "direction": "down"
       },
       "x": 650,
-      "y": 1600
+      "y": 1360
     },
     {
       "id": "cmdTop",
@@ -844,56 +541,56 @@
         "direction": "top"
       },
       "x": 650,
-      "y": 2560
+      "y": 2080
     },
     {
       "id": "cmdClose",
       "type": "/Commands/Close task",
       "label": "Close",
       "x": 650,
-      "y": 4480
+      "y": 3160
     },
     {
       "id": "cmdReopen",
       "type": "/Commands/Reopen task",
       "label": "Reopen",
       "x": 650,
-      "y": 4600
+      "y": 3280
     },
     {
       "id": "cmdRename",
       "type": "/Commands/Rename task",
       "label": "Rename",
       "x": 650,
-      "y": 2680
+      "y": 2200
     },
     {
       "id": "cmdDeadline",
       "type": "/Commands/Set deadline",
       "label": "Deadline",
       "x": 650,
-      "y": 2800
+      "y": 2320
     },
     {
       "id": "cmdAddAction",
       "type": "/Commands/Add action",
       "label": "AddAction",
       "x": 650,
-      "y": 3160
+      "y": 2440
     },
     {
       "id": "cmdTick",
       "type": "/Commands/Tick action",
       "label": "Tick",
       "x": 650,
-      "y": 4720
+      "y": 3400
     },
     {
       "id": "cmdUntick",
       "type": "/Commands/Untick action",
       "label": "Untick",
       "x": 650,
-      "y": 4840
+      "y": 3520
     },
     {
       "id": "cmdActUp",
@@ -903,7 +600,7 @@
         "direction": "up"
       },
       "x": 650,
-      "y": 3280
+      "y": 2560
     },
     {
       "id": "cmdActDown",
@@ -913,21 +610,21 @@
         "direction": "down"
       },
       "x": 650,
-      "y": 3400
+      "y": 2680
     },
     {
       "id": "cmdDescribe",
       "type": "/Commands/Describe action",
       "label": "Describe",
       "x": 650,
-      "y": 3520
+      "y": 2800
     },
     {
       "id": "cmdNote",
       "type": "/Commands/Add note",
       "label": "Note",
       "x": 650,
-      "y": 3640
+      "y": 2920
     }
   ],
   "visualRoots": [

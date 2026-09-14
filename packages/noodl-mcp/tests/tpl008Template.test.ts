@@ -205,6 +205,28 @@ describe('§4 the look Richard approved', () => {
     expect([...sizes].sort()).toEqual(['"var(--text-base)"', '"var(--text-sm)"', '"var(--text-xl)"']);
   });
 
+  it('🔴 every icon button has a name a screen reader can say, and hides the words (D72: Button has no accessible-name port)', () => {
+    // The label is the name; `font-size: 0` hides the words and the icon keeps its own size.
+    const seen: string[] = [];
+    const loud: string[] = [];
+    for (const c of componentsOf()) {
+      const wires = c.graph?.connections ?? [];
+      for (const n of nodesOf(c).filter((x) => x.type === 'net.noodl.controls.button')) {
+        const p = (n.parameters ?? {}) as { useIcon?: boolean; label?: string; styleCss?: string };
+        if (!p.useIcon) continue;
+        seen.push(`${c.name} ${n.id}`);
+        const named = String(p.label ?? '').trim() !== '' || wires.some((w) => w.toId === n.id && w.toProperty === 'label');
+        if (!named) loud.push(`${c.name} ${n.id} has no name`);
+        if (!/font-size:\s*0/.test(String(p.styleCss ?? ''))) loud.push(`${c.name} ${n.id} shows its words`);
+      }
+    }
+    // The control: the rule reached every icon button there is — two moves and a tick box per row kind.
+    expect(seen.sort()).toEqual(
+      ['/Todo/Action row arCheck', '/Todo/Action row arDown', '/Todo/Action row arUp', '/Todo/Task row trClose', '/Todo/Task row trDown', '/Todo/Task row trUp'].sort()
+    );
+    expect(loud).toEqual([]);
+  });
+
   it('every pair it draws passes WCAG AA, recomputed from the tokens', () => {
     const token = (name: string) => {
       const found = TPL008_TOKENS.find((t) => t.name === name);
@@ -274,6 +296,7 @@ describe('§5 the scripts', () => {
     const { outputs } = run(SELECTED_SCRIPT, { tasks, actions, events: [], selectedId: 'a' });
     const rows = outputs.actionRows as Array<Record<string, unknown>>;
     expect(rows.map((r) => [r.id, r.num])).toEqual([['x1', '1'], ['x2', '2'], ['x0', '']]);
+    expect(rows.map((r) => r.checkLabel)).toEqual(['Mark done', 'Mark done', 'Mark not done']);
     expect((outputs.openActionRows as unknown[]).length).toBe(2);
     expect(String(outputs.rankLine)).toMatch(/^#1 of 3/);
     expect(outputs.nextActionPosition).toBe(3);

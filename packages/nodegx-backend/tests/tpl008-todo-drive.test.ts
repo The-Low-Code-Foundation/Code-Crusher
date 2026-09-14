@@ -185,6 +185,33 @@ describe('TPL-008 — the todo list, driven', () => {
       });
       return b.length === 0 ? 'absent' : b[b.length - 1].disabled;
     })()`);
+  /** D72: what a screen reader calls each button on screen, read from Chrome's own accessibility tree. */
+  const buttonNames = async (page: RenderedPage): Promise<string[]> => {
+    const client = (page as unknown as { client: { send(m: string, p?: unknown): Promise<unknown> } }).client;
+    const tree = (await client.send('Accessibility.getFullAXTree')) as {
+      nodes: Array<{ ignored?: boolean; role?: { value?: string }; name?: { value?: string } }>;
+    };
+    // An icon font's private-use glyph is not a name anyone can hear.
+    return tree.nodes
+      .filter((n) => !n.ignored && n.role?.value === 'button')
+      .map((n) => String(n.name?.value ?? '').replace(/[-]/g, '').trim());
+  };
+  /** How the first "Move up" button looks: its words take no room, and its icon does. */
+  const ICON_BUTTON_LOOK = `(function () {
+    var b = Array.prototype.filter.call(document.querySelectorAll('button'), function (x) {
+      return (x.textContent || '').trim() === 'Move up';
+    })[0];
+    if (!b) return 'absent';
+    var glyph = b.querySelector('span');
+    var words = Array.prototype.filter.call(b.childNodes, function (n) { return n.nodeType === 3; })[0];
+    var range = document.createRange();
+    if (words) range.selectNodeContents(words);
+    return JSON.stringify({
+      fontSize: getComputedStyle(b).fontSize,
+      iconDrawn: !!glyph && glyph.getBoundingClientRect().width > 0,
+      wordsWidth: words ? Math.round(range.getBoundingClientRect().width) : -1
+    });
+  })()`;
 
   beforeAll(async () => {
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tpl008-drive-project-'));
@@ -280,6 +307,8 @@ describe('TPL-008 — the todo list, driven', () => {
         await wait(1500);
         R.moveLines = (await eventsFor(tk, NOTES)).filter((e) => e.kind === 'moved').map((e) => String(e.summary));
         await shot('1-list');
+        R.listButtonNames = await buttonNames(page);
+        R.iconButtonLook = await page.evaluate(ICON_BUTTON_LOOK);
 
         // ── §3 Close one, with a note ──────────────────────────────────────────
         step('§3 close');
@@ -315,6 +344,7 @@ describe('TPL-008 — the todo list, driven', () => {
         await clickButtonByField(page, 'Add', 'Add a next action');
         await until('action written', () => rows('Action', tk), (a) => a.length === 1);
         await until('action drawn', () => text(page), (s) => s.includes(ACTION));
+        R.actionNamesBefore = await buttonNames(page);
         step('§4 tick action');
         await clickButtonBeside(page, ACTION, 3, 0);
         await until('tick dialog', () => text(page), (s) => s.includes('A line is enough.'));
@@ -323,6 +353,7 @@ describe('TPL-008 — the todo list, driven', () => {
         const ticked = await until('tick written', () => rows('Action', tk), (a) => a[0]?.done === true);
         R.ticked = { done: ticked[0].done, note: ticked[0].note };
         await wait(1500);
+        R.actionNamesAfter = await buttonNames(page);
         step('§4 describe action');
         await clickWords(page, ACTION);
         await until('description open', () =>
@@ -450,6 +481,24 @@ describe('TPL-008 — the todo list, driven', () => {
   it('§4 AC6 — a next action is added, ticked with a note and described', () => {
     expect(R.ticked).toEqual({ done: true, note: TICK_NOTE });
     expect(R.description).toBe(DESCRIPTION);
+  });
+
+  it('🔴 D72 — every button on the list has a name a screen reader says; the icon still shows and the words do not', () => {
+    const names = (R.listButtonNames as string[]) ?? [];
+    const count = (name: string) => names.filter((x) => x === name).length;
+    // Three open tasks, each with up, down and close — the known-firing half beside "no nameless button".
+    expect({ nameless: count(''), up: count('Move up'), down: count('Move down'), close: count('Close this task') }).toEqual({
+      nameless: 0,
+      up: 3,
+      down: 3,
+      close: 3
+    });
+    expect(JSON.parse(String(R.iconButtonLook ?? '"unread"'))).toEqual({ fontSize: '0px', iconDrawn: true, wordsWidth: 0 });
+    // The tick box's name follows its state, both ways.
+    expect([(R.actionNamesBefore as string[]) ?? [], (R.actionNamesAfter as string[]) ?? []].map((ns) => ns.filter((n) => n.startsWith('Mark ')))).toEqual([
+      ['Mark done'],
+      ['Mark not done']
+    ]);
   });
 
   it('§5 a note, a rename and a deadline each leave a line; a deadline that is not a date is refused in words', () => {

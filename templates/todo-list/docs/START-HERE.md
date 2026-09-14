@@ -33,9 +33,10 @@ The access rules ship as `nodegx.security.json`:
   read the pattern.
 - **`Logic/Write history`** is the only thing that writes to `Event`. Moving the same task several
   times within two minutes updates one line ("Moved #5 → #2") rather than adding one per click.
-- **`Logic/Task rows`**, **`Logic/Selected task`** and **`Logic/Log rows`** turn the three queries into
-  what the screen draws.
-- **`Todo/`** is everything you can see. **`Pages/Todo`** places it and wires the commands to it.
+- **`Logic/Todo data`** holds the queries. **`Logic/Task rows`**, **`Logic/Selected task`** and
+  **`Logic/Log rows`** turn what they load into what the screen draws.
+- **`Todo/`** is everything you can see. **`Todo/Dialog flow`** asks "What happened?" before a close,
+  reopen, tick or untick. **`Pages/Todo`** places it all and wires the commands to it.
 
 ## The data
 

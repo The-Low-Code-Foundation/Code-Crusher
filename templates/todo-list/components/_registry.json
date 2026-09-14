@@ -139,6 +139,14 @@
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
     },
+    "Logic/Todo data": {
+      "path": "Logic/Todo data",
+      "type": "visual",
+      "nodeCount": 9,
+      "connectionCount": 13,
+      "modified": "2026-09-14T00:00:00.000Z",
+      "created": "2026-09-14T00:00:00.000Z"
+    },
     "Todo/Header": {
       "path": "Todo/Header",
       "type": "visual",
@@ -215,7 +223,7 @@
       "path": "Todo/Action row",
       "type": "visual",
       "nodeCount": 17,
-      "connectionCount": 27,
+      "connectionCount": 28,
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
     },
@@ -251,11 +259,19 @@
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
     },
+    "Todo/Dialog flow": {
+      "path": "Todo/Dialog flow",
+      "type": "visual",
+      "nodeCount": 18,
+      "connectionCount": 46,
+      "modified": "2026-09-14T00:00:00.000Z",
+      "created": "2026-09-14T00:00:00.000Z"
+    },
     "Pages/Todo": {
       "path": "Pages/Todo",
       "type": "page",
-      "nodeCount": 71,
-      "connectionCount": 184,
+      "nodeCount": 51,
+      "connectionCount": 149,
       "modified": "2026-09-14T00:00:00.000Z",
       "created": "2026-09-14T00:00:00.000Z"
     },
@@ -269,8 +285,8 @@
     }
   },
   "stats": {
-    "totalComponents": 33,
-    "totalNodes": 323,
-    "totalConnections": 603
+    "totalComponents": 35,
+    "totalNodes": 330,
+    "totalConnections": 628
   }
 }

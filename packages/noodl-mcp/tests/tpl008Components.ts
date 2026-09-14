@@ -5,12 +5,14 @@
  * ──────────────────────────────────────────────────────────────────────────────
  * ## The shape, in one paragraph
  *
- * `Pages/Todo` holds three queries (tasks, next actions, history) and hands them
- * to three `Logic/` components that turn them into what the screen draws. The
- * visible parts live in `Todo/`. **Everything a person can do is one component in
- * `Commands/`**: a guard `Function` that decides whether there is anything to do,
- * the record write, then `Logic/Write history`. After any command the page
- * re-fetches the three queries. Nothing is ever deleted — see the policy.
+ * `Logic/Todo data` holds the queries (tasks, next actions, history), and
+ * `Pages/Todo` hands what they load to three `Logic/` components that turn it into
+ * what the screen draws. The visible parts live in `Todo/`, and `Todo/Dialog flow`
+ * asks "what happened?" before a close, reopen, tick or untick. **Everything a
+ * person can do is one component in `Commands/`**: a guard `Function` that decides
+ * whether there is anything to do, the record write, then `Logic/Write history`.
+ * After any command the page asks `Logic/Todo data` to load everything again.
+ * Nothing is ever deleted — see the policy.
  *
  * ## 🔴 The traps this file is written against (each one measured on an earlier template)
  *
@@ -69,6 +71,8 @@ export const C = {
   historyEntry: '/Todo/History entry',
   history: '/Todo/History',
   dialog: '/Todo/Note dialog',
+  dialogFlow: '/Todo/Dialog flow',
+  todoData: '/Logic/Todo data',
   taskRows: '/Logic/Task rows',
   selected: '/Logic/Selected task',
   logRows: '/Logic/Log rows',
@@ -217,9 +221,25 @@ const BTN_GHOST = {
   fontWeight: 'var(--font-medium)',
   sizeMode: 'contentSize'
 };
-const BTN_ICON = (code: string) => ({
-  ...BTN_GHOST,
-  label: '',
+/**
+ * 🔴 **D72 — a Button has no accessible-name port**, so an icon button with `label: ''`
+ * is a `<button>` with no name: silent to a screen reader. The label IS the name —
+ * `Button.tsx` writes it inside the `<button>` — and `font-size: 0` on the button hides
+ * the words while the icon keeps its own size (`iconSize` is set on the glyph). The
+ * drive reads the names back from Chrome's accessibility tree.
+ */
+const HIDDEN_LABEL = 'font-size: 0;';
+/** A ghost button's box without its type size: `font-size: 0` is the only size these carry. */
+const BTN_ICON = (code: string, name: string) => ({
+  backgroundColor: 'transparent',
+  color: 'var(--foreground)',
+  borderStyle: 'none',
+  borderRadius: 'var(--radius-md)',
+  paddingTop: 'var(--space-2)',
+  paddingBottom: 'var(--space-2)',
+  sizeMode: 'contentSize',
+  label: name,
+  styleCss: HIDDEN_LABEL,
   useIcon: true,
   iconSourceType: 'icon',
   iconIconSource: icon(code),
@@ -231,7 +251,7 @@ const BTN_ICON = (code: string) => ({
 });
 /** The round tick box. Its fill and colours are wired, so a done row and an open row share one node. */
 const BTN_CHECK = {
-  label: '',
+  styleCss: HIDDEN_LABEL,
   useIcon: true,
   iconSourceType: 'icon',
   iconIconSource: icon('icon-check'),
@@ -434,9 +454,9 @@ const TASK_ROW: Tpl008Component = {
     group('trMain', 'Title and what is next', 'trRow', { ...COLUMN('var(--space-0-5)'), paddingTop: 'var(--space-1)', paddingBottom: 'var(--space-1)' }),
     text('trTitle', 'Title', 'trMain', '', wide(T_BODY)),
     text('trMeta', 'Deadline and next action', 'trMain', '', wide(T_META)),
-    place('trUp', BUTTON, 'Move up', 'trRow', BTN_ICON('icon-chevron-up')),
-    place('trDown', BUTTON, 'Move down', 'trRow', BTN_ICON('icon-chevron-down')),
-    place('trClose', BUTTON, 'Close it', 'trRow', { ...BTN_CHECK, marginLeft: 'var(--space-1)' })
+    place('trUp', BUTTON, 'Move up', 'trRow', BTN_ICON('icon-chevron-up', 'Move up')),
+    place('trDown', BUTTON, 'Move down', 'trRow', BTN_ICON('icon-chevron-down', 'Move down')),
+    place('trClose', BUTTON, 'Close it', 'trRow', { ...BTN_CHECK, label: 'Close this task', marginLeft: 'var(--space-1)' })
   ],
   connections: [
     wire('trIn', 'rank', 'trRank', 'text'),
@@ -737,7 +757,8 @@ const ACTION_ROW_FIELDS: Array<[string, string]> = [
   ['canDown', 'boolean'],
   ['checkBg', 'string'],
   ['checkIconColor', 'string'],
-  ['checkBorder', 'string']
+  ['checkBorder', 'string'],
+  ['checkLabel', 'string']
 ];
 const ACTION_ROW_OUTS: Array<[string, string]> = [
   ['tick', 'signal'],
@@ -764,11 +785,11 @@ const ACTION_ROW: Tpl008Component = {
     group('arRoot', 'Next action', undefined, { ...COLUMN('var(--space-0)'), ...RULE_BELOW, paddingTop: 'var(--space-1)', paddingBottom: 'var(--space-1)' }),
     group('arTop', 'The line', 'arRoot', ROW('var(--space-2)')),
     text('arNum', 'Its place', 'arTop', '', { ...T_META, sizeMode: 'contentHeight', width: px(20), textAlignX: 'right', fontVariantNumeric: 'tabular-nums' }),
-    place('arCheck', BUTTON, 'Tick box', 'arTop', BTN_CHECK),
+    place('arCheck', BUTTON, 'Tick box', 'arTop', { ...BTN_CHECK, label: 'Mark done' }),
     text('arTitle', 'Title', 'arTop', '', wide(T_BODY)),
     group('arMove', 'Move buttons', 'arTop', { flexDirection: 'row', alignItems: 'center', sizeMode: 'contentSize' }),
-    place('arUp', BUTTON, 'Move up', 'arMove', BTN_ICON('icon-chevron-up')),
-    place('arDown', BUTTON, 'Move down', 'arMove', BTN_ICON('icon-chevron-down')),
+    place('arUp', BUTTON, 'Move up', 'arMove', BTN_ICON('icon-chevron-up', 'Move up')),
+    place('arDown', BUTTON, 'Move down', 'arMove', BTN_ICON('icon-chevron-down', 'Move down')),
     group('arPreview', 'Description, folded', 'arRoot', { ...COLUMN('var(--space-0)'), paddingLeft: ACTION_INDENT }),
     text('arPreviewText', 'Description', 'arPreview', '', wide(T_META)),
     group('arEditor', 'Description, open', 'arRoot', { ...COLUMN('var(--space-1)'), paddingLeft: ACTION_INDENT, paddingBottom: 'var(--space-2)', mounted: false }),
@@ -792,6 +813,7 @@ const ACTION_ROW: Tpl008Component = {
     wire('arIn', 'checkBg', 'arCheck', 'backgroundColor'),
     wire('arIn', 'checkIconColor', 'arCheck', 'iconColor'),
     wire('arIn', 'checkBorder', 'arCheck', 'borderColor'),
+    wire('arIn', 'checkLabel', 'arCheck', 'label'),
     wire('arIn', 'done', 'arWhich', 'condition'),
     wire('arIn', 'id', 'arOut', 'id'),
     wire('arIn', 'title', 'arOut', 'title'),
@@ -1134,6 +1156,7 @@ function row(x, index, count) {
     checkBg: isDone ? 'var(--primary)' : 'transparent',
     checkIconColor: isDone ? 'var(--primary-foreground)' : 'var(--border-control)',
     checkBorder: isDone ? 'var(--primary)' : 'var(--border-control)',
+    checkLabel: isDone ? 'Mark not done' : 'Mark done',
     position: num(x.position, 0)
   };
 }
@@ -1941,13 +1964,152 @@ const PAGE_COMMANDS: Array<[string, string, Record<string, unknown>?]> = [
 
 const QUERY_OFF = { 'runOnChange-collectionName': false, 'runOnChange-querySettings': false, storageEnableLimit: true };
 
+const DIALOG_FLOW_INS: Array<[string, string]> = [
+  ['listTaskId', 'string'], ['listTaskTitle', 'string'], ['listClose', 'signal'],
+  ['detailTaskId', 'string'], ['detailTaskTitle', 'string'], ['detailClose', 'signal'], ['detailReopen', 'signal'],
+  ['actionId', 'string'], ['actionTitle', 'string'], ['tick', 'signal'], ['untick', 'signal']
+];
+const DIALOG_FLOW_OUTS: Array<[string, string]> = [
+  ['dialogTaskId', 'string'], ['dialogActionId', 'string'], ['note', 'string'],
+  ['confirmClose', 'signal'], ['confirmReopen', 'signal'], ['confirmTick', 'signal'], ['confirmUntick', 'signal']
+];
+
+/**
+ * Out of `Pages/Todo` in s2, when the page was 70 nodes. Every producer still has its
+ * OWN input and its own `Set Variable` — the list's close and the detail pane's close
+ * never share a value port (see the module header).
+ */
+const DIALOG_FLOW: Tpl008Component = {
+  path: 'Todo/Dialog flow',
+  description:
+    'Asks "what happened?" before a close, a reopen, a tick or an untick: remembers which task or next action it is about, shows the dialog, and says which question was answered.',
+  ...iface(DIALOG_FLOW_INS, DIALOG_FLOW_OUTS),
+  instantiates: [C.dialog],
+  nodes: [
+    inputs('dfIn', 'What was pressed', DIALOG_FLOW_INS),
+    outputs('dfOut', 'What was answered', DIALOG_FLOW_OUTS),
+    group('dfRoot', 'Dialog', undefined, COLUMN('var(--space-0)')),
+    place('dfDialog', C.dialog, 'What happened?', 'dfRoot'),
+    logic('dfMode', STATES, 'What the dialog is asking', DIALOG_MODES),
+    logic('dfTask', VARIABLE, 'Which task the dialog is about', { name: VAR.dialogTask }),
+    logic('dfTaskFromList', SET_VARIABLE, 'From the list', { name: VAR.dialogTask, setWith: 'string' }),
+    logic('dfTaskFromDetail', SET_VARIABLE, 'From the detail pane', { name: VAR.dialogTask, setWith: 'string' }),
+    logic('dfAction', VARIABLE, 'Which next action', { name: VAR.dialogAction }),
+    logic('dfActionSet', SET_VARIABLE, 'From the next actions', { name: VAR.dialogAction, setWith: 'string' }),
+    logic('dfSubject', VARIABLE, 'What the dialog names', { name: VAR.dialogSubject }),
+    logic('dfSubjectFromList', SET_VARIABLE, 'Name it from the list', { name: VAR.dialogSubject, setWith: 'string' }),
+    logic('dfSubjectFromDetail', SET_VARIABLE, 'Name it from the detail pane', { name: VAR.dialogSubject, setWith: 'string' }),
+    logic('dfSubjectFromAction', SET_VARIABLE, 'Name the next action', { name: VAR.dialogSubject, setWith: 'string' }),
+    logic('dfIfClose', CONDITION, 'Was it closing?', signalOnly('condition')),
+    logic('dfIfReopen', CONDITION, 'Was it reopening?', signalOnly('condition')),
+    logic('dfIfTick', CONDITION, 'Was it ticking?', signalOnly('condition')),
+    logic('dfIfUntick', CONDITION, 'Was it unticking?', signalOnly('condition'))
+  ],
+  connections: [
+    // From the list
+    wire('dfIn', 'listTaskId', 'dfTaskFromList', 'value'),
+    wire('dfIn', 'listClose', 'dfTaskFromList', 'do'),
+    wire('dfIn', 'listTaskTitle', 'dfSubjectFromList', 'value'),
+    wire('dfIn', 'listClose', 'dfSubjectFromList', 'do'),
+    wire('dfIn', 'listClose', 'dfMode', 'to-close'),
+    // From the detail pane
+    wire('dfIn', 'detailTaskId', 'dfTaskFromDetail', 'value'),
+    wire('dfIn', 'detailClose', 'dfTaskFromDetail', 'do'),
+    wire('dfIn', 'detailReopen', 'dfTaskFromDetail', 'do'),
+    wire('dfIn', 'detailTaskTitle', 'dfSubjectFromDetail', 'value'),
+    wire('dfIn', 'detailClose', 'dfSubjectFromDetail', 'do'),
+    wire('dfIn', 'detailReopen', 'dfSubjectFromDetail', 'do'),
+    wire('dfIn', 'detailClose', 'dfMode', 'to-close'),
+    wire('dfIn', 'detailReopen', 'dfMode', 'to-reopen'),
+    // From the next actions
+    wire('dfIn', 'actionId', 'dfActionSet', 'value'),
+    wire('dfIn', 'tick', 'dfActionSet', 'do'),
+    wire('dfIn', 'untick', 'dfActionSet', 'do'),
+    wire('dfIn', 'actionTitle', 'dfSubjectFromAction', 'value'),
+    wire('dfIn', 'tick', 'dfSubjectFromAction', 'do'),
+    wire('dfIn', 'untick', 'dfSubjectFromAction', 'do'),
+    wire('dfIn', 'tick', 'dfMode', 'to-tick'),
+    wire('dfIn', 'untick', 'dfMode', 'to-untick'),
+
+    // Showing the question
+    wire('dfMode', 'open', 'dfDialog', 'open'),
+    wire('dfMode', 'heading', 'dfDialog', 'heading'),
+    wire('dfMode', 'help', 'dfDialog', 'help'),
+    wire('dfMode', 'ok', 'dfDialog', 'okLabel'),
+    wire('dfSubject', 'value', 'dfDialog', 'subject'),
+    wire('dfDialog', 'cancel', 'dfMode', 'to-none'),
+
+    // Answering it: test which question it was, THEN close it
+    wire('dfMode', 'at-close', 'dfIfClose', 'condition'),
+    wire('dfMode', 'at-reopen', 'dfIfReopen', 'condition'),
+    wire('dfMode', 'at-tick', 'dfIfTick', 'condition'),
+    wire('dfMode', 'at-untick', 'dfIfUntick', 'condition'),
+    ...['dfIfClose', 'dfIfReopen', 'dfIfTick', 'dfIfUntick'].flatMap((g) => [wire('dfDialog', 'confirm', g, 'eval'), wire(g, 'ontrue', 'dfMode', 'to-none')]),
+    wire('dfIfClose', 'ontrue', 'dfOut', 'confirmClose'),
+    wire('dfIfReopen', 'ontrue', 'dfOut', 'confirmReopen'),
+    wire('dfIfTick', 'ontrue', 'dfOut', 'confirmTick'),
+    wire('dfIfUntick', 'ontrue', 'dfOut', 'confirmUntick'),
+    wire('dfTask', 'value', 'dfOut', 'dialogTaskId'),
+    wire('dfAction', 'value', 'dfOut', 'dialogActionId'),
+    wire('dfDialog', 'note', 'dfOut', 'note')
+  ]
+};
+
+const TODO_DATA_INS: Array<[string, string]> = [['refresh', 'signal'], ['loadHistory', 'signal'], ['hasTask', 'boolean']];
+const TODO_DATA_OUTS: Array<[string, string]> = [['tasks', 'array'], ['actions', 'array'], ['events', 'array'], ['recent', 'array']];
+
+/** Out of `Pages/Todo` in s2, with the queries' wiring unchanged. */
+const TODO_DATA: Tpl008Component = {
+  path: 'Logic/Todo data',
+  description:
+    'The four queries: your tasks, your next actions, the selected task’s history, and recent history across all tasks. Refresh loads them all again; a task’s history is only asked for when a task is selected.',
+  ...iface(TODO_DATA_INS, TODO_DATA_OUTS),
+  nodes: [
+    inputs('dtIn', 'When to load', TODO_DATA_INS),
+    outputs('dtOut', 'The records', TODO_DATA_OUTS),
+    logic('dtSelected', VARIABLE, 'The selected task', { name: VAR.selected }),
+    logic('dtTasks', QUERY, 'Your tasks', { collectionName: 'Task', ...QUERY_OFF, storageLimit: 1000, visualSort: [{ property: 'position', order: 'ascending' }] }),
+    logic('dtActions', QUERY, 'Your next actions', { collectionName: 'Action', ...QUERY_OFF, storageLimit: 1000, visualSort: [{ property: 'position', order: 'ascending' }] }),
+    logic('dtEvents', QUERY, 'The selected task’s history', {
+      collectionName: 'Event',
+      ...QUERY_OFF,
+      // 🔴 A filter parameter has its OWN Run On Value Change box, ticked by default,
+      // and the two above do not cover it (`dbcollectionnode2.ts:1145`). Left on, the
+      // id arriving at boot fetched history for a signed-out visitor and logged a 403.
+      'runOnChange-qp-taskId': false,
+      storageLimit: 1000,
+      visualFilter: { combinator: 'and', rules: [{ property: 'taskId', operator: 'equal to', input: 'taskId' }] },
+      visualSort: [{ property: 'at', order: 'descending' }]
+    }),
+    logic('dtRecent', QUERY, 'Recent history, all tasks', { collectionName: 'Event', ...QUERY_OFF, storageLimit: 300, visualSort: [{ property: 'at', order: 'descending' }] }),
+    logic('dtHasTask', CONDITION, 'Is a task selected?', signalOnly('condition')),
+    logic('dtLoadProblem', SET_VARIABLE, 'Say the list did not load', { name: VAR.problem, setWith: 'string', value: LOAD_PROBLEM_TEXT })
+  ],
+  connections: [
+    ...['dtTasks', 'dtActions', 'dtRecent'].map((q) => wire('dtIn', 'refresh', q, 'storageFetch')),
+    // A task's history is only asked for when there is a task to ask about.
+    wire('dtIn', 'refresh', 'dtHasTask', 'eval'),
+    wire('dtIn', 'hasTask', 'dtHasTask', 'condition'),
+    wire('dtHasTask', 'ontrue', 'dtEvents', 'storageFetch'),
+    wire('dtIn', 'loadHistory', 'dtEvents', 'storageFetch'),
+    // Straight from the variable, as it was on the page: Set Variable's Done fires after
+    // every reader has the new value, so `loadHistory` filters on the task just picked.
+    wire('dtSelected', 'value', 'dtEvents', 'qp-taskId'),
+    wire('dtTasks', 'failure', 'dtLoadProblem', 'do'),
+    wire('dtTasks', 'items', 'dtOut', 'tasks'),
+    wire('dtActions', 'items', 'dtOut', 'actions'),
+    wire('dtEvents', 'items', 'dtOut', 'events'),
+    wire('dtRecent', 'items', 'dtOut', 'recent')
+  ]
+};
+
 const PAGE_TODO: Tpl008Component = {
   path: 'Pages/Todo',
   description:
-    'The app: the list (or Done, or the Log) beside the selected task. Holds the three queries, the selection and the dialog, and wires every button to its command. Signed-out visitors are sent to Sign in.',
+    'The app: the list (or Done, or the Log) beside the selected task. Holds the selection, places the data and the dialog flow, and wires every button to its command. Signed-out visitors are sent to Sign in.',
   instantiates: [
-    C.header, C.problem, C.taskList, C.doneList, C.logList, C.summary, C.nextActions, C.history, C.dialog,
-    C.taskRows, C.selected, C.logRows,
+    C.header, C.problem, C.taskList, C.doneList, C.logList, C.summary, C.nextActions, C.history, C.dialogFlow,
+    C.todoData, C.taskRows, C.selected, C.logRows,
     ...new Set(PAGE_COMMANDS.map(([, c]) => c))
   ],
   nodes: [
@@ -2001,7 +2163,7 @@ const PAGE_TODO: Tpl008Component = {
     place('tdSummary', C.summary, 'Summary', 'tdDetail'),
     place('tdNext', C.nextActions, 'Next actions', 'tdDetail'),
     place('tdHistory', C.history, 'History', 'tdDetail'),
-    place('tdDialog', C.dialog, 'What happened?', 'tdRoot'),
+    place('tdDialog', C.dialogFlow, 'What happened?', 'tdRoot'),
 
     // Who you are
     logic('tdUser', 'net.noodl.user.User', 'Who is signed in'),
@@ -2009,24 +2171,8 @@ const PAGE_TODO: Tpl008Component = {
     logic('tdToSignIn', NAVIGATE, 'Go to sign in', { router: ROUTER, target: C.pageSignIn }),
     logic('tdLogOut', 'net.noodl.user.LogOut', 'Sign out'),
 
-    // The three collections
-    logic('tdTasks', QUERY, 'Your tasks', { collectionName: 'Task', ...QUERY_OFF, storageLimit: 1000, visualSort: [{ property: 'position', order: 'ascending' }] }),
-    logic('tdActions', QUERY, 'Your next actions', { collectionName: 'Action', ...QUERY_OFF, storageLimit: 1000, visualSort: [{ property: 'position', order: 'ascending' }] }),
-    logic('tdEvents', QUERY, 'The selected task’s history', {
-      collectionName: 'Event',
-      ...QUERY_OFF,
-      // 🔴 A filter parameter has its OWN Run On Value Change box, ticked by default,
-      // and the two above do not cover it (`dbcollectionnode2.ts:1145`). Left on, the
-      // id arriving at boot fetched history for a signed-out visitor and logged a 403.
-      'runOnChange-qp-taskId': false,
-      storageLimit: 1000,
-      visualFilter: { combinator: 'and', rules: [{ property: 'taskId', operator: 'equal to', input: 'taskId' }] },
-      visualSort: [{ property: 'at', order: 'descending' }]
-    }),
-    logic('tdRecent', QUERY, 'Recent history, all tasks', { collectionName: 'Event', ...QUERY_OFF, storageLimit: 300, visualSort: [{ property: 'at', order: 'descending' }] }),
-    derive('tdRefresh', 'Load everything again', 'Outputs.go();'),
-    logic('tdHasTask', CONDITION, 'Is a task selected?', signalOnly('condition')),
-    logic('tdLoadProblem', SET_VARIABLE, 'Say the list did not load', { name: VAR.problem, setWith: 'string', value: LOAD_PROBLEM_TEXT }),
+    // The records
+    logic('tdData', C.todoData, 'Your list, from the backend'),
 
     // What the screen draws
     logic('tdRows', C.taskRows, 'The rows'),
@@ -2047,22 +2193,6 @@ const PAGE_TODO: Tpl008Component = {
     logic('tdSelectFromLog', SET_VARIABLE, 'Select from the log', { name: VAR.selected, setWith: 'string' }),
     logic('tdDeselect', SET_VARIABLE, 'Back to the list', { name: VAR.selected, setWith: 'emptyString' }),
 
-    // The dialog
-    logic('tdMode', STATES, 'What the dialog is asking', DIALOG_MODES),
-    logic('tdDialogTask', VARIABLE, 'Which task the dialog is about', { name: VAR.dialogTask }),
-    logic('tdDialogTaskFromList', SET_VARIABLE, 'From the list', { name: VAR.dialogTask, setWith: 'string' }),
-    logic('tdDialogTaskFromDetail', SET_VARIABLE, 'From the detail pane', { name: VAR.dialogTask, setWith: 'string' }),
-    logic('tdDialogAction', VARIABLE, 'Which next action', { name: VAR.dialogAction }),
-    logic('tdDialogActionSet', SET_VARIABLE, 'From the next actions', { name: VAR.dialogAction, setWith: 'string' }),
-    logic('tdSubject', VARIABLE, 'What the dialog names', { name: VAR.dialogSubject }),
-    logic('tdSubjectFromList', SET_VARIABLE, 'Name it from the list', { name: VAR.dialogSubject, setWith: 'string' }),
-    logic('tdSubjectFromDetail', SET_VARIABLE, 'Name it from the detail pane', { name: VAR.dialogSubject, setWith: 'string' }),
-    logic('tdSubjectFromAction', SET_VARIABLE, 'Name the next action', { name: VAR.dialogSubject, setWith: 'string' }),
-    logic('tdIfClose', CONDITION, 'Was it closing?', signalOnly('condition')),
-    logic('tdIfReopen', CONDITION, 'Was it reopening?', signalOnly('condition')),
-    logic('tdIfTick', CONDITION, 'Was it ticking?', signalOnly('condition')),
-    logic('tdIfUntick', CONDITION, 'Was it unticking?', signalOnly('condition')),
-
     // The commands
     ...PAGE_COMMANDS.map(([id, type, params]) => logic(id, type, id.replace(/^cmd/, ''), params))
   ],
@@ -2070,30 +2200,22 @@ const PAGE_TODO: Tpl008Component = {
     // Signed in, or sent away
     wire('tdPage', 'didMount', 'tdAuth', 'eval'),
     wire('tdUser', 'authenticated', 'tdAuth', 'condition'),
-    wire('tdAuth', 'ontrue', 'tdRefresh', 'run'),
+    wire('tdAuth', 'ontrue', 'tdData', 'refresh'),
     wire('tdAuth', 'onfalse', 'tdToSignIn', 'navigate'),
     wire('tdHeader', 'signOut', 'tdLogOut', 'login'),
     wire('tdLogOut', 'done', 'tdToSignIn', 'navigate'),
 
     // Loading
-    ...['tdTasks', 'tdActions', 'tdRecent'].map((q) => wire('tdRefresh', 'out-go', q, 'storageFetch')),
-    // A task's history is only asked for when there is a task to ask about.
-    wire('tdRefresh', 'out-go', 'tdHasTask', 'eval'),
-    wire('tdSel', 'found', 'tdHasTask', 'condition'),
-    wire('tdHasTask', 'ontrue', 'tdEvents', 'storageFetch'),
-    wire('tdTasks', 'failure', 'tdLoadProblem', 'do'),
-    wire('tdTasks', 'items', 'tdRows', 'tasks'),
-    wire('tdTasks', 'items', 'tdSel', 'tasks'),
-    wire('tdTasks', 'items', 'tdLogRows', 'tasks'),
-    wire('tdActions', 'items', 'tdRows', 'actions'),
-    wire('tdActions', 'items', 'tdSel', 'actions'),
-    wire('tdEvents', 'items', 'tdSel', 'events'),
-    wire('tdRecent', 'items', 'tdLogRows', 'events'),
+    wire('tdSel', 'found', 'tdData', 'hasTask'),
+    wire('tdData', 'tasks', 'tdRows', 'tasks'),
+    wire('tdData', 'tasks', 'tdSel', 'tasks'),
+    wire('tdData', 'tasks', 'tdLogRows', 'tasks'),
+    wire('tdData', 'actions', 'tdRows', 'actions'),
+    wire('tdData', 'actions', 'tdSel', 'actions'),
+    wire('tdData', 'events', 'tdSel', 'events'),
+    wire('tdData', 'recent', 'tdLogRows', 'events'),
     wire('tdSelected', 'value', 'tdRows', 'selectedId'),
     wire('tdSelected', 'value', 'tdSel', 'selectedId'),
-    // Straight from the variable: Set Variable's Done fires after every reader has
-    // the new value, so the fetch it triggers below filters on the task just picked.
-    wire('tdSelected', 'value', 'tdEvents', 'qp-taskId'),
 
     // Views
     wire('tdTab', 'currentState', 'tdHeader', 'tab'),
@@ -2132,43 +2254,20 @@ const PAGE_TODO: Tpl008Component = {
     wire('tdLog', 'taskId', 'tdSelectFromLog', 'value'),
     wire('tdLog', 'open', 'tdSelectFromLog', 'do'),
     wire('tdSummary', 'back', 'tdDeselect', 'do'),
-    ...['tdSelectFromList', 'tdSelectFromDone', 'tdSelectFromLog'].map((s) => wire(s, 'done', 'tdEvents', 'storageFetch')),
+    ...['tdSelectFromList', 'tdSelectFromDone', 'tdSelectFromLog'].map((s) => wire(s, 'done', 'tdData', 'loadHistory')),
 
-    // Opening the dialog
-    wire('tdList', 'taskId', 'tdDialogTaskFromList', 'value'),
-    wire('tdList', 'close', 'tdDialogTaskFromList', 'do'),
-    wire('tdList', 'taskTitle', 'tdSubjectFromList', 'value'),
-    wire('tdList', 'close', 'tdSubjectFromList', 'do'),
-    wire('tdList', 'close', 'tdMode', 'to-close'),
-    wire('tdSelected', 'value', 'tdDialogTaskFromDetail', 'value'),
-    wire('tdSummary', 'close', 'tdDialogTaskFromDetail', 'do'),
-    wire('tdSummary', 'reopen', 'tdDialogTaskFromDetail', 'do'),
-    wire('tdSel', 'title', 'tdSubjectFromDetail', 'value'),
-    wire('tdSummary', 'close', 'tdSubjectFromDetail', 'do'),
-    wire('tdSummary', 'reopen', 'tdSubjectFromDetail', 'do'),
-    wire('tdSummary', 'close', 'tdMode', 'to-close'),
-    wire('tdSummary', 'reopen', 'tdMode', 'to-reopen'),
-    wire('tdNext', 'actionId', 'tdDialogActionSet', 'value'),
-    wire('tdNext', 'tick', 'tdDialogActionSet', 'do'),
-    wire('tdNext', 'untick', 'tdDialogActionSet', 'do'),
-    wire('tdNext', 'actionTitle', 'tdSubjectFromAction', 'value'),
-    wire('tdNext', 'tick', 'tdSubjectFromAction', 'do'),
-    wire('tdNext', 'untick', 'tdSubjectFromAction', 'do'),
-    wire('tdNext', 'tick', 'tdMode', 'to-tick'),
-    wire('tdNext', 'untick', 'tdMode', 'to-untick'),
-    wire('tdMode', 'open', 'tdDialog', 'open'),
-    wire('tdMode', 'heading', 'tdDialog', 'heading'),
-    wire('tdMode', 'help', 'tdDialog', 'help'),
-    wire('tdMode', 'ok', 'tdDialog', 'okLabel'),
-    wire('tdSubject', 'value', 'tdDialog', 'subject'),
-    wire('tdDialog', 'cancel', 'tdMode', 'to-none'),
-
-    // Answering the dialog: test which question it was, THEN close it
-    wire('tdMode', 'at-close', 'tdIfClose', 'condition'),
-    wire('tdMode', 'at-reopen', 'tdIfReopen', 'condition'),
-    wire('tdMode', 'at-tick', 'tdIfTick', 'condition'),
-    wire('tdMode', 'at-untick', 'tdIfUntick', 'condition'),
-    ...['tdIfClose', 'tdIfReopen', 'tdIfTick', 'tdIfUntick'].flatMap((g) => [wire('tdDialog', 'confirm', g, 'eval'), wire(g, 'ontrue', 'tdMode', 'to-none')]),
+    // Asking what happened — each producer on its own inputs
+    wire('tdList', 'taskId', 'tdDialog', 'listTaskId'),
+    wire('tdList', 'taskTitle', 'tdDialog', 'listTaskTitle'),
+    wire('tdList', 'close', 'tdDialog', 'listClose'),
+    wire('tdSelected', 'value', 'tdDialog', 'detailTaskId'),
+    wire('tdSel', 'title', 'tdDialog', 'detailTaskTitle'),
+    wire('tdSummary', 'close', 'tdDialog', 'detailClose'),
+    wire('tdSummary', 'reopen', 'tdDialog', 'detailReopen'),
+    wire('tdNext', 'actionId', 'tdDialog', 'actionId'),
+    wire('tdNext', 'actionTitle', 'tdDialog', 'actionTitle'),
+    wire('tdNext', 'tick', 'tdDialog', 'tick'),
+    wire('tdNext', 'untick', 'tdDialog', 'untick'),
 
     // The commands
     wire('tdList', 'newTitle', 'cmdAdd', 'title'),
@@ -2188,15 +2287,15 @@ const PAGE_TODO: Tpl008Component = {
     wire('tdSummary', 'makeNext', 'cmdTop', 'do'),
 
     wire('tdRows', 'openRows', 'cmdClose', 'rows'),
-    wire('tdDialogTask', 'value', 'cmdClose', 'taskId'),
+    wire('tdDialog', 'dialogTaskId', 'cmdClose', 'taskId'),
     wire('tdDialog', 'note', 'cmdClose', 'note'),
-    wire('tdIfClose', 'ontrue', 'cmdClose', 'do'),
+    wire('tdDialog', 'confirmClose', 'cmdClose', 'do'),
 
-    wire('tdDialogTask', 'value', 'cmdReopen', 'taskId'),
+    wire('tdDialog', 'dialogTaskId', 'cmdReopen', 'taskId'),
     wire('tdDialog', 'note', 'cmdReopen', 'note'),
     wire('tdRows', 'nextPosition', 'cmdReopen', 'position'),
     wire('tdRows', 'nextRank', 'cmdReopen', 'rank'),
-    wire('tdIfReopen', 'ontrue', 'cmdReopen', 'do'),
+    wire('tdDialog', 'confirmReopen', 'cmdReopen', 'do'),
 
     wire('tdSelected', 'value', 'cmdRename', 'taskId'),
     wire('tdSel', 'title', 'cmdRename', 'oldTitle'),
@@ -2218,16 +2317,16 @@ const PAGE_TODO: Tpl008Component = {
 
     wire('tdSel', 'actionRows', 'cmdTick', 'rows'),
     wire('tdSelected', 'value', 'cmdTick', 'taskId'),
-    wire('tdDialogAction', 'value', 'cmdTick', 'actionId'),
+    wire('tdDialog', 'dialogActionId', 'cmdTick', 'actionId'),
     wire('tdDialog', 'note', 'cmdTick', 'note'),
-    wire('tdIfTick', 'ontrue', 'cmdTick', 'do'),
+    wire('tdDialog', 'confirmTick', 'cmdTick', 'do'),
 
     wire('tdSel', 'actionRows', 'cmdUntick', 'rows'),
     wire('tdSelected', 'value', 'cmdUntick', 'taskId'),
-    wire('tdDialogAction', 'value', 'cmdUntick', 'actionId'),
+    wire('tdDialog', 'dialogActionId', 'cmdUntick', 'actionId'),
     wire('tdDialog', 'note', 'cmdUntick', 'note'),
     wire('tdSel', 'nextActionPosition', 'cmdUntick', 'position'),
-    wire('tdIfUntick', 'ontrue', 'cmdUntick', 'do'),
+    wire('tdDialog', 'confirmUntick', 'cmdUntick', 'do'),
 
     wire('tdSel', 'openActionRows', 'cmdActUp', 'rows'),
     wire('tdSelected', 'value', 'cmdActUp', 'taskId'),
@@ -2250,7 +2349,7 @@ const PAGE_TODO: Tpl008Component = {
     wire('cmdNote', 'done', 'tdHistory', 'clearNote'),
 
     // After any change, load everything again
-    ...PAGE_COMMANDS.map(([id]) => wire(id, 'done', 'tdRefresh', 'run'))
+    ...PAGE_COMMANDS.map(([id]) => wire(id, 'done', 'tdData', 'refresh'))
   ]
 };
 
@@ -2290,6 +2389,7 @@ export const TPL008_COMPONENTS: ReadonlyArray<Tpl008Component> = [
   TASK_ROWS,
   SELECTED_TASK,
   LOG_ROWS,
+  TODO_DATA,
   HEADER,
   PROBLEM_BANNER,
   TASK_ROW,
@@ -2304,6 +2404,7 @@ export const TPL008_COMPONENTS: ReadonlyArray<Tpl008Component> = [
   HISTORY_ENTRY,
   HISTORY,
   NOTE_DIALOG,
+  DIALOG_FLOW,
   PAGE_TODO,
   PAGE_SIGN_IN
 ];

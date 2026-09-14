@@ -11,8 +11,9 @@
 >   *"nothing, I just need to delete this task"*, so there is ALWAYS a trace.
 > - Traces are stored: priority changes, notes added, completed, uncompleted, etc.
 
-**Status: 🟢 BUILT, GATED (19/19) AND DRIVEN (11/11) — s1, 2026-09-14. Nothing committed (Richard did not ask).**
-`npm run template:todo` → `templates/todo-list/`. AC1–AC7 green; **AC8 is Richard's look and his first real use.**
+**Status: 🟢 BUILT, GATED (20/20) AND DRIVEN (12/12) — s2, 2026-09-14. Committed (s1 `2ad64ccee` + `7b6f7c650`).**
+`npm run template:todo` → `templates/todo-list/`. AC1–AC7 and AC9 green; **AC8 is Richard's look and his first real use;
+AC10 (the browser-only demo, R9) is the next build.**
 
 ---
 
@@ -30,6 +31,8 @@ The mockups are Artifacts: v1, then v2 — the one he approved.
 | R6 | Row meta | The row shows the task's **next next-action** — "Yep" |
 | R7 | Name | **"Todo list"**, not "Then." — "Nope, just Todo list is fine" |
 | R8 | Look | v1 was *"trying too hard"*. **v2: one system font, three sizes, one accent, red only for overdue** — "Love it, build it please" |
+| R9 | The nodegx.io demo (s2) | **A browser-only demo mode** — not a public backend on nexus-1, not screenshots. A second data layer, to be kept in step with the backend one |
+| R4a | A note on every tick (s2) | **"Try it first, decide after use"** — unchanged until Richard has used it |
 
 ### 1a. Storage — decided by me, at Richard's request (*"you decide, my head hurts"*)
 
@@ -59,14 +62,17 @@ SQLite file, so the template connects to it and uses nothing else.
 Through the plan door, like TPL-007. Sources: `packages/noodl-mcp/tests/tpl008{Components,Template,Theme}.ts`; policy
 `templates/todo-list.security.json` (copied in last); generator `scripts/generate-todo-template.ts`.
 
-**33 components**: `App`, 14 in `Todo/` (what you see), 4 in `Logic/`, 12 in `Commands/`, 2 pages.
+**35 components** (s2): `App`, 15 in `Todo/` (what you see), 5 in `Logic/`, 12 in `Commands/`, 2 pages.
 
 - **`Commands/*`** — one component per thing a person can do (add, move ×3 placements, close, reopen, rename, set deadline,
   add/tick/untick/move/describe a next action, add a note). Each: a guard `Function` → the record write → `Logic/Write history`.
 - **`Logic/Write history`** — the only writer of `Event`; it decides create-or-extend for R5.
-- **`Logic/Task rows` / `Selected task` / `Log rows`** — the queries turned into what the screen draws.
-- **`Pages/Todo`** holds the queries, the selection and the one dialog; **`Pages/Sign in`** makes or opens an account.
+- **`Logic/Todo data`** (s2) — the four queries, the only reader. `refresh` loads everything; `loadHistory` the selected task's.
+- **`Logic/Task rows` / `Selected task` / `Log rows`** — what the queries load, turned into what the screen draws.
+- **`Todo/Dialog flow`** (s2) — "what happened?" for close, reopen, tick and untick: one input per producer, one confirm per question.
+- **`Pages/Todo`** (51 nodes, was 71) holds the selection and places the rest; **`Pages/Sign in`** makes or opens an account.
 - The deadline is **typed** (`YYYY-MM-DD`, `today`, `tomorrow`), because Text Input has no date type — **D73**.
+- Icon buttons carry their name as a hidden label (`styleCss: 'font-size: 0;'`), because Button has no accessible-name port — **D72**.
 
 ## 4. Acceptance criteria
 
@@ -80,22 +86,27 @@ Through the plan door, like TPL-007. Sources: `packages/noodl-mcp/tests/tpl008{C
 | AC6 | Next actions: add, tick-with-note, describe; each leaves a line | ✅ drive §4–§5: history kinds are exactly the eight expected |
 | AC7 | A second account sees none of the first account's rows | ✅ drive §6: Task/Action/Event 0/0/0 |
 | AC8 | Richard's look, and a week of real use | ⬜ Richard |
+| AC9 | Every icon button has a name a screen reader says; the icon shows and the words do not (D72) | ✅ s2 gate §4 (sabotaged: dropping one label reddens exactly it) + drive: Chrome's AX tree names all 9 list buttons, the tick box flips "Mark done" → "Mark not done", `font-size` 0px, words 0px wide |
+| AC10 | A browser-only demo mode for nodegx.io (R9) | ⬜ next build |
 
-Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **19/19** · `packages/nodegx-backend/tests/tpl008-todo-drive.test.ts`
-**11/11**, `devOpen: false`, **0 console errors** · `npm run typecheck:mcp` clean. Pictures: run the drive with
+Gates: `packages/noodl-mcp/tests/tpl008Template.test.ts` **20/20** · `packages/nodegx-backend/tests/tpl008-todo-drive.test.ts`
+**12/12**, `devOpen: false`, **0 console errors** · `npm run typecheck:mcp` clean. Pictures: run the drive with
 `TPL008_SHOTS=<dir>` (desktop list, the close dialog, desktop detail, phone detail, phone list).
 
 ## 5. Not in this build
 
 - File uploads (Richard: *"maybe not file uploads yet (complicated)"*).
-- The nodegx.io demo (§6, question 1).
+- The nodegx.io demo — ruled R9 (browser-only), not yet built (AC10).
 - Paging: the queries cap at 1,000 tasks, 1,000 next actions and 1,000 history lines per task; the Log shows the latest 300.
 
 ## 6. Questions for Richard
 
-1. **The public demo on nodegx.io**: (a) host a real backend for it (public sign-ups on nexus-1, which serves two live sites),
-   (b) a browser-only demo mode (a second data layer to maintain), or (c) no live demo, just screenshots?
+1. ~~The public demo on nodegx.io~~ — **ruled R9 (s2): browser-only demo mode.**
 2. **R4 in practice**: is a note on every tick of a next action too much? One parameter's worth of change either way.
+   **Deferred by Richard (s2) until he has used it.**
+3. **For AC10, my defaults unless Richard says otherwise:** the demo starts with a few example tasks (an empty list demos
+   nothing), keeps the visitor's changes in their own browser (`localStorage`) with a visible "Reset the demo" button, and says
+   on screen that it is a demo whose data never leaves the browser.
 
 ## 7. Session log
 
@@ -127,16 +138,30 @@ error, fixed with a constant-false Condition fired by each new attempt.
 screen reader), D73 (Text Input has no date type). All three owner `NONE`.
 
 **Open, deliberately not done:**
-- ⚠️ **`Pages/Todo` is 70 nodes** (the door's `oversized-page` info; its guideline is about 40). The candidates are the dialog
-  flow (the `States` node, four gates, three variables and five setters) as `Todo/Dialog flow`, and the four queries with the
-  refresh as `Logic/Todo data`. Each move re-wires the page, so it wants a re-drive; left for Richard to decide it matters.
+- ~~`Pages/Todo` is 70 nodes~~ — split in s2 (71 → 51).
 - The page's selection and dialog use app-wide Variables (global by name). Correct for one page, and it would need revisiting
   if a second page placed them.
 
-**Hand-off — every TPL-008 path, none committed** (commit by pathspec, `git add` the untracked ones first):
-- new: `templates/todo-list/`, `templates/todo-list.security.json`, `scripts/generate-todo-template.ts`,
-  `packages/noodl-mcp/tests/tpl008{Components,Template,Theme}.ts`, `packages/noodl-mcp/tests/tpl008Template.test.ts`,
-  `packages/nodegx-backend/tests/tpl008-todo-drive.test.ts`, this file;
-- edited: `package.json` (one line, `template:todo`), and in this folder `README.md` (the TPL-008 roster line),
-  `NEXT-SESSION-PROMPT.md` (the top section) and `DEFECTS-THE-TEMPLATES-FOUND.md` (D71–D73). 🔴 **The last two also carry a
-  peer's unstaged TPL-007 edits** — a pathspec commit of either takes theirs too.
+**Committed in s2** as `2ad64ccee` (every s1 path) and `7b6f7c650` (D71–D73), each from a private `GIT_INDEX_FILE` holding
+only TPL-008's hunks, so the peer's TPL-007 and P88 edits in `package.json`, `NEXT-SESSION-PROMPT.md` and
+`DEFECTS-THE-TEMPLATES-FOUND.md` stayed unstaged and theirs.
+
+### s2 — 2026-09-14: Richard's rulings, D72 fixed in the template, `Pages/Todo` split, committed
+
+**Rulings** (asked at the start): R9 — the demo is browser-only; R4a — the note on a tick stays until he has used it.
+
+**D72, fixed in the template (AC9).** A Button writes its `label` inside the `<button>`, and the icon's size is set on the
+glyph, so `label: 'Move up'` plus `styleCss: 'font-size: 0;'` gives the button a name and shows only the icon. The tick box's
+name is wired from the row (`checkLabel`: "Mark done" / "Mark not done"). Names were chosen not to collide with the dialog's
+"Close task" / "Tick off", which the drive clicks by exact text. **Measured, not assumed:** the drive reads Chrome's
+accessibility tree (`Accessibility.getFullAXTree`, private-use icon glyphs stripped) — 9 named list buttons, 0 nameless, the
+tick box renamed after a tick — and the first "Move up" computes `font-size: 0px`, its icon draws, its words are 0px wide.
+Gate §4 rule sabotaged (one label removed → exactly that rule red, plus the byte-identical check); restored by `cp`, md5 matched.
+
+**The split.** `Logic/Todo data` (9 nodes: the four queries, the has-a-task gate, the load-problem setter, and its own reader
+of the selection variable, so the history filter still has the new id before `loadHistory` fires). `Todo/Dialog flow`
+(18 nodes: the dialog, the mode States node, three variables, six setters, four gates) — each producer keeps its own input,
+so the list's close and the detail pane's close still never share a value port. The refresh `Function` became the component's
+`refresh` signal input. `Pages/Todo` **71 → 51 nodes**; the door still says `oversized-page` (the 15 command placements are
+the page's job). Re-gated 20/20, re-driven 12/12 with 0 console errors; the drive closes from the list and ticks a next
+action through the new flow. ⚠️ **Reopen and untick are not driven** — same wiring shape, unclicked.

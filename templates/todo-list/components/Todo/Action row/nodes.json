@@ -82,6 +82,11 @@
           "name": "checkBorder",
           "plug": "output",
           "type": "string"
+        },
+        {
+          "name": "checkLabel",
+          "plug": "output",
+          "type": "string"
         }
       ],
       "x": 470,
@@ -213,7 +218,7 @@
       "label": "Tick box",
       "parent": "arTop",
       "parameters": {
-        "label": "",
+        "styleCss": "font-size: 0;",
         "useIcon": true,
         "iconSourceType": "icon",
         "iconIconSource": {
@@ -241,7 +246,8 @@
         "paddingLeft": "var(--space-0)",
         "paddingRight": "var(--space-0)",
         "paddingTop": "var(--space-0)",
-        "paddingBottom": "var(--space-0)"
+        "paddingBottom": "var(--space-0)",
+        "label": "Mark done"
       },
       "x": 160,
       "y": 400
@@ -291,14 +297,11 @@
         "color": "var(--foreground)",
         "borderStyle": "none",
         "borderRadius": "var(--radius-md)",
-        "paddingLeft": "var(--space-2)",
-        "paddingRight": "var(--space-2)",
         "paddingTop": "var(--space-2)",
         "paddingBottom": "var(--space-2)",
-        "fontSize": "var(--text-sm)",
-        "fontWeight": "var(--font-medium)",
         "sizeMode": "contentSize",
-        "label": "",
+        "label": "Move up",
+        "styleCss": "font-size: 0;",
         "useIcon": true,
         "iconSourceType": "icon",
         "iconIconSource": {
@@ -308,7 +311,9 @@
         },
         "iconSize": 16,
         "iconSpacing": 0,
-        "iconColor": "var(--muted-foreground)"
+        "iconColor": "var(--muted-foreground)",
+        "paddingLeft": "var(--space-2)",
+        "paddingRight": "var(--space-2)"
       },
       "x": 220,
       "y": 760
@@ -323,14 +328,11 @@
         "color": "var(--foreground)",
         "borderStyle": "none",
         "borderRadius": "var(--radius-md)",
-        "paddingLeft": "var(--space-2)",
-        "paddingRight": "var(--space-2)",
         "paddingTop": "var(--space-2)",
         "paddingBottom": "var(--space-2)",
-        "fontSize": "var(--text-sm)",
-        "fontWeight": "var(--font-medium)",
         "sizeMode": "contentSize",
-        "label": "",
+        "label": "Move down",
+        "styleCss": "font-size: 0;",
         "useIcon": true,
         "iconSourceType": "icon",
         "iconIconSource": {
@@ -340,7 +342,9 @@
         },
         "iconSize": 16,
         "iconSpacing": 0,
-        "iconColor": "var(--muted-foreground)"
+        "iconColor": "var(--muted-foreground)",
+        "paddingLeft": "var(--space-2)",
+        "paddingRight": "var(--space-2)"
       },
       "x": 220,
       "y": 880

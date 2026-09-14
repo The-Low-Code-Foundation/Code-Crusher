@@ -2883,7 +2883,10 @@ Function has `run` wired and a wired `in-*` input still ticked, which is the rul
   text. **The drive itself could not find them by name**: `tpl008-todo-drive.test.ts` locates them by POSITION inside the row
   (`clickButtonBeside`), which is exactly the position a screen-reader user does not have.
 
-**Workaround in the template:** none. The row's title is the nearest words, and they are not the button's name.
+**Workaround in the template (TPL-008 s2, 09-14):** the label IS the name. `label: 'Move up'` with `styleCss: 'font-size: 0;'`
+puts the words inside the `<button>` at no size, and the icon keeps its own (`iconSize` is set on the glyph). Driven: Chrome's
+accessibility tree names every list button, `font-size` computes to `0px` and the words are 0px wide. It is a trick every
+template has to know, so the product door below is still the fix.
 
 **Where it bites:** every screen-reader user of any list, toolbar or card with icon buttons — delete, edit, move, close, play.
 **Cheapest door:** an `Accessible Label` string input on Button (emitting `aria-label`), and a door warning when a Button has
