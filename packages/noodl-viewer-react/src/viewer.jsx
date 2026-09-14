@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { NoHomeError } from './components/common/NoHomeError';
+import { FocusTracker } from './focus-tracker';
 import GraphWarnings from './graph-warnings';
 import { Highlighter } from './highlighter';
 import { bindInputInjector } from './inputinjector';
@@ -162,7 +163,7 @@ export default class Viewer extends React.Component {
 
     const { noodlRuntime } = props;
     this.runningDeployed = this.props.projectData !== undefined;
-    this.focusedNoodlNodes = [];
+    this.focusTracker = new FocusTracker();
 
     noodlRuntime.context.setNodeFocused = this.setNodeFocused.bind(this);
 
@@ -291,7 +292,7 @@ export default class Viewer extends React.Component {
       this.connectToEditor();
     }
 
-    this.focusedNoodlNodes = [];
+    this.focusTracker.reset();
   }
 
   connectToEditor() {
@@ -345,53 +346,19 @@ export default class Viewer extends React.Component {
     this.graphWarnings = new GraphWarnings(noodlRuntime.graphModel, noodlRuntime.editorConnection);
   }
 
+  // GAM-012 — the tracker lives in `focus-tracker.ts`, where its three faults were fixed and a spec
+  // grades it without stubbing it. Returns `false` when a Focus could not act (R13).
   setNodeFocused(node, focused) {
-    if (focused && this.focusedNoodlNodes.indexOf(node) === -1) {
-      //blur nodes that don't contain this new node
-      this.focusedNoodlNodes
-        .filter((focusedNode) => !focusedNode.contains(node))
-        .forEach((blurredNode) => {
-          blurredNode._blur();
-        });
+    return this.focusTracker.setNodeFocused(node, focused);
+  }
 
-      node._focus();
-      this.focusedNoodlNodes.push(node);
-    } else if (!focused) {
-      const index = this.focusedNoodlNodes.indexOf(node);
-      if (index !== -1) {
-        return;
-      }
-
-      node._blur();
-
-      //also blur nodes that contain this node
-      this.focusedNoodlNodes
-        .filter((focusedNode) => focusedNode.contains(node))
-        .forEach((blurredNode) => {
-          blurredNode._blur();
-        });
-
-      this.focusedNoodlNodes.splice(index, 1);
-    }
+  /** The tracker's list, read by drives that inspect focus through the Viewer instance. */
+  get focusedNoodlNodes() {
+    return this.focusTracker.nodes;
   }
 
   onClickCapture(e) {
-    const focusedNoodlNodes = [];
-
-    //walk up the dom tree and collect all noodl nodes
-    let elem = e.target;
-    while (elem) {
-      if (elem.noodlNode && elem.noodlNode._focus) focusedNoodlNodes.push(elem.noodlNode);
-      elem = elem.parentNode;
-    }
-
-    //blur nodes that weren't part of this click
-    this.focusedNoodlNodes.filter((node) => focusedNoodlNodes.indexOf(node) === -1).forEach((node) => node._blur());
-
-    //focus all new focused nodes
-    focusedNoodlNodes.filter((node) => this.focusedNoodlNodes.indexOf(node) === -1).forEach((node) => node._focus());
-
-    this.focusedNoodlNodes = focusedNoodlNodes;
+    this.focusTracker.onClickCapture(e.target);
   }
 
   render() {

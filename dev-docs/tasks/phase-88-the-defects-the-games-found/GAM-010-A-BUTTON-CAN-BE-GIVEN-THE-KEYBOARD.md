@@ -56,6 +56,11 @@ HEAD `eb12ebe99`, 2026-09-14.
 - 🔒 **Ruling for Richard:** does a control's Focus go through the viewer tracker (so a click elsewhere, or focusing a
   sibling, blurs it the way Text Input is blurred today), or does it call the element's `.focus()` directly and let the
   browser own focus? The tracker is the house's existing path; it is also the path GAM-012 found broken.
+> 🔒 **R11, ruled 2026-09-14 (session 2): follow R13.** R13 ([GAM-012 §5](GAM-012-A-FIELD-FOCUSED-AS-ITS-ROW-APPEARS-HAS-THE-CURSOR.md)):
+> a Focus to a **mounted** control focuses it every time. A Focus to an **unmounted** one **fails, is not held**, and the builder is
+> told in the editor, not the browser. So a Button's Focus obeys the same rule as Text Input's, through the same (corrected)
+> path. ⚠️ **This rejects the "Target" bullet's queue through `withInnerComponent`**: a Focus that arrives before mount is not
+> kept for later. Build after GAM-012's fix lands, so the family inherits a working tracker.
 - **Radio Button Group**: focus the checked radio, or the first. Decide and document; do not leave it undefined.
 - **Do not** add `tabIndex` or change tab order in this task.
 

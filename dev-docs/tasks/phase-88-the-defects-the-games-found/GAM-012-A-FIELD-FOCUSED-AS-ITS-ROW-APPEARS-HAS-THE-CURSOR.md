@@ -1,6 +1,6 @@
 # GAM-012 — A field focused as its row appears has the cursor, every time
 
-**Status: ⬜ not started.** **Source:** [P78 D68](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by P87 [RKT-003](../phase-87-the-first-play-test/RKT-003-ONE-SCREEN-PER-QUESTION.md) AC5 run 2, 2026-09-13 · **Side:** product (viewer focus tracker)
+**Status: 🟡 2026-09-14 (session 2): AC1–AC5 met for faults 1 and 2 under R13 (§5, §8); fault 3 kept on purpose (it holds multi-select's Dropdown open) and owed; AC6 owed.** **Source:** [P78 D68](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by P87 [RKT-003](../phase-87-the-first-play-test/RKT-003-ONE-SCREEN-PER-QUESTION.md) AC5 run 2, 2026-09-13 · **Side:** product (viewer focus tracker)
 
 A child playing with the keyboard answers the first question and presses Enter twice. The second question arrives with no
 cursor in the box. The author did send Focus. It worked once and never again.
@@ -67,6 +67,29 @@ node on `willUnmount`), and its Blur branch is corrected. `_focus` goes through 
 changes the click-blurs-other-nodes behaviour Group's `Focus Lost` relies on.
 **Do not** "fix" this with a next-frame delay inside the runtime. That is the workaround, moved.
 
+> 🔒 **R13, ruled 2026-09-14 (session 2), after AC1 named three faults:** *"That sounds weird, surely if I've made a race
+> condition mistake, the group with my input's group isn't mounted yet but I sent the focus signal to the input, then the user
+> goes on and does other stuff and the group is eventually mounted, I don't want the focus to be taken at all costs. It feels
+> like if the input is mounted, you focus, it focusses, otherwise it's not mounted and the focus signal fails and that's the
+> end of the story and the builder needs to trace why or there's a failure message in the editor (but not the browser)"* — Richard
+>
+> **So the build is:**
+> - **Mounted → focus, every time.** A Focus to a mounted field puts the cursor in it whether or not the tracker has it listed
+>   (fault 2 goes). The tracker's list must describe reality: a node is recorded only when focus really moved, and is dropped
+>   on unmount.
+> - **Not mounted → the Focus fails, and that is the end.** It is **not held**. §5's "`_focus` goes through
+>   `withInnerComponent`" is **rejected**, because it would take focus later, after the person has moved on. It is not recorded
+>   in the list (fault 1 goes). It does not report `Done`.
+> - **The failure is told to the builder in the editor, not the browser.** Mechanism to be read before code (outcome contract
+>   `failure` with no console raise, and/or an editor-only warning on the node).
+> - **The Blur inversion is a bug, not a design question** (fault 3). It is fixed, with its own AC4 row.
+> - The tracker **stays** for Groups' click-driven Focused / Focus Lost. That was not ruled away.
+> - R11 (GAM-010) follows this ruling: a Button's Focus obeys the same rule.
+>
+> **Consequence for the ACs:** arm D (build 4's shape) and arm K must go GREEN. Arm C (a Focus only before mount) must stay
+> unfocused **and** report its failure in the editor, beside a known-firing check that the message is absent in the browser
+> console. RKT-003 build 4's shape passes because its `didMount` Focus arrives mounted.
+
 ## 6. Acceptance criteria
 
 | AC | Clause |
@@ -89,4 +112,121 @@ changes the click-blurs-other-nodes behaviour Group's `Focus Lost` relies on.
 
 ## 8. Record
 
-Not started.
+### Session 2 — 2026-09-14, over `15f7bf720`
+
+**AC1 — RED at HEAD, and the cause named.** 🔴 **It is not one candidate. It is three faults in the tracker
+(`viewer.jsx:348-376`), acting together.**
+1. **A Focus that did nothing is recorded as done** (candidates 2 + 1's precondition). `setNodeFocused(node, true)` calls
+   `node._focus()`. Text Input's `_focus` returns silently when `innerReactComponentRef` is null (`text-input.ts:327-330`).
+   The node is **pushed onto `focusedNoodlNodes` anyway**.
+2. **A recorded node is never focused again** (candidate 1). A later Focus to it, even one sent once the ref exists, is skipped
+   by the `indexOf === -1` test. Nothing removes a node on unmount, and nothing checks `document.activeElement`.
+3. **The Blur branch is inverted** (§2's reading, now driven). `Group.componentWillUnmount` sends
+   `setNodeFocused(group, false)` (`Group.tsx:73`). For a group that is **not** in the list, the branch runs `_blur()` and
+   then `splice(-1, 1)`, which removes the list's **last** entry, an unrelated node. On a simple page that last entry is
+   the stale field, so this accidentally cures fault 2. That is why the first minimal page did not reproduce. On a page where
+   another field was focused last, it removes the wrong one and the field's next Focus is skipped.
+
+**Instrument.** A minimal project (a copy of MCP's `demo-app` fixture, with a hand-written Home) was served by
+`render-from-disk.js` against `external/viewer/noodl.viewer.js` (built 2026-09-12 10:45, after the last `viewer.jsx` (08-25)
+and `text-input.ts` (09-04) commits). It was driven headless by keyboard only, with CDP Tab and Enter (`text: "\r"`), and
+`Emulation.setFocusEmulationEnabled`. The page wraps `context.setNodeFocused` and each node's `_focus`, and reads the
+**real** list off the Viewer instance through React's fiber, before and after every call. It also logs every
+`focusin`/`focusout` and every pointer, mouse and click event. Scratch: session `c7b27bb6…/scratchpad/gam012/`
+(`project/`, `drive-gam012-ac1.js`, `tracker-hook.js`, `ac1-drive*.log`).
+
+| arm, keyboard only | wiring | remount cycles with the field focused | what the list shows |
+|---|---|---|---|
+| **C** | `timer.timerFinished → sw.on` **and** `→ field.focus` (a Focus in the update that remounts the row, before React mounts it) | **0 / 3** | `_focus ref=false`, then `after` holds `fieldC` |
+| **D**, build 4's shape | C's wire **plus** `row.didMount → field.focus` | **0 / 3** | the first Focus is pushed with no ref; the `didMount` Focus has `before` already holding `fieldD` and is skipped, `active=body` |
+| **K** | `row.didMount → field.focus` only | 2 / 3 (cycle 2 RED) | cycle 2: `before=[fieldB, fieldD]`; `rowB`'s unmount Blur spliced `fieldD`, so `fieldB`'s Focus was skipped |
+| **B** | Button `onClick → sw.flip`; `row.didMount → field.focus` | 4 / 4 | Enter on a native button fires a trusted `click` (`detail=0`), and `onClickCapture` rebuilds the list |
+| **control** | K with a real mouse click between cycles | 3 / 3 | the click rebuilds the list: the §5 discriminator for candidate 1 |
+
+Zero pointer or click events in arms C, D and K (asserted per cycle). An earlier version of the page, with only K and B, read
+5/5 in both; §7's trap, **"a drive with any pointer event hides candidate 1"**, has a keyboard twin: **Enter on a button is a
+click**, and so is a Group unmounting beside a lucky list order.
+
+**The person's shape, read in the original build.** RKT-003 build 4 was still on disk (`674e2ffe…/scratchpad/rocket-rkt003`: two
+wires into `qbInput.focus`, `qbNew.valueChanged` and `qbTyped.didMount`, and no next-frame script). `drive-rkt003-stage.js --keys
+--only 1366x768 --lang en`, with the list hook preloaded (`node -r tracker-hook.js`, nothing in the drive or the build edited):
+`focusIn` **failed on rounds 2 and 5** (typed, after a verdict), exit 1. Round 2's events:
+`13777 click → Next` (Enter) rebuilds the list → `13778 _focus qbInput ref=false` + `setNodeFocused(qbInput, true)` pushes it →
+`13792` `fbCard`/`fbRow` unmount (tracked, so the inverted branch returns) → `13808 setNodeFocused(qbInput, true)`, already
+listed, **skipped**, `active=body`. Build 5 (`rocket-rkt003-v5`, one wire + the rAF script) under the same hook: exit 0, and
+its `13742 _focus qbInput ref=false` is the same fault 1. The field is focused only by the script, outside the tracker.
+
+**So §5's "likely fix shapes" all hold, and none alone is enough:** record a node only once `_focus` has really run (hold a
+Focus that arrives before mount through `withInnerComponent`), drop a node from the list on unmount, and correct the Blur branch.
+Fault 3 gets its own AC4 row and sabotage arm, as §6 says.
+
+**Instrument defects found, not fixed (they block only the deploy route):** `scripts/devtools/deploy-from-disk.cjs`, the checked-in build
+and a fresh one built to scratch, fails on the shipped `templates/landing-pages` (`TypeError: node.component.getConnectionsTo is
+not a function` in `nodedefinition.ts:592` `collectPorts`, reached from `registerRuntimeDiscoveredPorts`). On the `demo-app`
+fixture, `Exporter.exportToJSON` returns nothing, and the rejection `{result:'failure', message:'Failed to export project.'}` is
+printed as `[object Object]` because the catch does `String(err)`. AC2 and AC3 can use `render-from-disk.js` after a viewer rebuild.
+
+🔒 **R13 is now askable** (§5): candidate 1 is confirmed. **Ruled the same session** (§5).
+
+**Built under R13:**
+- `noodl-viewer-react/src/focus-tracker.ts` (new): the tracker as a class, with `viewer.jsx` delegating to it and keeping a
+  `focusedNoodlNodes` getter. Fault 1: `_canFocus()` false → return `false`, nothing blurred or recorded. Fault 2: a listed node
+  whose `_hasFocus()` is false is focused again; a Group (no hook) keeps today's no-repeat.
+- 🔴 **Fault 3 is NOT fixed, and that was measured, not preferred.** The first build corrected Blur (blur the tracked node and its
+  containers, splice its own index). AC5's Dropdown drive (below) showed that correction **breaks multi-select's Dropdown in a
+  browser**, so the branch is HEAD's again, with the reason in the code. **Owed as a follow-up:** split an unmount (drop the node,
+  fire nothing) from an explicit Blur (act on the node it names), then fix the branch.
+- `text-input.ts`: `_canFocus` / `_hasFocus`. Focus reports `Unchanged` and sets the editor-only diagnostic `focus/not-mounted`
+  when the tracker returns `false`, and clears it on success. It is not `Failure`, because a failure raises on the error bus,
+  whose console subscriber is live in a deployed page (`nodecontext.ts:298-303`). `Unchanged`'s description names Focus.
+- `react-component-node.ts`: `setNodeFocused` returns `boolean | void`.
+- Not changed: the deprecated Text Input (same tracker; no `_canFocus`, so it keeps fault 1's recording).
+
+**AC4 — the spec does not stub the tracker** (`tests/gam-012-focus-tracker.test.ts`, final): 13 passed + 1 todo (fault 3 proper),
+exit 0. **Reverted arms**, each on a snapshot of `focus-tracker.ts`, restored `cmp`-identical:
+| reverted | red |
+|---|---|
+| fault 1 (the `_canFocus` guard) | not-mounted refusal, build 4's shape, Text Input `Unchanged` + diagnostic (3) |
+| fault 2 (re-focus a listed node) | after a remount, arm K's order (2) |
+| the Dropdown pin (the Blur correction that broke it, re-applied) | "a clicked child Group that unmounts does not blur the Group around it" (1) |
+
+**AC2 — in a browser, GREEN.** Viewer rebuilt (`webpack.viewer.prod.js`, exit 0, three size warnings only; bundle 10:45 → 15:04, the
+fix present), the same page and drive as AC1, 5 cycles, keyboard only, console errors `[]`:
+| arm | at HEAD (AC1 run) | with the fix |
+|---|---|---|
+| D (build 4's shape) | 0 / 3 | **4 / 4** remounts |
+| K | cycle 2 RED | **4 / 4** |
+| B, control | green | green |
+| C (Focus only before mount) | unfocused | unfocused, **by ruling**, with the diagnostic set (spec-graded; the page has no editor) |
+
+AC3's browser arm is the AC1 run: the same page on the pre-fix bundle.
+
+**Regression:** viewer specs touching Text Input, `viewer.jsx`, Group or focus: 13 files, 13 PASS lines, 185 tests, exit 0.
+
+**AC5 — census** (connection endpoints by node type, both file shapes):
+| population | connections | Group `focusLost` out | Group `focused` out | → Group `focus` | → Text Input `focus` / `blur` |
+|---|---|---|---|---|---|
+| `templates/` | 2,539 | 0 | 0 | 0 | 0 / 0 |
+| `library/prefabs` | 2,063 | **1** | 0 | 0 | 0 / 5 |
+| `library/modules` | 45 | 0 | 0 | 0 | 0 / 0 |
+| `project-examples` | 264 | 0 | 0 | 0 | 1 / 0 |
+| NodeGX test projects | 14,577 | **3** | 1 | 1 | 4 / 2 |
+
+**AC5 — multi-select's Dropdown, driven both ways** (a copy of NodeGX test project `test112`, whose Home places the prefab;
+`render-from-disk.js`; real mouse clicks; `scratchpad/gam012/drive-dropdown.js`). `Group(root).focusLost → States.to-No` closes its
+sheet, and the opening click lands on the "Border neutral" overlay, which the state change unmounts. 🔴 **My prediction from source
+was backwards.** I predicted HEAD fired `Focus Lost` as the sheet opened. It does not: the overlay is **tracked** (the click listed it),
+and HEAD's inverted branch returns early for a tracked node.
+| step | HEAD tracker (a scratch file with HEAD's logic, bundle built, repo file restored `cmp`-identical) | first fix (Blur corrected) | final fix (Blur = HEAD) |
+|---|---|---|---|
+| click the wrapper, +300ms | sheet open | **sheet closed**: `root.focusLost` at 20ms, from the overlay's unmount Blur | sheet open |
+| +1500ms | open | closed | open |
+| click away | closed | closed | closed |
+| wrapper again / wrapper to close | open / closed | closed / closed | open / closed |
+
+The final fix matches HEAD at every step. The two test-project copies of this prefab are covered by the same reading. "Text Input
+With Dropdown" (def036-dash-drive, a legacy file) was **not driven**. It has no Text Input Focus wire into its field, so faults 1 and 2
+cannot reach it, and Blur is HEAD's.
+
+**AC2 re-driven on the final build** (viewer rebuilt again, exit 0): D 5/5, K cycles 2-5, B 5/5, control 2-5, C unfocused by ruling,
+console errors `[]`.

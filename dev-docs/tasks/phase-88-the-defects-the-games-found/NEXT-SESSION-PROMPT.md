@@ -18,7 +18,11 @@ leaves open) and §7 (rules). Then read the whole task you pick. Every task file
    GAM-003 §5, GAM-019 §8 and README §4. **GAM-001 and GAM-003 are now unblocked.** ✅ GAM-019's hint is **built** (session 2,
    uncommitted, reverted arms at the rule, `validate_component` and the plan door; GAM-019 §8 "Session 2").
 2. **Build what needs no ruling**, by who it bites:
-   - **GAM-012 AC1, isolation.** Is the focus tracker the cause? GAM-010 waits on it.
+   - ✅ **GAM-012 AC1 met (session 2).** The tracker is the cause, as three faults (GAM-012 §8). RED in a minimal project and in
+     RKT-003's original build 4. 🔒 **R13 ruled (GAM-012 §5): mounted → focus every time; not mounted → fail, not held,
+     told in the editor only.** R11 (GAM-010) follows it.
+     ⚠️ `deploy-from-disk.cjs` is broken on `landing-pages` and on the fixture (§8), so serve with `render-from-disk.js`, and
+     rebuild the viewer first for AC2.
    - **GAM-004 AC1, isolation.** It rebuilds the two failing attempts, which are not in git.
    - **GAM-018 AC1.** Prediction: confetti with `custom-html-module` registers, and confetti with `nodegx-clipboard` fails.
      GAM-014 may wait on it. ⚠️ The GAM-019 corpus run logged `kit "nodegx-richtext" failed to load: Cannot convert object to
@@ -76,7 +80,17 @@ leaves open) and §7 (rules). Then read the whole task you pick. Every task file
   `validation/{CatalogIndex,model,normalize}.ts`, `validation/rules/nonexistentPort.ts`,
   `noodl-editor/tests-unit/gam-019/builtinPortDoor.test.ts`, `noodl-mcp/tests/gam019BuiltinPortDoor.test.ts`. Commit with
   pathspecs, and `git add` nothing untracked. None of the files is new.
-- Session 2's logs (`hint-*.log`) are in session `c7b27bb6…`'s scratchpad. Session 1's AC7 runner is still at
+- **Session 2, GAM-012's fix for faults 1 and 2** (AC2, AC4 and AC5's Dropdown drive green, reverted arms red; GAM-012 §8):
+  `noodl-viewer-react/src/{focus-tracker.ts (new), viewer.jsx, react-component-node.ts, nodes/controls/text-input.ts}`,
+  `noodl-viewer-react/tests/gam-012-focus-tracker.test.ts` (new), plus GAM-012/GAM-010 docs. The shared
+  `external/viewer/noodl.viewer.js` holds the final fix (rebuilt after the Dropdown drive).
+- 🔴 **Owed by GAM-012:** fault 3 (the inverted Blur) is kept on purpose. Fixing it naively broke multi-select's Dropdown in a
+  browser. It needs an unmount split from an explicit Blur first. Also owed: AC6 (Rocket School's workaround, which the peer
+  session's tpl007 files hold right now), the deprecated Text Input (no `_canFocus`), and rebuilding the `external/deploy`
+  bundle so deployed apps get the fix.
+- 🔴 **`deploy-from-disk.cjs` is broken** on `templates/landing-pages` and on MCP's `demo-app` fixture (GAM-012 §8 has both
+  errors). Unowned. Use `render-from-disk.js` for drives until someone takes it.
+- Session 2's logs (`hint-*.log`, `gam012/`) are in session `c7b27bb6…`'s scratchpad. Session 1's AC7 runner is still at
   `2ca95830…/scratchpad/gam019-ac7-rocket.ts` (`npx ts-node -T -P ./scripts/tsconfig.json <file>`, from the repo root).
 - P87's template, kit, gates and drives are still uncommitted, and none of them was touched.
 - Scratch evidence for GAM-019 (census, compare script, AC7 runner, logs) is in session `2ca95830…`'s scratchpad. The

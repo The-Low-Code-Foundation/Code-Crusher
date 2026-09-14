@@ -214,8 +214,19 @@ const TextInputNode = {
       description: 'Puts the keyboard cursor in this field',
       valueChangedToTrue() {
         const outcome = this.beginOutcome();
-        this.context.setNodeFocused(this, true);
-        this.reportOutcome(outcome, 'done');
+        // 🔒 GAM-012 R13 — a field that is not on the page cannot take the cursor, and the Focus is
+        // not kept for later: taking focus once the field appears would steal it from wherever the
+        // person has gone since. So it ends here, and the author is told in the editor. A
+        // diagnostic is editor-only by contract, so a deployed page prints nothing.
+        const took = this.context.setNodeFocused(this, true) !== false;
+        this.setDiagnostic(
+          'focus/not-mounted',
+          took
+            ? null
+            : 'Focus arrived while this field was not on the page, so nothing was focused. A Focus is not kept for ' +
+                'later: send it once the field has mounted, for example from its row’s Did Mount'
+        );
+        this.reportOutcome(outcome, took ? 'done' : 'unchanged');
       }
     },
     blur: {
@@ -311,16 +322,19 @@ const TextInputNode = {
      * changes, from typing as much as from a `Set`, and it does not fire at all when a `Set` was
      * absorbed.
      *
-     * No `Failure`: none of the four can fail. `Set` and `Clear` can legitimately do nothing,
-     * which is `Unchanged`; `Focus` and `Blur` always report `Done`, because
-     * `setNodeFocused` has no answer to give and "the field was already focused" is not a fact
-     * this node holds.
+     * No `Failure`: `Set` and `Clear` can legitimately do nothing, which is `Unchanged`. So can
+     * `Focus` since GAM-012 (R13): sent while the field is not mounted, it moves nothing and is not
+     * held, and `setNodeFocused` now says so. It is `Unchanged` and not `Failure` because a
+     * `Failure` raises on the error bus, which prints in a deployed page, and Richard ruled the
+     * message editor-only. The reason travels as the `focus/not-mounted` diagnostic. `Blur`
+     * still always reports `Done`.
      */
     ...outcomeOutputs({
       done: 'Fires when Set, Clear, Focus or Blur did something',
       unchanged:
         'Fires when a Set or Clear left the field as it was — most often a Set while the field ' +
-        'has focus, which is deliberately absorbed so it cannot overwrite what is being typed'
+        'has focus, which is deliberately absorbed so it cannot overwrite what is being typed — or when a ' +
+        'Focus arrived while the field was not on the page'
     })
   },
   methods: {
@@ -331,6 +345,14 @@ const TextInputNode = {
     _blur() {
       if (!this.innerReactComponentRef) return;
       this.innerReactComponentRef.blur();
+    },
+    /** GAM-012 — the tracker asks before it records a Focus; see `focus-tracker.ts`. */
+    _canFocus() {
+      return !!this.innerReactComponentRef;
+    },
+    /** GAM-012 — being listed by the tracker is not holding focus: a remounted field is a new element. */
+    _hasFocus() {
+      return !!this.innerReactComponentRef && this.innerReactComponentRef.hasFocus();
     },
     /** @returns whether anything actually changed — ERG-001 §4 reports `Unchanged` when not. */
     clear() {

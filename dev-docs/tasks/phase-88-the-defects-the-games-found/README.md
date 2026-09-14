@@ -92,6 +92,8 @@ Each task file states its ruling in full, with the trade-offs.
 | # | ruling | task |
 |---|---|---|
 | R3 | 🔒 *"Can't we do B but with a checkbox or something that lets the user turn off auto evaluation, a bit like we have with the function node?"* An Expression evaluates over unset inputs, with a per-node opt-out. **Follow-ups ruled in session 2:** saved Expressions evaluate at load too (on for all, no migration); the opt-out is a **new node-level checkbox**, not one of NDA-017's per-input controls; a `NaN` magnitude reaching a size port is **empty, silently**, and `"tall"` is still refused | GAM-001, GAM-003 |
+| R13 | (session 2, after GAM-012 AC1) A Focus to a **mounted** control focuses it every time; to an **unmounted** one it **fails and is not held**, and the builder is told in the editor, not the browser. The tracker stays for Groups; the Blur inversion is fixed | GAM-012 §5 |
+| R11 | Follows R13: a Button's Focus obeys the same rule | GAM-010 §5 |
 | R3b | The GAM-019 refusal's "did you mean" matches the wire's kind: no signal is suggested for a value wire, and no value input for a signal wire. The threshold is unchanged | GAM-019 §8 (✅ built in session 2, uncommitted) |
 | R4 | Yes: stop minting ports for JS globals and keywords, and migrate any saved wire | GAM-002 |
 | R6 | A warning, with a "shared on purpose" escape | GAM-005 |
@@ -119,7 +121,7 @@ Each task file states its ruling in full, with the trade-offs.
 |---|---|---|
 | R2 | AC1 confirms the extractor, not the kit: then how honest must the extractor's environment be? | [GAM-018](GAM-018-A-KIT-REGISTERS-THE-SAME-WHATEVER-IS-INSTALLED-BESIDE-IT.md) |
 | R5 | isolation names the mechanism: does the runtime owe a gate the other branch's latest value? | [GAM-004](GAM-004-A-GATE-READS-THE-VALUE-FROM-THE-SAME-TURN-AS-ITS-SIGNAL.md) |
-| R13 | the focus tracker is confirmed as the cause: should it exist at all? | [GAM-012](GAM-012-A-FIELD-FOCUSED-AS-ITS-ROW-APPEARS-HAS-THE-CURSOR.md) |
+| R13 | ✅ **measured, now askable (session 2):** the tracker is the cause, as three faults (a no-op Focus is recorded, a recorded node is never refocused, Blur is inverted). Should it exist at all? | [GAM-012](GAM-012-A-FIELD-FOCUSED-AS-ITS-ROW-APPEARS-HAS-THE-CURSOR.md) §8 |
 | R14 | AC1 finds the door wrote no visual root: refuse, warn, or treat an unknown root type as visual? | [GAM-014](GAM-014-A-KIT-NODE-DRAWS-WHEN-IT-IS-THE-WHOLE-COMPONENT.md) |
 | R19 | a true positive of the rule turns out to have an item root the check cannot resolve | [GAM-022](GAM-022-A-WRAPPED-ROW-OF-PILLS-IS-NOT-TOLD-TO-BECOME-COLUMNS.md) |
 | R21 | the MCP kit extractor cannot be reused for module node types | [GAM-024](GAM-024-THE-DEPLOY-CENSUS-REPORTS-ONLY-REAL-DROPS.md) |

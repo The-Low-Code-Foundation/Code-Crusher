@@ -96,7 +96,8 @@ export interface ReactNodeContext extends NodeContextLike {
    * Records which node currently holds keyboard focus. Installed by `viewer.jsx`,
    * so it exists only in the browser viewer.
    */
-  setNodeFocused(node: ReactNodeInstance, focused: boolean): void;
+  /** `false` when a Focus could not act because the node is not mounted (GAM-012, R13); see `focus-tracker.ts`. */
+  setNodeFocused(node: ReactNodeInstance, focused: boolean): boolean | void;
   /** True when the runtime is rendering inside the editor's canvas preview. */
   runningInCanvas?: boolean;
 }
