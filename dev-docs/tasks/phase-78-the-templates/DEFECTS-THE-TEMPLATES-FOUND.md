@@ -90,17 +90,17 @@ failure this file's first house rule exists to prevent.
 | **D54** | 🔴 open (09-12, TPL-007 drive) — an `Expression` treats EVERY identifier in its text as an input port, so `String(n)` and `Math.min` throw "String is not a function" | **GAM-002** (P88) | product (Expression node / docs) | anyone who writes ordinary JavaScript in an Expression; the catalog names `min`/`round`/`random` and says nothing about the shadowing |
 | **D55** | 🔴 open (09-12, TPL-007 drive) — an `Expression` whose inputs have never received a value NEVER evaluates, so a guard like `m !== false` on an optional port leaves the part hidden | **GAM-001** (P88) | product (Expression node / doctrine) | every component with an optional `mounted` input — the placement contract P1 recommends one |
 | **D56** | 🔴 open (09-12, TPL-007 build) — `apply_plan` raises `page-cannot-scroll` on every page of the very plan whose `scroll: "page"` it is about to apply; the artefact has `bodyScroll: true` | **GAM-021** (P88) | product (validator ordering) | every plan author, who reads three warnings about a setting they set |
-| **D57** | 🔴 open (09-12, TPL-007 drive) — a `Variable` is GLOBAL by name, so two instances of one component that holds a Variable share it: the race page's two `Feedback banner`s opened together, and four `Choice row`s shared one pick | **GAM-005** (P88) | doctrine (interface playbook) | every component author who reaches for a Variable to hold local state — the doctrine never says a Variable is not local |
+| **D57** | 🟢 built 09-14 (GAM-005: doctrine + `variable-in-repeated-component` warning, uncommitted; AC5/AC7 owed) — was 🔴 open (09-12, TPL-007 drive) — a `Variable` is GLOBAL by name, so two instances of one component that holds a Variable share it: the race page's two `Feedback banner`s opened together, and four `Choice row`s shared one pick | **GAM-005** (P88) | doctrine (interface playbook) | every component author who reaches for a Variable to hold local state — the doctrine never says a Variable is not local |
 | **D58** | 🔴 open (09-13, P87 RKT-001) — nothing warns that a sentence in a content-sized Text will never wrap; the template's `text()` helper overrode Text's wrapping default and no door said so | **GAM-020** (P88) | product (validator / render_report) | every template and agent that writes a Text helper |
 | **D59** | 🔴 open (09-13, P87 RKT-003) — a `Button` has no Focus input, so a verdict cannot hand the keyboard to its Next button; the template focuses it from a Function by its label | **GAM-010** (P88) | product (node library) | every game or form that wants Enter, Enter — the keyboard-only child, and anyone who cannot use a pointer |
 | **D60** | 🔴 open (09-13, P87 RKT-005) — a Text Input has no `inputmode`/`enterkeyhint` port and cannot be typed into at the caret while focused | **GAM-011** (P88) | product (node library) | every numeric, phone, email or PIN field on a tablet, and any on-screen pad |
-| **D61** | 🔴 open (09-13, P87 RKT-006) — a Text Input that remounts shows its Start Value, not what the person typed | **GAM-009** (P88) | product (node library) | every form split across steps, tabs or a collapsible section |
+| **D61** | 🟢 built 09-14 (GAM-009 s9, uncommitted: typing writes the start value, and a same-value remount announces nothing; driven on a minimal page; Rocket School's clause and the `rsNameKeep` removal owed) — was 🔴 open (09-13, P87 RKT-006) — a Text Input that remounts shows its Start Value, not what the person typed | **GAM-009** (P88) | product (node library) | every form split across steps, tabs or a collapsible section |
 | **D62** | 🔴 open (09-13, P87 RKT-007) — an Expression wired into a size port raises "not a size" before it has ever evaluated | **GAM-003** (P88) | product (runtime) | every progress bar, meter or chart bar computed with an Expression |
 | **D63** | 🔴 open (09-13, P87 RKT-010) — player two's answers are graded into player one's learner model | **P87** — no task yet, beside RKT-008 | template | every sibling who plays a two-player race |
-| **D64** | 🔴 open (09-13, P87 RKT-011) — a Static Data row field named like a Model member (`on`, `get`, `data`…) reads as that member | **GAM-007** (P88) | product (runtime model) | any data row with a field called `on`, `get`, `set`, `fill` or `data` |
+| **D64** | 🟡 reserved loudly (09-14, P88 GAM-007 s8, uncommitted): the door warns `reserved-row-field`, and `Collection.set` raises `collection/reserved-field-name`. The field still reads as the member until GAM-025 (R8's "data wins later") — a Static Data row field named like a Model member (`on`, `get`, `data`…) reads as that member | **GAM-007** (P88), then **GAM-025** | product (runtime model) | any data row with a field called `on`, `get`, `set`, `fill` or `data` |
 | **D65** | 🔴 open (09-13, P87 RKT-011) — a kit React node reading a wired px port with `Number()` draws its default; fixed inside game-kit only | **GAM-015** (P88) | product (kit bridge / node-kit docs) | every kit author whose size works typed and fails wired |
-| **D66** | ✅ fixed (09-14, P88 GAM-019, uncommitted) — the door refuses a wire to an input a built-in node does not have, by name, with the right port offered; graded by reverted arms at the rule, `validate_component`/`validate_project` and Rocket School's generator | **GAM-019** (P88) | product (validator) | every author or agent who names a control's input by its label |
-| **D67** | 🔴 open (registered 09-14, from P87 RKT-006) — Animate To Value delivers one target when two arrive in one burst, so Rocket School's countdown never refilled | **GAM-008** (P88) | product (node library) | every countdown or progress bar that resets and re-animates |
+| **D66** | ✅ fixed (09-14, P88 GAM-019, `4bb438165`) — the door refuses a wire to an input a built-in node does not have, by name, with the right port offered; graded by reverted arms at the rule, `validate_component`/`validate_project` and Rocket School's generator | **GAM-019** (P88) | product (validator) | every author or agent who names a control's input by its label |
+| **D67** | 🟢 built in GAM-008 s10, uncommitted (registered 09-14, from P87 RKT-006) — Animate To Value turns two targets written in one pass into one glide from where it was (measured: the setter gets both; "one target" and "duration 0 is not a jump" are both wrong), so Rocket School's countdown never refilled. `Jump To` + `Jump Value` added; Rocket School's `cdKick` is still in place | **GAM-008** (P88) | product (node library) | every countdown or progress bar that resets and re-animates |
 | **D68** | 🔴 open (registered 09-14, from P87 RKT-003) — a Text Input's Focus signal sent on mount leaves it unfocused after a remount | **GAM-012** (P88) | product (node library) | every keyboard-only person in a form that mounts and focuses a field |
 | **D69** | 🔴 open (registered 09-14, from P87 RKT-002) — a style preset names a font that nothing ships, so a deployed app renders the fallback | **GAM-016** (P88) | product (presets / deploy) | every app styled with a preset |
 | **D70** | 🔴 open (registered 09-14, from P87 RKT-002/003) — a kit React node cannot take a signal, and gets no size ports | **GAM-017** (P88) | product (kit bridge) | every kit author whose node should react to an event or be sized in the graph |
@@ -2572,6 +2572,8 @@ pills).
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** ⚠️ **half holds.** The node reference already says "app-wide" (`variablenode2.ts:172`). The doctrine an agent receives is silent (`AiAssistant/authoring/prompts/interfaces.ts`, served as `interfaceDoctrine`), and `decomposition.ts:165-166` recommends Variables for shared state. Four template components hold a Variable and are placed more than once. The claim that a repeater row without an `id` keeps old rows contradicts `collection.ts:504-546`, and is not re-measured. Owner **GAM-005**.
 
+**Built 2026-09-14 (P88 GAM-005, over HEAD `3747d1d20`, uncommitted):** both doctrines now say a Variable is one value for the whole app (graded on a live `get_project_info`), and every validate and write door warns `variable-in-repeated-component` on a `Variable2`/`Set Variable` in a component drawn more than once, unless a node of that name carries a "shared on purpose" comment. AC4 ran the product check: 19 findings over 7 templates + 2 embedded, 0 over 46 prefabs and 104 catalog examples. TPL-003, TPL-005 and TPL-006 mark their intended hits. Rocket School's `New player form` is intended by reading (reset and fill rewrite the draft), and TPL-007/TPL-008 were told. The repeater-`id` note (AC7) and the browser drive (AC5) are still owed. See GAM-005 §8.
+
 ## D58 — 🔴 Nothing warns that a sentence in a content-sized Text will never wrap
 
 **Measured 2026-09-13** (P87 [RKT-001](../phase-87-the-first-play-test/RKT-001-TEXT-THAT-WRAPS.md), from source). Rocket School's
@@ -2653,6 +2655,18 @@ collapsible section, and any Text Input under a `Mounted` toggle. **Cheapest doo
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** mechanism holds, citation corrected: the field mounts from Start Value at `TextInput.tsx:69` and `:92`; `text-input.ts:372-373` is where Start Value is written. ⚠️ "The `Text` output still holds the name" is questionable from source: a remount calls `setText(startValue)`, which overwrites the output (`react-component-node.ts:562-566`). P77 D33's "startValue does not emit onTextChanged" is false at HEAD. Owner **GAM-009**.
 
+**Built 2026-09-14 (P88 GAM-009 session 9, uncommitted; R10).**
+- **Measured:** the box came back `""`. ✅ **The remount also overwrote the Value output with `""` and fired `Value Changed`
+  again**, so this row's "the `Text` output still holds the name" was wrong.
+- **The fix:** typing writes the start value (raw text, `_typed`). A remount announces only a value the Value output has
+  not already announced (`_announcedValueIs`). `Set` still means the author's last Value.
+- **Graded:** a jsdom spec, RED at HEAD, then 12/12, with 3 reverted arms. In a browser, on a minimal Mounted-toggle page,
+  the old and sabotage runtimes read `""` and the fixed runtime reads `Tom`.
+- **Not graded:** Rocket School's own clause. P87's drive reached no cell in a `deploy-from-disk` build. So
+  `rsNameKeep` stays, and removing it is the TPL-007 peer's call.
+- **Blast radius:** 90 Text Inputs, 36 wired both ways. The 7 `Value Changed` consumers lose only the same-value remount
+  duplicate. See GAM-009 §8.
+
 ## D62 — 🔴 An Expression wired into a size port raises "not a size" before it has ever evaluated
 
 **Measured 2026-09-13** (P87 [RKT-007](../phase-87-the-first-play-test/RKT-007-THE-CLOCK-AND-THE-BOOST-EXPLAIN-THEMSELVES.md), driven and
@@ -2729,6 +2743,17 @@ reserved name when it writes a Static Data node. Owner `NONE`.
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** holds, and the member list is incomplete: `Object.prototype` names (`toString`, `valueOf`, `hasOwnProperty`…), `listeners` and `_class` also shadow data. Rocket School's gate misses them. Runtime code calls members through the proxy (`collection.ts:497` `item.getId()`), so "data wins" needs care. Owner **GAM-007**.
 
+**Session 8, 2026-09-14 (P88 [GAM-007](../phase-88-the-defects-the-games-found/GAM-007-A-DATA-FIELD-CALLED-ON-READS-AS-DATA.md), at HEAD `f9981f7aa`, uncommitted): 🔒 R8's B is built. The names are reserved loudly, and the trap is unchanged.**
+- **Measured, not predicted:** the list read off real rows through the trap has 24 names. It adds `Object.prototype`'s ten, plus
+  `listeners` (only after an `on()`) and `_class` (only once it is set). `id` is safe.
+- **The door:** `validate_component`, `validate_project` and `create_component` warn `reserved-row-field` at the Static Data
+  node, naming the field. The runtime: `Collection.set` raises `collection/reserved-field-name` once per field.
+- **Census:** 0 hits over every template, prefab, module, embedded template and catalog example.
+- Five reverted arms each turned exactly their owning tests red.
+- **The export already reads the data** (frozen plain rows). "Data wins" is therefore registered as
+  [GAM-025](../phase-88-the-defects-the-games-found/GAM-025-A-ROW-FIELD-NAMED-ON-READS-AS-THE-DATA.md), call-site sweep first.
+- Rocket School's `faces` rename stays. Its gate can now ask `Model.isReservedFieldName`, and that change is the TPL-007 peer's.
+
 ## D65 — 🔴 The game-kit Avatar draws every WIRED Size at its default 64 px
 
 **Measured 2026-09-13** (P87 [RKT-011](../phase-87-the-first-play-test/RKT-011-THE-HANGAR.md), the drive's picture diagnostics, then the
@@ -2766,7 +2791,7 @@ smaller on every page.
 
 ## D66 — 🔴 A wire to an input a built-in node does not have passes the plan door, and fails only in the browser's console
 
-> ✅ **Fixed 2026-09-14 by [P88 GAM-019](../phase-88-the-defects-the-games-found/GAM-019-A-WIRE-TO-AN-INPUT-A-BUILT-IN-NODE-DOES-NOT-HAVE-IS-REFUSED-AT-THE-DOOR.md), uncommitted.**
+> ✅ **Fixed 2026-09-14 by [P88 GAM-019](../phase-88-the-defects-the-games-found/GAM-019-A-WIRE-TO-AN-INPUT-A-BUILT-IN-NODE-DOES-NOT-HAVE-IS-REFUSED-AT-THE-DOOR.md), committed `4bb438165`.**
 > `rules/nonexistentPort` skips only runtime-unbounded types. FB-026's verified retype list is catalogued as `runtime-narrowed`.
 > Alternatives rank value ports before styling ports, so `startValue` is offered. Rebuilding Rocket School with `name0 → text`
 > is now refused at `stage_plan_operation`. With the old skip restored it builds with 154 diagnostics and none about the wire,
@@ -2814,6 +2839,16 @@ source). Registered 2026-09-14. **Not re-measured at registration:** [GAM-008](.
 The bar looks like it is working. Owner **GAM-008**.
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** ⚠️ **"saw one target" does not hold in source.** `queueInput` keeps every value, consolidating last-wins only during a node's first update (`node.ts:1223-1270`). A target equal to `endValue` is ignored (`animate-to-value.ts:117-120`). `start()` only queues, and start, end and duration are read when frames run (`animate-to-value.ts:58-61`, `:133-135`; `timerscheduler.ts:43-50`). A duration of 0 lands in two frames, the same as 1 ms (`timerscheduler.ts:139-143`, `:185-195`). Three readings fit the drive numbers, and GAM-008 AC1 separates them. P30's animation audit ruled the equal-target no-op correct, and the export copies it.
+
+**Measured 2026-09-14 (GAM-008 session 10, HEAD `1f5c10c5b`, a runtime spec over a real `Set Variable → Variable` chain, frame by frame):** the
+cause is the **collapse**. The node's setter is handed **both** targets, 100 and then 0, in the press frame. The second restarts the run from the
+bar's unmoved value (47.2), and the bar never shows 100. **"Saw one target" is wrong**, and **"a duration of 0 is not a jump" is wrong**: 0 and
+1 ms both land on the second frame. A jump needs two frames, so full and empty written **one** frame apart still glide. `cdKick`'s 40 ms is what
+worked. **Built (R9):** `Jump To` and `Jump Value` move Current Value now, then carry on towards Target Value, in either order within one pass. A jump
+is not an arrival. The description says two targets in one pass make one move. Graded by 4 reverted arms and 7 export A4 rows. **Driven in a real browser** on a minimal deploy (GAM-008 §8 AC5): on
+every press the fixed runtime's bar is full within 32 ms and then glides, and the old and sabotaged runtimes never refill. Beside it, the unchanged
+one-pass chain refills once and then reads 182 and 109, which is this row seen in a browser. **Still open:** Rocket School keeps `cdKick` (AC6, P87's
+file), and Défi was not driven.
 
 ## D68 — 🔴 A Text Input's Focus signal sent on mount leaves it unfocused after a remount
 
