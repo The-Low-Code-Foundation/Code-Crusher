@@ -62,6 +62,19 @@ Still owed before code, and none of it is settled by the ruling:
 - ⚠️ It does **not** close [GAM-003](GAM-003-A-METER-COMPUTED-BY-AN-EXPRESSION-LOADS-WITHOUT-AN-ERROR.md) on its own: `round(s * 48)`
   over an unset `s` evaluates to `NaN`, and a `NaN` is still not a size. See GAM-003 §5.
 
+> 🔒 **The owed follow-ups, ruled 2026-09-14 (session 2).** Richard chose the recommended option each time:
+> - **Saved default: on for all.** Saved and new Expressions both evaluate at load. There is no migration that writes the
+>   switch off. The first-frame changes this makes are listed by name under AC5 before anything lands.
+> - **The opt-out is a new node-level checkbox**, for example `Evaluate At Load`, ticked by default and placed beside the
+>   `Run On Value Change` group. It is **not** one of NDA-017's per-input `runOnChange-` controls. Those govern an
+>   *arrival*, and at load nothing has arrived. Wiring `Run` still stops load-time evaluation too (`expression.ts:514`,
+>   the same guard the Function node has at `simplejavascript.ts:248`). The checkbox adds a way to opt out and changes
+>   nothing else.
+> - **GAM-003's `NaN`:** a `NaN` magnitude reaching a size port is **empty, silently**. See GAM-003 §5.
+>
+> Read from source when the options were framed, not measured: `cdShown` (`enabled === true`) evaluates to `false` over
+> an unset input, the same `false` today's `null` seed gives, so it is predicted not to change. AC5 measures it.
+
 **Do not** fix this by renaming ports. RKT-006 build 4 excluded that. **Do not** remove the `anyInputArrived` gate without a replacement for NDA-004's `a.missing.deeper` guard.
 
 ## 6. Acceptance criteria

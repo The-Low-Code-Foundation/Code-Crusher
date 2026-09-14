@@ -338,10 +338,40 @@ export class CatalogIndex {
     return nearest(unknown, this.allTypeNames);
   }
 
-  /** Nearest port name (of a plug) to an unknown port string, if close enough. */
-  suggestPort(typeName: string, plug: Plug, unknown: string): string | undefined {
-    return nearest(unknown, this.portNames(typeName, plug));
+  /**
+   * Nearest port name (of a plug) to an unknown port string, if close enough.
+   *
+   * GAM-019 (ruled 2026-09-14) — pass the `kind` the wire carries, and a port of the other kind
+   * is never the suggestion. Edit distance alone offered D66's `text` the signal `set` for a
+   * string wire, and an agent that follows the first hint wires a value into a signal. A port
+   * with no kind (`*`) stays a candidate either way; no `kind` filters nothing.
+   */
+  suggestPort(typeName: string, plug: Plug, unknown: string, kind?: PortKind): string | undefined {
+    const names = this.portNames(typeName, plug);
+    const candidates = kind
+      ? names.filter((name) => {
+          const own = this.portKind(typeName, plug, name);
+          return own === undefined || own === kind;
+        })
+      : names;
+    return nearest(unknown, candidates);
   }
+
+  /** Whether a statically-known port carries a signal or a value; `undefined` for `*` or unknown. */
+  portKind(typeName: string, plug: Plug, portName: string): PortKind | undefined {
+    const port = this.getPort(typeName, plug, portName);
+    if (!port) return undefined;
+    return portKindOfTypeName(port.isSignal ? 'signal' : CatalogIndex.portTypeName(port));
+  }
+}
+
+/** GAM-019 — what a wire carries, for matching a suggestion to it. */
+export type PortKind = 'signal' | 'value';
+
+/** `signal` → signal; `*`, empty or unknown → no kind; any other type name → value. */
+export function portKindOfTypeName(typeName: string | undefined): PortKind | undefined {
+  if (!typeName || typeName === '*') return undefined;
+  return typeName === 'signal' ? 'signal' : 'value';
 }
 
 // ─── Edit distance ──────────────────────────────────────────────────────────

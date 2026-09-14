@@ -60,6 +60,17 @@ Expression evaluate at load" for GAM-001's purposes, and it does not fix this ro
 So GAM-003 still needs one of this table's consumer-side fixes (B or C, extended to `NaN`), and whether a `NaN` computed from
 unset inputs is "empty" or "not a size" is a second question for Richard. Ask it with GAM-001's owed default question.
 
+> 🔒 **Ruled, 2026-09-14 (session 2): empty, silently.** A `NaN` magnitude reaching a units port takes the same branch as a
+> bare `null`: the port keeps or clears to its default and raises nothing. A value that is not a number, such as
+> `{value: "tall", unit: "px"}`, is still refused out loud (FLD-004 (b) untouched, AC4). Richard accepted the trade: a real
+> `0/0` bug in an author's expression also goes quiet at the size port. Framed alongside GAM-001's answers: saved
+> Expressions evaluate at load, and the opt-out is a new node-level checkbox.
+>
+> **So the fix is option C extended to `NaN`,** or B restricted to `null`/`undefined`/`NaN` magnitudes. Either way it
+> covers both shapes: the `{value: null}` seed (switch off, or `Run` wired) and the `{value: NaN}` evaluation (switch on).
+> AC1 and AC3 grade both. ⚠️ The sentence *"do not make the Expression evaluate at load"* below predates the ruling. Load-time
+> evaluation is GAM-001's to build, and this task does not use it as its fix.
+
 **Do not** remove or soften `dimensions/not-a-dimension` for a non-numeric value. **Do not** restore the `delete` FLD-004 (b) removed. **Do not** "fix" this by making the Expression evaluate at load. That is GAM-001's ruling, and it would reintroduce NDA-004's load-time throw.
 
 ## 6. Acceptance criteria

@@ -3,7 +3,7 @@
 **Scoped:** 2026-09-14, at HEAD `eb12ebe99`, from every open row in
 [P78's register](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) whose owner was `NONE`, plus four findings
 from [phase 87](../phase-87-the-first-play-test/README.md) that had never been registered.
-**Status: ⬜ OPEN — 1 of 24 built** (GAM-019 ✅, 2026-09-14, uncommitted). 7 rulings landed in session 1 (§4). **Prefix: `GAM`.**
+**Status: ⬜ OPEN — 1 of 24 built** (GAM-019 ✅, 2026-09-14, `4bb438165`). 7 rulings landed in session 1 (§4). **Prefix: `GAM`.**
 
 > "Let's make a new phase to write task files for all the defects please" — Richard, 2026-09-14
 
@@ -91,7 +91,8 @@ Each task file states its ruling in full, with the trade-offs.
 
 | # | ruling | task |
 |---|---|---|
-| R3 | 🔒 *"Can't we do B but with a checkbox or something that lets the user turn off auto evaluation, a bit like we have with the function node?"* An Expression evaluates over unset inputs, with a per-node opt-out. **Owed before code:** what a *saved* Expression defaults to; whether the switch reuses NDA-017's `Run On Value Change` controls, which Expression already has; and GAM-003's `NaN` question, since `round(s * 48)` over unset `s` is still not a size | GAM-001, GAM-003 |
+| R3 | 🔒 *"Can't we do B but with a checkbox or something that lets the user turn off auto evaluation, a bit like we have with the function node?"* An Expression evaluates over unset inputs, with a per-node opt-out. **Follow-ups ruled in session 2:** saved Expressions evaluate at load too (on for all, no migration); the opt-out is a **new node-level checkbox**, not one of NDA-017's per-input controls; a `NaN` magnitude reaching a size port is **empty, silently**, and `"tall"` is still refused | GAM-001, GAM-003 |
+| R3b | The GAM-019 refusal's "did you mean" matches the wire's kind: no signal is suggested for a value wire, and no value input for a signal wire. The threshold is unchanged | GAM-019 §8 (✅ built in session 2, uncommitted) |
 | R4 | Yes: stop minting ports for JS globals and keywords, and migrate any saved wire | GAM-002 |
 | R6 | A warning, with a "shared on purpose" escape | GAM-005 |
 | R7 | Warn only if CSS itself rejects the colour; a valid colour the tween cannot read jumps silently | GAM-006 |
@@ -165,7 +166,7 @@ Each task file states its ruling in full, with the trade-offs.
 
 | id | task | row | depends on |
 |---|---|---|---|
-| [GAM-019](GAM-019-A-WIRE-TO-AN-INPUT-A-BUILT-IN-NODE-DOES-NOT-HAVE-IS-REFUSED-AT-THE-DOOR.md) ✅ | A wire to an input a built-in node does not have is refused at the door | D66 | — (built 2026-09-14, uncommitted; §8 lists owed) |
+| [GAM-019](GAM-019-A-WIRE-TO-AN-INPUT-A-BUILT-IN-NODE-DOES-NOT-HAVE-IS-REFUSED-AT-THE-DOOR.md) ✅ | A wire to an input a built-in node does not have is refused at the door | D66 | — (built 2026-09-14, `4bb438165`; §8 lists owed) |
 | [GAM-023](GAM-023-A-DEPLOY-REFUSES-A-BROKEN-WIRE-AND-KEEPS-EVERY-GOOD-ONE.md) | A deploy refuses a broken wire and keeps every good one | D48 | R20; ports first, filter second |
 | [GAM-024](GAM-024-THE-DEPLOY-CENSUS-REPORTS-ONLY-REAL-DROPS.md) | The deploy census reports only real drops | D44 + D52 | GAM-023 decides where the port pass lives |
 | [GAM-020](GAM-020-A-SENTENCE-THAT-WILL-NEVER-WRAP-IS-FLAGGED-BEFORE-A-PERSON-SEES-IT-CLIPPED.md) | A sentence that will never wrap is flagged before a person sees it clipped | D58 | R18 |

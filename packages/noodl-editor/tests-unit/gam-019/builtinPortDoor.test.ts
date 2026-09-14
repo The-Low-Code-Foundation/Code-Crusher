@@ -161,6 +161,72 @@ describe('GAM-019 AC6 — a type that really mints ports is still skipped', () =
   });
 });
 
+describe('GAM-019 (ruled 2026-09-14) — the "did you mean" matches what the wire carries', () => {
+  /**
+   * AC7 found the refusal's first hint wrong: "did you mean `set`?" for D66's `text`. `set` is a
+   * signal and `name0` is a string, so an agent that followed the hint wired a value into a
+   * signal. Richard ruled: match the wire's kind, keep the threshold.
+   *
+   * The kind of D66's source lives only on the instance (`Component Inputs` ports are typed in
+   * `nodes.json`), which is why `NormNode` now carries `instancePortTypes`.
+   */
+  const typedIn = {
+    ...node('nfIn', 'Component Inputs', ['name0', 'fill', 'loose']),
+    instancePortTypes: { name0: 'string', fill: 'signal' }
+  } as NormNode;
+
+  it('premises: by name alone `text` is nearest to `set`, and `set` is a signal', () => {
+    expect(catalog.suggestPort(TEXT_INPUT, 'input', 'text')).toBe('set');
+    expect(catalog.portKind(TEXT_INPUT, 'input', 'set')).toBe('signal');
+    // Declared `*`, which FB-026's setup narrows at runtime, so it has no kind and is never filtered out.
+    expect(catalog.portKind(TEXT_INPUT, 'input', 'startValue')).toBeUndefined();
+  });
+
+  it("D66's string wire is not offered `set`, and the same name from a signal wire is, in one run", () => {
+    const found = refusals(
+      [typedIn, node('byValue', TEXT_INPUT), node('bySignal', TEXT_INPUT)],
+      [wire('nfIn', 'name0', 'byValue', 'text'), wire('nfIn', 'fill', 'bySignal', 'text')]
+    );
+    const byValue = refusalOn(found, 'byValue', 'text');
+    expect(byValue).toBeDefined();
+    expect(byValue!.suggestion).not.toBe('set');
+    expect(byValue!.alternatives).toContain('startValue');
+    expect(refusalOn(found, 'bySignal', 'text')!.suggestion).toBe('set');
+  });
+
+  it('a value near-miss from a value wire is still suggested: Group `widht` → `width`', () => {
+    const found = refusals([typedIn, node('box', 'Group')], [wire('nfIn', 'name0', 'box', 'widht')]);
+    expect(refusalOn(found, 'box', 'widht')!.suggestion).toBe('width');
+  });
+
+  it("a catalog port answers for the other end, and an untyped end filters nothing", () => {
+    expect(catalog.portKind(TEXT_INPUT, 'output', 'onFocus')).toBe('signal');
+    // `onTextChanged` is declared `*`: a catalog port with no kind filters nothing either.
+    expect(catalog.portKind(TEXT_INPUT, 'output', 'onTextChanged')).toBeUndefined();
+    const found = refusals(
+      [
+        typedIn,
+        node('src', TEXT_INPUT),
+        node('fromSignal', TEXT_INPUT),
+        node('fromStar', TEXT_INPUT),
+        node('fromString', TEXT_INPUT),
+        node('untyped', TEXT_INPUT)
+      ],
+      [
+        wire('src', 'onFocus', 'fromSignal', 'text'),
+        wire('src', 'onTextChanged', 'fromStar', 'text'),
+        wire('nfIn', 'name0', 'fromString', 'text'),
+        wire('nfIn', 'loose', 'untyped', 'text')
+      ]
+    );
+    expect(refusalOn(found, 'fromSignal', 'text')!.suggestion).toBe('set');
+    expect(refusalOn(found, 'fromStar', 'text')!.suggestion).toBe('set');
+    expect(refusalOn(found, 'untyped', 'text')!.suggestion).toBe('set');
+    // …and in the same run, the string wire is the one that is filtered.
+    expect(refusalOn(found, 'fromString', 'text')!.suggestion).not.toBe('set');
+  });
+});
+
 describe('GAM-019 — the parameter half moves with the mechanism', () => {
   /**
    * `parameterValues` skips the unknown-parameter check on `hasRuntimeDynamicPorts` (CN-004), so

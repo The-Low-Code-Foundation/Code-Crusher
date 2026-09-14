@@ -27,9 +27,9 @@
  * @module noodl-editor/validation/rules/nonexistentPort
  */
 
-import { CatalogIndex, Plug } from '../CatalogIndex';
+import { CatalogIndex, Plug, PortKind, portKindOfTypeName } from '../CatalogIndex';
 import { Diagnostic, DiagnosticCode } from '../diagnostics';
-import { NormNode, isComponentRef } from '../model';
+import { NormConnection, NormNode, isComponentRef } from '../model';
 import { SkippedCheck, unknownTypeSkip } from '../unknownTypeSkip';
 import { Rule, RuleContext } from './types';
 
@@ -49,6 +49,29 @@ function availableAlternatives(catalog: CatalogIndex, type: string, plug: Plug):
   const tier = (name: string) => (signals.has(name) ? 0 : catalog.getPort(type, plug, name)?.allowVisualStates ? 2 : 1);
   const ordered = [...all].sort((a, b) => tier(a) - tier(b) || (a < b ? -1 : 1));
   return ordered.slice(0, MAX_ALTERNATIVES);
+}
+
+/**
+ * GAM-019 (ruled 2026-09-14) — what the wire carries, read from its other end.
+ *
+ * A catalog port answers first. Otherwise the type the instance declared for the port, which is
+ * where D66's `Component Inputs.name0` (`string`) lives. `*`, an untyped instance port, a
+ * component instance and a dangling end have no kind, and the suggestion is not filtered.
+ */
+function otherEndKind(
+  catalog: CatalogIndex,
+  nodeById: { get(id: string): NormNode | undefined },
+  conn: NormConnection,
+  plug: Plug
+): PortKind | undefined {
+  const [id, port, otherPlug]: [string, string, Plug] =
+    plug === 'input' ? [conn.fromId, conn.fromProperty, 'output'] : [conn.toId, conn.toProperty, 'input'];
+  const other = nodeById.get(id);
+  if (!other) return undefined;
+  if (!isComponentRef(other.type) && catalog.hasPort(other.type, otherPlug, port)) {
+    return catalog.portKind(other.type, otherPlug, port);
+  }
+  return portKindOfTypeName(other.instancePortTypes?.[port]);
 }
 
 export const nonexistentPort: Rule = {
@@ -124,7 +147,7 @@ export const nonexistentPort: Rule = {
           }
 
           // Fully static node — a missing port here is a real error.
-          const suggestion = catalog.suggestPort(node.type, plug, port);
+          const suggestion = catalog.suggestPort(node.type, plug, port, otherEndKind(catalog, nodeById, conn, plug));
           const alternatives = availableAlternatives(catalog, node.type, plug);
           out.push({
             code: DiagnosticCode.NonexistentPort,

@@ -22,6 +22,7 @@ interface Finding {
   code: string;
   severity?: string;
   location?: { nodeId?: string; port?: string };
+  suggestion?: string;
   alternatives?: string[];
 }
 
@@ -34,14 +35,24 @@ function writeHome(projectDir: string): void {
   const existingConnections = JSON.parse(fs.readFileSync(connectionsFile, 'utf8'));
   const nodes = [
     { id: 'page', type: 'Page', label: 'Home', parameters: { title: 'Home' }, children: ['layout'] },
-    { id: 'layout', type: 'Group', label: 'Layout', parent: 'page', children: ['source', 'nameBox', 'nameBoxOk'] },
+    {
+      id: 'layout',
+      type: 'Group',
+      label: 'Layout',
+      parent: 'page',
+      children: ['source', 'nameBox', 'nameBoxOk', 'nameBoxTyped']
+    },
     { id: 'source', type: 'net.noodl.controls.textinput', label: 'Source', parent: 'layout' },
     { id: 'nameBox', type: 'net.noodl.controls.textinput', label: 'Name box', parent: 'layout' },
-    { id: 'nameBoxOk', type: 'net.noodl.controls.textinput', label: 'Name box, wired right', parent: 'layout' }
+    { id: 'nameBoxOk', type: 'net.noodl.controls.textinput', label: 'Name box, wired right', parent: 'layout' },
+    // D66's own shape: a string from a typed `Component Inputs` port (ruled 2026-09-14, the hint).
+    { id: 'pageIn', type: 'Component Inputs', label: 'Page inputs', ports: [{ name: 'name0', plug: 'output', type: 'string' }] },
+    { id: 'nameBoxTyped', type: 'net.noodl.controls.textinput', label: 'Name box, fed a string', parent: 'layout' }
   ];
   const connections = [
     { fromId: 'source', fromProperty: 'onTextChanged', toId: 'nameBox', toProperty: 'text' },
-    { fromId: 'source', fromProperty: 'onTextChanged', toId: 'nameBoxOk', toProperty: 'startValue' }
+    { fromId: 'source', fromProperty: 'onTextChanged', toId: 'nameBoxOk', toProperty: 'startValue' },
+    { fromId: 'pageIn', fromProperty: 'name0', toId: 'nameBoxTyped', toProperty: 'text' }
   ];
   fs.writeFileSync(nodesFile, JSON.stringify({ ...existingNodes, nodes }, null, 2));
   fs.writeFileSync(connectionsFile, JSON.stringify({ ...existingConnections, connections }, null, 2));
@@ -87,6 +98,19 @@ describe('GAM-019 AC8 — a wire to a port a Text Input does not have, through t
     expect(refusal!.severity).toBe('error');
     expect(refusal!.alternatives).toContain('startValue');
     expect(portFinding(found, 'nameBoxOk', 'startValue')).toBeUndefined();
+  });
+
+  it('validate_component does not offer the signal `set` to a string wire (the hint, ruled 2026-09-14)', async () => {
+    const { data } = await call<unknown>(session!, 'validate_component', { path: HOME_KEY });
+    const found = findingsIn(data);
+
+    // Known-firing: `onTextChanged` is declared `*`, which has no kind, so that wire keeps the
+    // edit-distance hint. That proves the tool carries `suggestion` at all.
+    expect(portFinding(found, 'nameBox', 'text')!.suggestion).toBe('set');
+    const typed = portFinding(found, 'nameBoxTyped', 'text');
+    expect(typed).toBeDefined();
+    expect(typed!.suggestion).not.toBe('set');
+    expect(typed!.alternatives).toContain('startValue');
   });
 
   it('validate_project carries the same refusal, and not for the wire that is right', async () => {

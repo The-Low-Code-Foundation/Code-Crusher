@@ -1,6 +1,6 @@
 # GAM-019 — A wire to an input a built-in node does not have is refused at the door
 
-**Status: ✅ built 2026-09-14 (session 1), uncommitted. Owed: the Electron `test:ci` run, a look at the panel, and the MCP bundle rebuild (§8).** **Source:** [P78 D66](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 / P87 [RKT-008](../phase-87-the-first-play-test/RKT-008-THE-PLAYER-MENU.md) build 1, 2026-09-13 · **Side:** product (validator, `rules/nonexistentPort`)
+**Status: ✅ built 2026-09-14 (session 1), committed `4bb438165`. Owed: the Electron `test:ci` run, a look at the panel, and the MCP bundle rebuild (§8).** **Source:** [P78 D66](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 / P87 [RKT-008](../phase-87-the-first-play-test/RKT-008-THE-PLAYER-MENU.md) build 1, 2026-09-13 · **Side:** product (validator, `rules/nonexistentPort`)
 
 An agent wired `nfIn.name0 → nfName.text` on a Text Input. A Text Input has no `text` input; its value is `startValue`. The
 plan door said nothing, not even an info. The page rendered, the name box opened empty, and only the browser console said
@@ -97,7 +97,7 @@ template. The artefact validates, the page renders, and the value never arrives.
 
 ## 8. Record
 
-### Session 1 — 2026-09-14, over HEAD `eb12ebe99` (uncommitted)
+### Session 1 — 2026-09-14, over HEAD `eb12ebe99` (committed as `4bb438165`)
 
 **What scoping got wrong, measured before building.**
 - 🔴 **There are two Text Inputs.** The catalog type named `Text Input` is the **deprecated** node, and it is
@@ -243,5 +243,48 @@ MCP `toolDisclosure` (byte budgets), run alone because the combined run silently
   seen it.
 - **The bundled MCP server (`packages/noodl-mcp/dist/noodl-mcp.cjs`) is not rebuilt.** Agents on an installed or bundled server
   still get the old skip until it is rebuilt.
-- **Follow-up for Richard, not built:** the refusal's first hint is "did you mean `set`?", which offers a signal for a value wire.
-- Nothing is committed.
+- **Follow-up, ruled and built 2026-09-14 (session 2), uncommitted:** the refusal's first hint was "did you mean `set`?", which offers a signal for a value wire.
+  > 🔒 **Match the wire's kind.** The hint never suggests a signal input for a value wire, nor a value input for a signal
+  > wire. The short-name threshold is **not** tightened. `startValue` stays in `alternatives`. — Richard, choosing it over
+  > tightening the threshold, both, or leaving it
+
+### Session 2 — 2026-09-14, the hint, over `4bb438165`
+
+**What the ruling's framing got wrong, found before building.** The option was put to Richard as *"the rule already knows the
+source port"*. It knows the **name**. D66's source, `Component Inputs.name0`, is an instance port, and `NormNode.instancePorts`
+kept names only, so its kind was unknowable. A literal build would have left D66's `set` in place. The saved file does record it:
+Rocket School's `nfIn` ports are `{name: "name0", plug: "output", type: "string"}`, and `reset`/`fill` are `signal`.
+
+**Built.**
+- `NormNode.instancePortTypes?` holds each instance port's declared type name. `normalize.ts` fills it on both node shapes
+  (`fromLegacyProject`'s flatten and `normalizeV2Component`), and a node whose ports record no type carries no key.
+- `CatalogIndex.suggestPort(type, plug, name, kind?)` drops candidates of the other kind. `portKind` reads a catalog port:
+  `isSignal` gives signal, `*` gives no kind, and anything else is a value. A no-kind candidate is never dropped.
+- `nonexistentPort` passes the kind of the wire's **other** end: a catalog port first, then `instancePortTypes`. A `*` end, an
+  untyped instance port, a component instance and a dangling end filter nothing.
+- 🔴 **Measured, not assumed:** the live Text Input's `startValue` and `onTextChanged` are both declared `*`
+  (`node-catalog.json` :51940, :52445). So a wire from `onTextChanged` has no kind and still gets `set`. The MCP spec's
+  original D66 wire was that shape, not a signal.
+
+**Graded.**
+| arm | result |
+|---|---|
+| editor `tests-unit/gam-019` (4 new arms: premises, D66 string wire vs signal wire, Group `widht` → `width`, catalog signal `onFocus` / `*` / untyped / string in one run) | 15 of 15, exit 0 |
+| 🔴 reverted: rule passes no kind | exactly the 2 arms asserting "a string wire is filtered" red; premises, `widht`, and all 11 earlier arms green; restored `cmp`-identical |
+| MCP `gam019BuiltinPortDoor` (new: a typed `Component Inputs.name0` → Text Input `text` through `validate_component`, beside the `*` wire that keeps `set`) | 3 of 3, exit 0 |
+| 🔴 reverted: `normalizeV2Component` carries no types | exactly the hint test red, 2 green; restored `cmp`-identical |
+| **the plan door** (session 1's `gam019-ac7-rocket.ts`, re-run) | refused, exit 3, `startValue` offered, **no "did you mean" line** |
+| 🔴 reverted at the plan door: `normalizeV2Component` carries no types | refused, exit 3, **`→ did you mean \`set\`?` is back** |
+
+⚠️ **A reverted arm that graded nothing, and what it changed.** A first draft also carried the types through
+`graphComponentFromFiles` → `toNormComponent` (`plan.ts`, `validate.ts`, `explain/graph.ts`, `explain/types.ts`), believing
+that was the plan door. Removing it at AC7 left the hint unchanged. `toNormComponent` normalises only the **other** components of
+the graph (`validate.ts:186`, `:327`); the staged candidate goes through `normalizeV2Component` (`planTools.ts:239`). Those four
+edits were reverted, so every kept line has a reverted arm. **Known gap:** a refusal inside a neighbouring component reached
+through `toNormComponent` still gets the unfiltered hint, as before.
+
+**Regression, all green.** `tsc --noEmit -p packages/noodl-editor` 0 errors (taken with the four reverted edits in place; the
+kept files have not changed since). Editor `tests-unit` gam-019, cn-010, def-002, validation, d-13, cn-003, lib-006, phase-54:
+24 spec files, 24 PASS lines, 327 tests (session 1's 323 + 4). MCP `tools`, `validateOnDiskPreconditions`, `kitOverlay`,
+`gam019BuiltinPortDoor`: 4 of 4 PASS lines, 53 tests. `toolDisclosure` alone: 18.
+- Committed as `4bb438165` (Richard, 2026-09-14, register included).
