@@ -1071,6 +1071,11 @@ function createNodeFromReactComponent(def: ReactNodeDefinition): ReactNodeModule
     getInspectInfo: def.getInspectInfo,
     nodeScopeDidInitialize: def.nodeScopeDidInitialize,
     dynamicports,
+    // P88 GAM-019 — NDA-017 §2's field was dropped here, so Text Input's `runOnValueChange` never
+    // reached `defineNode`: its Run On Value Change checkbox was not a declared port, not in the
+    // catalog and not in the panel, while a saved `runOnChange-startValue` still worked through
+    // `defineNode`'s lazy `registerInputIfNeeded` claim. Forwarded so `defineNode` synthesises it.
+    runOnValueChange: def.runOnValueChange as NodeDefinitionOptions['runOnValueChange'],
     inputs: {
       cssClassName: {
         index: 100010,

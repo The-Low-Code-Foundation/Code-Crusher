@@ -49782,7 +49782,7 @@
       "dynamicPorts": {
         "mechanisms": [
           "declared-port-groups",
-          "runtime-discovered"
+          "runtime-narrowed"
         ],
         "description": "The port list above is complete — this node mints no ports. It republishes its own `value` input per instance as an `enum` built from this node's `items`: one choice per option, labelled with the option's `Label` and carrying its `Value`, plus the currently stored value when that matches no option. It is declared `string` statically because nothing outside a connected editor can know the instance's options.",
         "declaredPortGroups": [
@@ -55862,6 +55862,19 @@
           "index": 11
         },
         {
+          "name": "runOnChange-startValue",
+          "displayName": "Value",
+          "group": "Run On Value Change",
+          "plug": "input",
+          "type": {
+            "name": "boolean",
+            "allowEditOnly": true
+          },
+          "isSignal": false,
+          "default": true,
+          "description": "Whether a new value on Value re-runs this node. On by default; untick to make this input passive so only the control signal runs it"
+        },
+        {
           "name": "set",
           "displayName": "Set",
           "group": "Actions",
@@ -56528,7 +56541,7 @@
       "dynamicPorts": {
         "mechanisms": [
           "declared-port-groups",
-          "runtime-discovered"
+          "runtime-narrowed"
         ],
         "description": "The port list above is complete — this node mints no ports. It republishes its own two value ports (`startValue`, `onTextChanged`) per instance with a narrowed type: `number` when the `type` parameter is `number`, `string` for every other Type. They are declared `*` statically because nothing outside a connected editor can narrow them.",
         "declaredPortGroups": [

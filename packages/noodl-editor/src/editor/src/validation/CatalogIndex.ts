@@ -25,13 +25,19 @@ export type { NodeCatalog, CatalogNode, CatalogPort };
  * connection names a port we can't find on such a node, we must NOT error: the
  * port is very likely legitimate and runtime-determined.
  *
- * `declared-port-groups` is deliberately absent — its ports are (mostly) listed
- * in the static inputs/outputs plus `declaredPortGroups`. But because a handful
- * of legacy/adapter port names (e.g. Text Input's `disabled`) are reachable on
- * such nodes without appearing in either list, ANY node carrying dynamic ports
- * still takes the conservative skip path in the port rule (see `isDynamicNode`).
- * This matches the SUB-004 corpus preview, which produced zero static-port
- * false positives across the whole real-project corpus.
+ * `declared-port-groups` is deliberately absent: its ports are listed in the
+ * static inputs/outputs plus `declaredPortGroups`. So is `runtime-narrowed`, a
+ * `setup` that republishes ports the node already declares with a narrower type
+ * (Text Input, Options) and mints no new name.
+ *
+ * 🔴 GAM-019 — this comment used to say the port rule skips ANY dynamic node
+ * because "legacy/adapter port names (e.g. Text Input's `disabled`) are reachable
+ * without appearing in either list". Re-read 2026-09-14: the deprecated Text
+ * Input's `disabled` input is commented out (`nodes-deprecated/controls/
+ * text-input.tsx`), so a wire to it cannot reach anything at runtime. A census
+ * of 7,260 endpoints on the affected types across 178 projects (templates,
+ * prefabs, project-examples, NodeGX test projects) found **zero** to an
+ * undeclared port. The port rule now skips on {@link CatalogIndex.hasRuntimeDynamicPorts}.
  */
 const RUNTIME_DYNAMIC_MECHANISMS = new Set([
   'runtime-discovered',
