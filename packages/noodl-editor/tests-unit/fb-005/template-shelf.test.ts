@@ -1005,7 +1005,7 @@ describe('createProjectFromTemplate never throws, including from the cleanup pre
  * ⚠️ It is deliberately NOT imported from the platform. There is no dependency between these
  * repositories and inventing one for six strings would be the more expensive mistake.
  */
-const EMBEDDED_TEMPLATE_CATEGORIES = ['starter', 'data-app', 'dashboard', 'site', 'form', 'integration'];
+const EMBEDDED_TEMPLATE_CATEGORIES = ['starter', 'data-app', 'dashboard', 'site', 'form', 'integration', 'game'];
 
 describe('FB-005 — embedded templates use the platform’s category vocabulary', () => {
   /**
