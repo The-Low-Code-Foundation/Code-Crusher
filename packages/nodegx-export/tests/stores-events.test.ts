@@ -130,8 +130,8 @@ Outputs.text = name.toUpperCase() + '!';
 }
 
 // From the Expression node "hasLongName" — the expression is preserved verbatim (EXP-003 §4).
-function hasLongName(__inputs: { name: string | undefined; length?: any }) {
-  const { name, length } = __inputs as { [K in keyof typeof __inputs]: any };
+function hasLongName(__inputs: { name: string | undefined }) {
+  const { name } = __inputs as { [K in keyof typeof __inputs]: any };
   try {
     return ((name || '').length > 1);
   } catch (e) {

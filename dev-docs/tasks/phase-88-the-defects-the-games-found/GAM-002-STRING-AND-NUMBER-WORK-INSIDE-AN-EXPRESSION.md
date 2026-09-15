@@ -1,6 +1,6 @@
 # GAM-002 — `String(n)` and `Number(s)` work inside an Expression
 
-**Status: ⬜ not started.** **Source:** [P78 D54](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 Rocket School's first drive, 2026-09-12 · **Side:** product (runtime, `Expression`)
+**Status: 🟢 built, session 11 (2026-09-14, over `5df2a01a6`), uncommitted.** Option A under R4, plus a lexer in place of the regex (no parser ships in the runtime). AC1 RED at HEAD (17 failed, the 2 controls passed). AC2, AC5 and AC7 graded with 4 reverted arms (8/2/6/1). AC3's census: 386 Expressions, **0 wires lose their port**, so no migration is owed on any project on this machine; the runtime guards a saved wire instead. **Left:** AC4 (the editor, driven), the cloud runtime run, the viewer and MCP bundles, and AC6's Rocket School sites (the peer's files, §8). **Source:** [P78 D54](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 Rocket School's first drive, 2026-09-12 · **Side:** product (runtime, `Expression`)
 
 Someone types the JavaScript they already know, `String(n)`, and the node says *"The expression threw: String is not a function"*. The node turned `String` into an input port, so `String` was `undefined` when the expression ran.
 
@@ -76,4 +76,124 @@ Anyone who writes ordinary JavaScript in the node sold as *"the cheapest correct
 
 ## 8. Record
 
-Not started.
+### Session 11 (2026-09-14, HEAD `5df2a01a6`)
+
+**Which build.** R4 says B if the runtime already carries a parser, otherwise A. It carries none: `noodl-runtime`'s
+dependencies are two `lodash` helpers and two contract packages, and no source file imports acorn, esprima, babel or
+meriyah. So the list is widened (A). The regex is replaced by a small lexer in the same file, because the regex was
+the cause of AC7 and a list cannot fix that.
+
+**What was built.**
+- `noodl-runtime/src/nodes/std-library/expression-ports.ts` (new, no imports): the reserved names (the 15 Math
+  shortcuts, 7 Noodl names, 34 JavaScript globals, 36 sloppy-mode keywords) and `expressionReferences`, a lexer that
+  skips comments, quoted strings, template-literal text (its `${…}` is read), regex literals, numbers, and a member name
+  after `.` or `?.`. `expressionPorts` is the unreserved references, once, in order.
+- `expression.ts`: the `expression` setter and `updatePorts` both call `expressionPorts`, so the editor and the runtime
+  cannot disagree. `portsToIgnore` and `parsePorts` are gone. `registerInputIfNeeded` registers a reserved name as an
+  input that drops its value and never enters `scope`, so a wire saved before GAM-002 cannot shadow the global again.
+  The port description names what can never be a port (AC5).
+- `nodegx-export/src/analyze/expression-ports.ts` is a byte-identical copy (the export cannot import the runtime), and
+  `jsfun.ts`'s `expressionIdentifiersOf` uses it in place of its verbatim clone of the old list and regex.
+- `docs/node-catalog/enrichment/expression.json`: the `expression` port text, and two new `antiPatterns` (the reserved
+  names, and the object-literal key that still mints a port). The catalog, the enriched catalog and
+  `docs-site/docs/nodes/custom-code/expression.md` were regenerated. Each differed from HEAD **only** in the Expression
+  entry (diffed by `typeName`), and `docs:nodes` changed only that one page.
+
+**AC1: RED at HEAD.** `packages/noodl-runtime/test/gam-002-string-and-number-in-an-expression.test.ts`, with
+`expression.ts` checked equal to HEAD first: **17 failed, 2 passed**. The 2 passes are the known-firing controls:
+`'' + n` gives `"5"`, and `Math.min(a, b)` gives `2` with ports `[a, b]`, which confirms §2's correction of the register.
+The runtime's own messages:
+
+| expression | at HEAD |
+|---|---|
+| `String(n)` | `expression/threw`: String is not a function |
+| `Number(s)` | `expression/threw`: Number is not a function |
+| `JSON.stringify(o)` | `expression/threw`: Cannot read properties of undefined (reading 'stringify') |
+| `parseInt(s)` | `expression/threw`: parseInt is not a function |
+| `Date.now() - t` | `expression/threw`: Cannot read properties of undefined (reading 'now') |
+| `typeof n` | `expression/compile-failed`: Unexpected token 'typeof' (predicted in §2, confirmed) |
+| AC7's 9 rows | each minted a junk port (`trim`, `length`, `test`, `b`, `e3`…) |
+| a saved wire into `String` / `typeof` | threw / did not compile |
+
+**AC2 and AC7: after.** 21/21, including AC5's two text rows. One row was first red for a wrong expectation of mine,
+not the lexer's: in `` `${ {k: a}.k } and ${b}` `` the key `k` comes first in the text, so the port order is `k, a, b`.
+The spec was corrected to text order, and says the key is still a port.
+
+**Reverted arms** (`scratchpad/gam002/sabotage.sh`: each replaces one asserted-unique string, runs the owning spec, and
+restores from a snapshot, checked byte-identical):
+
+| arm | reverted | red | exactly |
+|---|---|---|---|
+| S1 | the reserved list back to the old names | **8** | the 6 AC2 rows and the 2 saved-wire rows |
+| S2 | no guard in `registerInputIfNeeded` | **2** | the 2 saved-wire rows |
+| S3 | a member name read as a variable again | **6** | `JSON.stringify`, `Date.now`, `.trim()`, `.length`, `/x+/.test`, `a?.b` |
+| S4 | the export's copy drifts by one byte | **1** | the byte-identity row (export parity spec, 10 rows) |
+
+**AC3: blast radius** (`scratchpad/gam002/census.js`, HEAD's scan copied verbatim against the new one). Roots:
+`library/`, `templates/`, `project-examples/`, `docs/node-catalog/examples/`, P86's `corpus/` (no project JSON), the
+`NodeGX test projects` folder and `~/Documents/NodeGX`. A V2 `nodes.json` is joined with its folder's `connections.json`.
+
+| reading | value |
+|---|---|
+| files holding an Expression / Expression nodes | 123 / **386** (library 19, templates 118, project-examples 12, catalog examples 18, test projects 217, Documents 2) |
+| wires into those Expressions (the known-firing signal) | **517** |
+| port sets that change / ports that vanish | 37 / 52 |
+| **wires whose target port vanishes** | **0** |
+| sabotage arm `SAME=1` (HEAD's scan on both sides) | 386 nodes, 517 wires, 0 changed, 0 vanished |
+
+Every vanished port was junk: a method or property name after `)` (`trim`, `length`, `toString`, `slice`, `charAt`,
+`toLowerCase`, `toUpperCase`, `id`) or an unwired `Number`. None of the 386 used a global as data. So under R4 no wire
+needs migrating on any project on this machine, and none was written. The runtime guard (S2) covers a project saved
+elsewhere. The editor still shows such a wire as unconnected until someone deletes it.
+
+🔴 **Found by the census:** two published catalog examples were broken at HEAD. `cloud-who-is-in-this-role`
+(`Math.max(0, Number(page) || 0) * 20`) and `fn-cloud-function-roundtrip` (`Number(a) + Number(b)`) each minted an
+unwired `Number` port, so both threw. They work after this change and were not edited.
+
+**AC4: owed.** The editor's port list comes from the viewer bundle (`updatePorts` runs only when `isRunningLocally()`),
+and `src/external`'s bundles were not rebuilt. A drive needs a rebuild and an editor launch.
+
+**AC5.** The port description and the catalog `antiPatterns` name `String`, `Number`, `JSON`, `Date`, `parseInt`, `Math`
+and `typeof`, say a wire into one delivers nothing, and name the object-literal key. The spec asserts that text.
+
+**AC6: kept, and why.** Rocket School's `'' + ceil(v * limit / 100000)` (`tpl007Components.ts:1217`, pinned at
+`tpl007Template.test.ts:753`) still works, and `String(…)` would now work too. Both files belong to the TPL-007 peer,
+who was changing them during this session (22:28), so neither the generator nor the gate comment was touched. Changing
+them is the peer's call.
+
+**AC7: met.** `(first + ' ' + last).trim()` mints `first` and `last` only, and so do P85's other two cases. Left on
+purpose: a key in an object literal (`{ size: n }`) still mints a port, because telling a key from a ternary's `b :`
+needs a parse. It is written in the `antiPatterns`.
+
+**§4 collisions.** FUN-009: Expression's editor mode only turns `no-undef` off (`CodeEditorType.ts:69-153`) and offers
+no list of globals, so there is nothing to keep in step. P30 NDA-012 D1 is this defect, filed and not fixed for want of a
+migration ruling. R4 is that ruling. The editor validator (`nonexistentPort.ts`) treats Expression inputs as runtime-minted
+and skips them, and `noodl-mcp/src` never names Expression, so no third copy of the scan exists.
+
+**Cloud runtime:** not run. It hosts the same `expression.ts`, but only through its own bundle.
+
+**The export's pins of the old scan.** The whole `nodegx-export` suite's first run had **3 red suites, 3 tests, one
+cause**. `cheer`'s `hasLongName` (`(name || '').length > 1`) no longer mints `length`, so its wrapper lost `length?: any`.
+- `jsfun.test.ts` pinned the old defect by name (*"the runtime mints a port for `.length` after a paren — the wrapper
+  carries it, unfed"*). That is an assertion written from HEAD's behaviour against R4. It is rewritten to pin one input
+  and assert `length?: any` is absent.
+- `stores-events.test.ts`'s hand-written `GOLDEN_HOME` changed the same 2 lines.
+- HLS-001's golden named 1 file, `cheer/src/pages/Home.tsx`.
+- **Attribution:** with HEAD's `jsfun.ts` put back (snapshot, restored, `cmp` identical), all three suites were **70/70**.
+  The golden was regenerated after that and moved **1** hash line (`2f4c0fef…` → `d420548f…`). The four suites, parity
+  included, were **80/80** after. The regeneration is recorded in HLS-001's header.
+
+**Gates (2026-09-14, over `5df2a01a6`), one job at a time:**
+
+| gate | result |
+|---|---|
+| GAM-002 spec at HEAD / after | 17 failed + 2 passed / **21/21** |
+| 4 reverted arms | S1 **8**, S2 **2**, S3 **6**, S4 **1**, each exactly its rows; all restored byte-identical |
+| export parity spec | **10/10** |
+| AC3 census, both arms | 386 Expressions, 517 wires; new: 37 sets change, **0 wires lose a port**; `SAME=1`: 0 |
+| `catalog:check`, `catalog:merge:check`, `docs:nodes:check` | exit 0, 0, 0, after splicing only the Expression entry |
+| `catalog:examples` | exit 1, **baseline**: 2 agent examples wire Text Input's `text` output, which HEAD's catalog does not have (last touched by AIX-005). Not GAM-002 |
+| whole `noodl-runtime` | **162 suites, 2,759 passed, 13 skipped**, exit 0 |
+| whole `nodegx-export`, first run | 3 red (above); HEAD `jsfun.ts`: 70/70; after pins and golden: the 4 suites **80/80** |
+| editor `test:main` | **458 suites, 7,522 / 7,522**, exit 0 |
+| Electron `test:ci`, noodl-mcp suites, viewer/MCP bundles, cloud runtime | not run |

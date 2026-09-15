@@ -1,6 +1,6 @@
 # GAM-001 — An optional port left unset shows the part
 
-**Status: ⬜ not started.** **Source:** [P78 D55](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 Rocket School's first drive, 2026-09-12, and again by P87 [RKT-006](../phase-87-the-first-play-test/RKT-006-RESTART-FROM-INSIDE-THE-RACE.md) and [RKT-008](../phase-87-the-first-play-test/RKT-008-THE-PLAYER-MENU.md), 2026-09-13 · **Side:** product (runtime, `Expression` → `Mounted`)
+**Status: 🟢 built, session 11 (2026-09-14, over `5df2a01a6`), uncommitted.** R3's B with its checkbox: an Expression evaluates at load over unset inputs, and `Evaluate At Load` (ticked by default) turns that off. AC1 RED at HEAD (3 failed, 4 passed). AC2, AC3 and AC7 are graded, with 4 reverted arms (2/1/1/2). The AC5 census lists 14 first-frame changes by name. **Left:** AC4 and AC6 on Rocket School (the peer's files, and not walkable in a `deploy-from-disk` build), AC5's render of the corpus both ways, and the bundles. **Source:** [P78 D55](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by TPL-007 Rocket School's first drive, 2026-09-12, and again by P87 [RKT-006](../phase-87-the-first-play-test/RKT-006-RESTART-FROM-INSIDE-THE-RACE.md) and [RKT-008](../phase-87-the-first-play-test/RKT-008-THE-PLAYER-MENU.md), 2026-09-13 · **Side:** product (runtime, `Expression` → `Mounted`)
 
 A component guards an optional input with `m !== false`, so a page that never mentions `m` should show the part. It does not. Home lost its whole header bar this way, twice, in two builds, and renaming the port changed nothing.
 
@@ -99,4 +99,104 @@ Still owed before code, and none of it is settled by the ruling:
 
 ## 8. Record
 
-Not started.
+### Session 11 (2026-09-14, HEAD `5df2a01a6`, over GAM-002's uncommitted `expression.ts`)
+
+**What was built** (`noodl-runtime/src/nodes/std-library/expression.ts`):
+- A new input, `evaluateAtLoad` (**Evaluate At Load**): boolean, `default: true`, in the `Run On Value Change` group. It is
+  a node-level checkbox, as ruled, and not a `runOnChange-` control. Saved projects are not migrated.
+- The `expression` setter's load call is `_scheduleLoadEvaluation`, not `_scheduleAutomaticEvaluation`. If a referenced
+  input has not arrived, it marks `pendingLoadEvaluation` and schedules anyway. The scheduled callback decides once the
+  inputs have had their chance to land. If an input arrived, or a `Run` is in the batch, it is an ordinary evaluation.
+  Otherwise, with the box ticked, `_evaluateOverUnsetInputs` runs the compiled function over the unset (`undefined`) inputs.
+- **No answer, no publish.** A throw (NDA-004's `a.missing.deeper`), a compile failure, or a **`NaN`** returns
+  `NOT_EVALUATED`. The node then keeps abstaining on `null`, exactly as before, and reports nothing. The `NaN` rule is session
+  1's condition that `a + b` over unset inputs must not start raising OBS-003's `node/nan-input` on its consumers. A compile
+  failure is still reported when an input arrives, as it was.
+- `_argumentsForEvaluation` is the argument list, shared by both evaluation paths. Wiring `Run` still stops the load's
+  evaluation. The Noodl-globals path (`_scheduleAutomaticEvaluation`) is unchanged.
+
+**AC1: RED at HEAD.** `packages/noodl-viewer-react/tests/gam-001-an-optional-port-left-unset-shows-the-part.test.ts`. A
+real `/Part` component, with Component Inputs `m`, then `m !== false`, then a node carrying Group's **real compiled
+`mounted` setter** (the real Group needs a DOM), placed on a page. At HEAD: **3 failed, 4 passed.**
+- Unset `m`: Mounted's setter was handed `[null]`, `wantsToBeMounted` is `false`, and the Expression has not evaluated. §2's
+  correction of the register is confirmed: `null`, not `undefined`, and set, not unset.
+- `m === true` over unset: not evaluated.
+- The `evaluateAtLoad: false` row also read `evaluated: true` at HEAD. HEAD has no such input, so the Expression took the
+  unknown parameter as a **dynamic input port**, and its arrival ran the evaluation. That is the harness behaving, not the
+  defect, and the static input removes the path.
+- Green at HEAD, as intended: `m = true` mounts and `m = false` unmounts (the known-firing arms). A throwing guard stays
+  silent. `evaluateAtLoad: false` with `m = true` still runs.
+
+**AC2 / AC3 / AC7: after.** The viewer's three files, GAM-001, GAM-003 and FLD-004, are **28/28**. GAM-001's 10 rows:
+- the unset part mounts, and Mounted is never handed `null`;
+- `m === true` over unset evaluates to `false`, so Rocket School's `cdShown` shape is unchanged, as §5 predicted;
+- `m.visible` over unset raises nothing, sends no `failure` and does not evaluate (AC3);
+- `m = NaN` from the page raises `node/nan-input` on the consumer (known-firing), and `m + 1` over unset does not evaluate
+  and raises nothing;
+- unticked, the unset guard does not run, while `m = true` still does;
+- AC7: the checkbox's description says unset inputs *"read as undefined, so `m !== false` is true"*.
+
+NDA-004's own file plus GAM-002's are **32/32** in `noodl-runtime`.
+
+**Reverted arms** (`scratchpad/gam001/sabotage.sh`: one asserted-unique string each, restored `cmp`-identical):
+
+| arm | reverted | predicted | red | rows |
+|---|---|---|---|---|
+| G1 | the load waits for an arrival again | 2 | **2** | unset mounts; `m === true` evaluates |
+| G2 | the checkbox ignored | 1 | **1** | unticked, the unset guard does not run |
+| G3 | a throw over unset becomes the answer `undefined` | 1 | **1** | the throwing guard does not evaluate |
+| G4 | a `NaN` over unset is published | 1 | 🔴 **2** | `m + 1` does not evaluate, **and GAM-003 AC1's shape row** |
+
+G4's second red was not predicted, and it is explained. Without the guard, GAM-003's unset `round(s * 48)` evaluates to
+`NaN` during the first update. `queueInput`'s first-update consolidation then replaces the queued `{value: null}` with
+`{value: NaN}` before Width drains, so the setter never sees `null`. That is the mechanism GAM-003 §2 hypothesised for the
+countdown, measured here in the `NaN` shape.
+
+**AC5: blast radius** (`scratchpad/gam001/census.js`). Every wire leaving an Expression into a boolean port or a units
+port, in `library/`, `templates/`, `project-examples/`, the catalog examples, `NodeGX test projects` and `~/Documents/NodeGX`.
+The census gives each the value delivered on the first frame before (the unevaluated seed) and after (evaluated over unset
+inputs), and each input's source.
+
+| reading | value |
+|---|---|
+| Expressions / wires out of them | 386 / 460 |
+| into a boolean port / into a units port | 161 / 4 |
+| first-frame value differs, any source | 52 boolean, 4 units. ⚠️ The "before" assumes no input arrives at build, so rows fed by a Variable or a Function are artefacts |
+| **differs, and an input can really be unset** (a Component Inputs port, or nothing wired) | **14, all boolean**, 0 units |
+| sabotage arm `SAME=1` | 0 |
+
+The 14, by name (all `false → true` unless marked):
+- **Rocket School (the peer's template):**
+  - `Game/Question box#qbSkillShown` (`enabled !== false` → Text Mounted)
+  - `Game/Teach card#tcNoWorked` (`… length === 0` → Group Mounted)
+  - `Monster/Setup#zsShown` (`m !== false`, the peer's new, untracked component)
+  - `Race/Setup#rsShown` (`m !== false`)
+  - `Race/Play#rpBMoves` (→ Condition). A census artefact: its `isB` comes from another Expression.
+- **`NodeGX test projects/def036-dash-drive`:**
+  - 6 guards of the form `x != ""` on Component Inputs (`attachment`, `prereq || endDate`, `subtitle`, `icon`,
+    `descriptor`, `label`), each into a Text, Group or Icon Mounted
+  - 2 `isFalse` wires (`type === "video"`, `count === 1`)
+- **`NodeGX test projects/Landing page test`:** `Logo group`'s `!logoUrl` (`isTrue` → Icon Mounted).
+
+`Game/Countdown bar#cdShown` is not among them (`false → false`). ⚠️ "Can be unset" is not "is unset": whether each
+placement sets the port was not measured. The `x != ""` guards in def036 now **show** an empty part where a page does not
+set the text. That is what the ruling asks for (the guard the author wrote decides), and it is the change most likely to be
+seen. **The corpus was not rendered both ways.** That half of AC5 is owed.
+
+**AC4 and AC6: owed.** Both need Rocket School (`Game/Header` build 4, `hdBarRoom`, `hdPanel`). Its generator and gate are
+the TPL-007 peer's files, changed during this session. A Rocket School drive also needs P87's own build, because
+`deploy-from-disk` cannot walk it (GAM-006 s5, GAM-009 s9).
+
+**Catalog.** `evaluateAtLoad` and the new `runtimeBehavior` sentence were regenerated into both catalogs and
+`expression.md`. Each catalog differs from HEAD only in the Expression entry.
+
+**Not read:** whether the export's emitted Expression hook already evaluates over `undefined` inputs on first render (P18
+parity).
+
+**Gates, after GAM-001, GAM-002 and GAM-003 together, one job at a time:**
+- `catalog:check`, `catalog:merge:check` and `docs:nodes:check` all exit 0.
+- Whole `noodl-runtime`: **162 suites, 2,759 passed**, 13 skipped, exit 0.
+- Whole `noodl-viewer-react`: **114 suites, 1,496 passed**, 1 todo, exit 0.
+- Whole `nodegx-export`: **102 suites, 3,510 passed**, 1 skipped, exit 0.
+- Editor `test:main`: **458 suites, 7,522 / 7,522**, exit 0.
+- Not run: the noodl-mcp suites, the Electron `test:ci`, the bundles and the cloud runtime.

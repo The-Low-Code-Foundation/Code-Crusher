@@ -1,6 +1,6 @@
 # GAM-003 — A meter computed by an Expression loads without an error
 
-**Status: ⬜ not started.** **Source:** [P78 D62](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by P87 [RKT-007](../phase-87-the-first-play-test/RKT-007-THE-CLOCK-AND-THE-BOOST-EXPLAIN-THEMSELVES.md), 2026-09-13 · **Side:** product (runtime wiring, viewer size ports)
+**Status: 🟢 built, session 11 (2026-09-14, over `5df2a01a6`), uncommitted.** R3: a `null` or `NaN` magnitude on a units port is empty, silently. AC1 RED at HEAD with the register's exact message. AC2's control explained, AC3 graded by a reverted arm (4 red), and AC4 holds for `"tall"`. One FLD-004 row was changed, because the ruling overturns its `NaN` half. AC6: 0 sites change. **Left:** AC5 in a browser, and AC7 on Rocket School (the peer's). **Source:** [P78 D62](../phase-78-the-templates/DEFECTS-THE-TEMPLATES-FOUND.md) · found by P87 [RKT-007](../phase-87-the-first-play-test/RKT-007-THE-CLOCK-AND-THE-BOOST-EXPLAIN-THEMSELVES.md), 2026-09-13 · **Side:** product (runtime wiring, viewer size ports)
 
 An author wires `round(s * 48)` into a Group's Width. Before any answer has been given, the console says `"Width" was sent {"value":null,"unit":"px"}, which is not a size`. It looks like a wiring mistake the author never made, and nothing on screen is wrong.
 
@@ -95,4 +95,54 @@ unset inputs is "empty" or "not a size" is a second question for Richard. Ask it
 
 ## 8. Record
 
-Not started.
+### Session 11 (2026-09-14, HEAD `5df2a01a6`)
+
+**What was built.** `noodl-viewer-react/src/react-component-node.ts`: `isEmptyMagnitude`, and the units setter (`inputProps`
+path) takes the clearing branch for `undefined`, `null` **or** an empty magnitude. An empty magnitude is a bare `NaN`, or
+`{value: null}` or `{value: NaN}`. It deletes the prop, so the port falls back to its default, and raises nothing.
+`Infinity`, `{unit}` alone and `{value: "tall"}` still reach FLD-004 (b), which keeps the value and raises
+`dimensions/not-a-dimension`.
+
+**AC1: RED at HEAD.** `packages/noodl-viewer-react/tests/gam-003-a-meter-computed-by-an-expression.test.ts`: a source, then
+Expression `round(s * 48)`, then a node carrying Group's **real compiled `width` setter**, through the real runtime wiring,
+with Width authored as 10px. With `react-component-node.ts` and `node.ts` both equal to HEAD: **3 failed, 3 passed.**
+- Unset `s`: the setter was handed `{"value":null,"unit":"px"}` and raised exactly the register's message: *"Width" was sent
+  {"value":null,"unit":"px"}, which is not a size … The previous value is kept.* The same error sits in the "fills when the
+  value arrives" row.
+- 🔴 **A computed `NaN` arrives BARE, not merged.** The row assumed `{value: NaN}`, and HEAD handed the setter `NaN`:
+  `setInputValue`'s `isNaN` test does not merge a `NaN` into the port's unit. The row now records the shape, and the fix
+  covers both.
+- Green at HEAD: a source holding 0.5 at creation gives 24px with no error (the known-firing control). A source holding 0 at
+  creation never hands the setter `null` (AC2). `"tall"` over a live wire is refused and keeps 30px (AC4).
+
+**AC2: the control, explained.** The source holding a number at creation is the countdown's shape: Width is never handed
+`{value: null}` and nothing is raised. Reverted arm G4 isolates why (GAM-001 §8). When the Expression produces a value
+during the first update, `queueInput`'s consolidation replaces the queued `null` seed before the consumer drains, so the
+setter never sees it. That matches §2's hypothesis. The arm where the Expression cannot evaluate before the first drain is
+AC1's unset arm, and it is the one that raised.
+
+**AC3: after.** 6/6: silent at load, Width cleared to its default, then `24px` once `s` arrives; a `NaN` computed later
+clears silently; `"tall"` still refused. **Reverted arm G5** (the empty-magnitude test removed): **4 red**, exactly the
+unset row, the fill row, the `NaN` row, and FLD-004's new clearing row. Restored `cmp`-identical.
+
+**AC4: FLD-004 (b) untouched for what is not a number, and one row changed as ruled.** `"tall"`, a bare `400`, `{unit}` and
+the token reference behave as built. FLD-004's row *"keeps it for NaN and Infinity"* could not pass unchanged: R3 rules a
+`NaN` empty. It is split in two. `Infinity` still keeps and now also asserts the raise. A new row, marked 🔴 and dated,
+asserts that `NaN` (bare or merged) and `{value: null}` clear silently. The runtime half,
+`fld-004-dynamic-units-port.test.js`, runs in the whole `noodl-runtime` suite (gates below).
+
+**The CSS-input loop** (`react-component-node.ts:2031-2074`, the `inputCss` units path) was read and **not** changed. A
+`{value: null}` there becomes `nullpx` and a bare `NaN` becomes `NaNpx`. The browser drops both as invalid CSS, so the
+element keeps its style and nothing is raised. That is "keeps, silently", inside the ruling.
+
+**AC5: owed** (a browser page with a console listener).
+
+**AC6: blast radius.** GAM-001's census counted **4** Expression wires into units ports. None has an input that can be
+unset at build (their sources are a Boolean, a Function and similar), so **no site's first frame changes** under the unset
+rule.
+
+**AC7: owed.** Rocket School's `fbMeterFill.width` workaround and its one-source gate are the TPL-007 peer's.
+
+**Gates** (with GAM-001 and GAM-002, one job at a time): the whole `noodl-viewer-react` suite, FLD-004's file included, is
+**114 suites, 1,496 passed**, exit 0. The whole `noodl-runtime` suite, including `fld-004-dynamic-units-port.test.js`, is
+**162 suites, 2,759 passed**, exit 0. `nodegx-export` passed 3,510 and editor `test:main` 7,522 / 7,522, both exit 0.
