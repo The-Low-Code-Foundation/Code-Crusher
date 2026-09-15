@@ -29,9 +29,9 @@ import { execSync } from 'child_process';
 import type { LegacyConnection, LegacyNode } from '../../noodl-editor/src/editor/src/io/ProjectExporter';
 
 import { CURRICULUM, HANGAR_SHELF, HangarItem, WORDS } from './tpl007Curriculum';
-import { APP_CSS, C, CONTENT_SIZED_TEXTS, DATA_COMPONENTS, LOGIC_COMPONENTS, PAGES, REQUIRED_MODULES, TPL007_COMPONENTS } from './tpl007Components';
+import { APP_CSS, C, CONTENT_SIZED_TEXTS, DATA_COMPONENTS, LOGIC_COMPONENTS, MONSTER_PIXELS, PAGES, REQUIRED_MODULES, TPL007_COMPONENTS } from './tpl007Components';
 import { reducedMotionReport } from './reducedMotion';
-import { DRAW_HUNT_SCRIPT, runScript } from './tpl007Scripts';
+import { DRAW_HUNT_SCRIPT, MONSTER_LOOKS, runScript } from './tpl007Scripts';
 import { AuthoredTemplate, buildRocketTemplateProject, prepareRocketArtefact, TEMPLATE_ID } from './tpl007Template';
 import { DISPLAY_FONT, LARGE_TEXT_SIZES, requestedCompositions, ROLE, tpl007TokenEntries, USED_COMPOSITIONS } from './tpl007Theme';
 
@@ -376,13 +376,19 @@ describe('TPL-007 — Rocket School, the artefact', () => {
       conns.some((c) => c.fromId === fromId && c.fromProperty === fromProperty && c.toId === toId && c.toProperty === toProperty);
     const missing = (name: string, wires: string[][]) => wires.filter((w) => !has(connectionsOf(built, name), w)).map((w) => w.join(' → '));
 
+    const ANIMATED = [
+      'rkt-bang-a', 'rkt-bang-b', 'rkt-clock-last', 'rkt-join-a', 'rkt-join-b', 'rkt-land-a', 'rkt-land-b',
+      'rkt-monster', 'rkt-monster-arrive-a', 'rkt-monster-arrive-b', 'rkt-monster-gone', 'rkt-monster-hit-a', 'rkt-monster-hit-b', 'rkt-monster-lunge-a', 'rkt-monster-lunge-b',
+      'rkt-result', 'rkt-result-glyph', 'rkt-shake-a', 'rkt-shake-b', 'rkt-stars', 'rkt-wear-a', 'rkt-wear-b'
+    ];
+
     it('🔴 every animation the app stylesheet starts is stilled for reduced motion', () => {
-      expect(reducedMotionReport(APP_CSS)).toEqual({ animated: ['rkt-clock-last', 'rkt-join-a', 'rkt-join-b', 'rkt-land-a', 'rkt-land-b', 'rkt-result', 'rkt-result-glyph', 'rkt-shake-a', 'rkt-shake-b', 'rkt-stars', 'rkt-wear-a', 'rkt-wear-b'], unstilled: [] });
+      expect(reducedMotionReport(APP_CSS)).toEqual({ animated: ANIMATED, unstilled: [] });
     });
 
     it('sabotage arm: without its reduced-motion block, every animation is named', () => {
       const bare = APP_CSS.replace(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\}$/, '');
-      expect(reducedMotionReport(bare).unstilled).toEqual(['rkt-clock-last', 'rkt-join-a', 'rkt-join-b', 'rkt-land-a', 'rkt-land-b', 'rkt-result', 'rkt-result-glyph', 'rkt-shake-a', 'rkt-shake-b', 'rkt-stars', 'rkt-wear-a', 'rkt-wear-b']);
+      expect(reducedMotionReport(bare).unstilled).toEqual(ANIMATED);
     });
 
     it('a right answer that moves rocket A raises its Boost count, and the course hands the count to the kit', () => {
@@ -1054,10 +1060,10 @@ describe('TPL-007 — Rocket School, the artefact', () => {
     const params = (name: string, id: string) => nodesOf(built, name).find((n) => n.id === id)!.parameters as Record<string, unknown>;
     const DIRS = [['Up', 'up'], ['Left', 'left'], ['Down', 'down'], ['Right', 'right']] as const;
 
-    it('Home’s Merge card opens the Merge page; the games not built yet stay greyed', () => {
+    it('Home’s Merge card opens the Merge page, and all four games are playable', () => {
       expect(missing(C.pageHome, [['hmMerge', 'chosen', 'hmGoMerge', 'navigate'], ['hmRace', 'chosen', 'hmGoRace', 'navigate']])).toEqual([]);
       expect(params(C.pageHome, 'hmGoMerge').target).toBe(C.pageMerge);
-      expect([params(C.pageHome, 'hmMerge').enabled, params(C.pageHome, 'hmHunt').enabled, params(C.pageHome, 'hmMonster').enabled]).toEqual([true, true, false]);
+      expect([params(C.pageHome, 'hmRace').enabled, params(C.pageHome, 'hmMerge').enabled, params(C.pageHome, 'hmHunt').enabled, params(C.pageHome, 'hmMonster').enabled]).toEqual([true, true, true, true]);
     });
 
     it('🔴 one slide rule, placed once per direction with the direction as a parameter; each arrow key and each arrow button runs its own', () => {
@@ -1222,6 +1228,164 @@ describe('TPL-007 — Rocket School, the artefact', () => {
       expect([params(C.huntPlay, 'hpNote').color, connectionsOf(built, C.huntPlay).filter((c) => c.toId === 'hpNote' && c.toProperty === 'color')]).toEqual([ROLE.ink, []]);
       expect(reducedMotionReport(APP_CSS)).toMatchObject({ unstilled: [] });
       expect(reducedMotionReport(APP_CSS).animated).toEqual(expect.arrayContaining(['rkt-shake-a', 'rkt-shake-b']));
+    });
+  });
+
+  describe('TPL-007 §16 — Monster Gate, held in the graph', () => {
+    const has = (conns: LegacyConnection[], [fromId, fromProperty, toId, toProperty]: string[]) =>
+      conns.some((c) => c.fromId === fromId && c.fromProperty === fromProperty && c.toId === toId && c.toProperty === toProperty);
+    const missing = (name: string, wires: string[][]) => wires.filter((w) => !has(connectionsOf(built, name), w)).map((w) => w.join(' → '));
+    const params = (name: string, id: string) => nodesOf(built, name).find((n) => n.id === id)!.parameters as Record<string, unknown>;
+
+    it('Home’s Monster card opens the Monster page, and Home is still a small page', () => {
+      expect(missing(C.pageHome, [['hmMonster', 'chosen', 'hmGoMonster', 'navigate']])).toEqual([]);
+      expect([params(C.pageHome, 'hmGoMonster').target, params(C.pageHome, 'hmMonster').enabled]).toEqual([C.pageMonster, true]);
+      expect(nodesOf(built, C.pageHome).length).toBeLessThanOrEqual(32);
+    });
+
+    it('🔴 every id this file wrote for the game is the id the door kept (the door renames a clash without a word)', () => {
+      for (const comp of [C.monster, C.monsterLane, C.monsterSetup, C.monsterPlay, C.pageMonster]) {
+        const authored = TPL007_COMPONENTS.find((c) => '/' + c.path === comp)!.nodes.map((n) => (n as { id: string }).id).sort();
+        expect({ comp, ids: nodesOf(built, comp).map((n) => n.id).sort() }).toEqual({ comp, ids: authored });
+      }
+    });
+
+    it('🔴 the race’s parts hear Monster Gate and the race is as it was: the round hands a clock scale to the picker, a game to the grader, and the bar’s own position out', () => {
+      expect(missing(C.raceRound, [['rdIn', 'limitScale', 'rdPick', 'limitScale'], ['rdIn', 'game', 'rdGrade', 'game'], ['rdClock', 'left', 'rdOut', 'clockLeft']])).toEqual([]);
+      expect(missing(C.countdown, [['cdAnim', 'currentValue', 'cdOut', 'left']])).toEqual([]);
+      // The race sends neither, so its clock and its words are the race's.
+      expect(connectionsOf(built, C.racePlay).filter((c) => c.toId === 'rpRound' && (c.toProperty === 'limitScale' || c.toProperty === 'game'))).toEqual([]);
+    });
+
+    it('🔴 one move rule, placed once per action with the action as a parameter: a graded round runs answer, Next runs next, and no wire carries an action', () => {
+      for (const [id, action] of [['zpAnswer', 'answer'], ['zpArrive', 'next']] as const) {
+        const node = nodesOf(built, C.monsterPlay).find((n) => n.id === id)!;
+        expect({ id, type: node.type, action: (node.parameters as Record<string, unknown>).action }).toEqual({ id, type: '/Logic/Monster move', action });
+        expect(missing(C.monsterPlay, [['zpGame', 'value', id, 'game'], [id, 'game', 'zpSetGame', 'value'], [id, 'done', 'zpSetGame', 'do']])).toEqual([]);
+      }
+      expect(connectionsOf(built, C.monsterPlay).filter((c) => c.toProperty === 'action')).toEqual([]);
+      expect(['zpAnswer', 'zpArrive'].map((id) => connectionsOf(built, C.monsterPlay).filter((c) => c.toId === id && c.toProperty === 'run').map((c) => `${c.fromId}.${c.fromProperty}`))).toEqual([['zpRound.graded'], ['zpRound.next']]);
+      expect(missing(C.monsterPlay, [['zpRound', 'outcome', 'zpAnswer', 'outcome'], ['zpRound', 'gain', 'zpAnswer', 'gain'], ['zpRound', 'cpuGain', 'zpAnswer', 'cpuGain']])).toEqual([]);
+    });
+
+    it('🔴 one Variable is the whole game, drawn into the lane; every way into a game makes a new one, whose id grades the answers and whose clock scale the round hears before it asks', () => {
+      expect([params(C.monsterPlay, 'zpGame').name, params(C.monsterPlay, 'zpSetGame').name]).toEqual(['monsterGame', 'monsterGame']);
+      expect(new Set([params(C.monsterPlay, 'zpGame').name, params(C.huntPlay, 'hpGame').name, params(C.mergePlay, 'mpGame').name]).size).toBe(3);
+      expect(
+        missing(C.monsterPlay, [
+          ['zpIn', 'start', 'zpNew', 'run'], ['zpRestart', 'onClick', 'zpNew', 'run'], ['zpResult', 'again', 'zpNew', 'run'],
+          ['zpIn', 'style', 'zpNew', 'style'], ['zpIn', 'timed', 'zpNew', 'timed'],
+          ['zpNew', 'game', 'zpSetGame', 'value'], ['zpNew', 'done', 'zpSetGame', 'do'],
+          ['zpNew', 'id', 'zpRound', 'raceId'], ['zpNew', 'timeScale', 'zpRound', 'limitScale'], ['zpAnswer', 'timeScale', 'zpRound', 'limitScale'], ['zpNew', 'done', 'zpRound', 'ask'],
+          ['zpIn', 'style', 'zpRound', 'game'], ['zpIn', 'timed', 'zpRound', 'timed'],
+          ['zpGame', 'value', 'zpDraw', 'game'], ['zpIn', 'lang', 'zpDraw', 'lang'],
+          ...['hearts', 'line', 'note', 'pips', 'monsterClass', 'laneClass', 'rest', 'walkFrom'].map((p) => ['zpDraw', p, 'zpLane', p]),
+          ['zpWalking', 'value', 'zpLane', 'walking'], ['zpRound', 'clockLeft', 'zpLane', 'left']
+        ])
+      ).toEqual([]);
+      expect(params(C.monsterPlay, 'zpRound').mode).toBe('maths');
+    });
+
+    it('🔴 a game is paid only when it is over, from the round’s latest model; the end card waits for Next, and the page stores both the answers and the finish', () => {
+      expect(
+        missing(C.monsterPlay, [
+          ['zpDraw', 'over', 'zpIsOver', 'condition'], ['zpIsOver', 'ontrue', 'zpFinish', 'run'], ['zpGame', 'value', 'zpFinish', 'game'], ['zpRound', 'model', 'zpFinish', 'model'], ['zpIn', 'lang', 'zpFinish', 'lang'],
+          ['zpRound', 'model', 'zpOut', 'model'], ['zpRound', 'graded', 'zpOut', 'graded'], ['zpFinish', 'model', 'zpOut', 'model'], ['zpFinish', 'done', 'zpOut', 'graded'],
+          ['zpRound', 'next', 'zpGoOn', 'eval'], ['zpDraw', 'over', 'zpGoOn', 'condition'], ['zpGoOn', 'onfalse', 'zpRound', 'ask'], ['zpGoOn', 'ontrue', 'zpPhase', 'to-over'],
+          ['zpPhase', 'over', 'zpResult', 'mounted'], ['zpPhase', 'playing', 'zpRoundSlot', 'mounted'], ['zpPhase', 'teaching', 'zpTeach', 'mounted'], ['zpPhase', 'controls', 'zpControls', 'mounted'],
+          ['zpFinish', 'headline', 'zpResult', 'headline'], ['zpFinish', 'line', 'zpResult', 'line'], ['zpFinish', 'starsText', 'zpResult', 'stars'], ['zpFinish', 'why', 'zpResult', 'why'], ['zpFinish', 'earnedPick', 'zpResult', 'hasPick'], ['zpFinish', 'won', 'zpResult', 'won'],
+          ['zpResult', 'hangar', 'zpOut', 'hangar'], ['zpResult', 'other', 'zpOut', 'changeGame'], ['zpChange', 'onClick', 'zpRound', 'abandon'], ['zpChange', 'onClick', 'zpOut', 'changeGame'],
+          ['zpRound', 'showMe', 'zpPhase', 'to-teaching'], ['zpTeach', 'gotIt', 'zpPhase', 'to-playing'], ['zpTeach', 'gotIt', 'zpGoOn', 'eval']
+        ])
+      ).toEqual([]);
+      expect(connectionsOf(built, C.monsterPlay).filter((c) => c.toId === 'zpFinish' && c.toProperty === 'run').map((c) => `${c.fromId}.${c.fromProperty}`)).toEqual(['zpIsOver.ontrue']);
+      expect(String(params(C.monsterPlay, 'zpPhase').states).split(',')[0]).toBe('playing');
+      expect(
+        missing(C.pageMonster, [
+          ['zgMe', 'level', 'zgPlay', 'level'], ['zgMe', 'model', 'zgPlay', 'model'], ['zgMe', 'lang', 'zgPlay', 'lang'], ['zgCurriculum', 'skills', 'zgPlay', 'curriculum'],
+          ['zgSetup', 'style', 'zgPlay', 'style'], ['zgSetup', 'timed', 'zgPlay', 'timed'], ['zgSetup', 'start', 'zgSetPlaying', 'do'], ['zgSetPlaying', 'done', 'zgPlay', 'start'],
+          ['zgPlay', 'model', 'zgSave', 'model'], ['zgPlay', 'graded', 'zgSave', 'run'], ['zgSave', 'app', 'zgStore', 'app'], ['zgSave', 'done', 'zgStore', 'write'],
+          ['zgPlay', 'changeGame', 'zgSetDone', 'do'], ['zgPlay', 'hangar', 'zgGoHangar', 'navigate'], ['zgHeader', 'home', 'zgGoHome', 'navigate'], ['zgPlaying', 'value', 'zgHeader', 'hideBar'],
+          ['zgT', 'monsterChange', 'zgPlay', 'changeWord'], ['zgT', 'newGame', 'zgPlay', 'againWord']
+        ])
+      ).toEqual([]);
+    });
+
+    it('🔴 the monster walks off the round’s own clock: only in a live Challenge question of the gate way, from where it stands to the gate as the bar empties; between answers it glides to where it rests', () => {
+      expect(
+        missing(C.monsterPlay, [
+          ['zpNew', 'done', 'zpWalkDelay', 'restart'], ['zpGoOn', 'onfalse', 'zpWalkDelay', 'restart'], ['zpWalkDelay', 'timerFinished', 'zpWalkOn', 'do'],
+          ['zpRound', 'graded', 'zpWalkOff', 'do'], ['zpRound', 'graded', 'zpWalkDelay', 'stop'], ['zpChange', 'onClick', 'zpWalkOff', 'do'], ['zpRestart', 'onClick', 'zpWalkOff', 'do']
+        ])
+      ).toEqual([]);
+      expect(
+        missing(C.monsterLane, [
+          ['zlIn', 'walking', 'zlWalk', 'in-walking'], ['zlIn', 'walkFrom', 'zlWalk', 'in-walkFrom'], ['zlIn', 'left', 'zlWalk', 'in-left'], ['zlIn', 'rest', 'zlWalk', 'in-rest'],
+          ['zlWalk', 'out-width', 'zlMover', 'width'], ['zlWalk', 'out-moverClass', 'zlMover', 'cssClassName'], ['zlIn', 'monsterClass', 'zlMonster', 'monsterClass'], ['zlIn', 'laneClass', 'zlLane', 'cssClassName']
+        ])
+      ).toEqual([]);
+      const walk = (inputs: Record<string, unknown>) => runScript(String(params(C.monsterLane, 'zlWalk').functionScript), inputs);
+      expect(walk({ walking: true, walkFrom: 0.5, left: 50, rest: 0.5 })).toEqual({ width: 25, moverClass: 'rkt-mover' });
+      expect(walk({ walking: true, walkFrom: 1, left: 100, rest: 1 })).toEqual({ width: 100, moverClass: 'rkt-mover' });
+      // Not walking (between answers, Practice, Push it back): where it rests, gliding there.
+      expect([walk({ walking: false, walkFrom: 0.5, left: 50, rest: 0.75 }), walk({ walking: true, walkFrom: 0, left: 50, rest: 0.4 }), walk({ rest: 1 })]).toEqual([
+        { width: 75, moverClass: 'rkt-mover rkt-mover-glide' },
+        { width: 40, moverClass: 'rkt-mover rkt-mover-glide' },
+        { width: 100, moverClass: 'rkt-mover rkt-mover-glide' }
+      ]);
+      expect(params(C.monsterLane, 'zlMover').justifyContent).toBe('flex-end');
+    });
+
+    it('the setup offers both ways and both paces, opens on Beat it to the gate and Practice (ruling 3), writes those once, and says the chosen pair’s rule', () => {
+      expect([params(C.monsterSetup, 'zsDefStyle').expression, params(C.monsterSetup, 'zsDefTimed').expression]).toEqual(["'gate'", "'practice'"]);
+      expect(
+        missing(C.monsterSetup, [
+          ['zsCard', 'didMount', 'zsFirst', 'eval'], ['zsFirst', 'onfalse', 'zsInitStyle', 'do'], ['zsInitStyle', 'done', 'zsInitTimed', 'do'], ['zsInitTimed', 'done', 'zsSeeded', 'to-seeded'],
+          ['zsStart', 'onClick', 'zsOut', 'start'], ['zsStyleVar', 'value', 'zsOut', 'style'], ['zsIsTimed', 'result', 'zsOut', 'timed'], ['zsRuleText', 'result', 'zsRule', 'text']
+        ])
+      ).toEqual([]);
+      const items = (id: string, inputs: Record<string, unknown>) => new Function('Inputs', 'Outputs', `${String(params(C.monsterSetup, id).functionScript)}; return Outputs.items;`)(inputs, {});
+      expect(items('zsStyleItems', { gate: 'G', push: 'P' })).toEqual([{ label: 'G', value: 'gate' }, { label: 'P', value: 'push' }]);
+      expect(items('zsTimedItems', { practice: 'Pr', challenge: 'Ch' })).toEqual([{ label: 'Pr', value: 'practice' }, { label: 'Ch', value: 'challenge' }]);
+      expect(String(params(C.monsterSetup, 'zsRuleText').expression)).toBe("style === 'push' ? (timed === 'challenge' ? pushChallenge : pushPractice) : (timed === 'challenge' ? gateChallenge : gatePractice)");
+      expect(
+        missing(C.pageMonster, [
+          ['zgT', 'monsterGate', 'zgSetup', 'gateWord'], ['zgT', 'monsterPush', 'zgSetup', 'pushWord'], ['zgT', 'practice', 'zgSetup', 'practiceWord'], ['zgT', 'challenge', 'zgSetup', 'challengeWord'],
+          ['zgT', 'monsterGatePractice', 'zgSetup', 'gatePracticeWord'], ['zgT', 'monsterGateChallenge', 'zgSetup', 'gateChallengeWord'], ['zgT', 'monsterPushPractice', 'zgSetup', 'pushPracticeWord'], ['zgT', 'monsterPushChallenge', 'zgSetup', 'pushChallengeWord']
+        ])
+      ).toEqual([]);
+      expect([WORDS.monsterGate.fr, WORDS.monsterPush.fr]).toEqual(['Plus rapide que le monstre', 'Repousse-le']);
+    });
+
+    it('🔴 ruling 5: three monsters, three shapes, three colours — each a 13 × 13 pixel map drawn by one box-shadow in tokens; every animation the game adds is stilled for reduced motion', () => {
+      expect(Object.keys(MONSTER_PIXELS)).toEqual([...MONSTER_LOOKS]);
+      const shapes = new Set<string>();
+      for (const look of MONSTER_LOOKS) {
+        const { rows, body } = MONSTER_PIXELS[look];
+        expect({ look, widths: rows.map((r) => r.length), height: rows.length }).toEqual({ look, widths: Array(13).fill(13), height: 13 });
+        expect(rows.join('')).toMatch(/^[.KBWY]+$/);
+        shapes.add(rows.join('|').replace(/[BWY]/g, 'X'));
+        expect(APP_CSS).toContain(`.rkt-monster-${look}::before { box-shadow: `);
+        expect(body).toMatch(/^var\(--[a-z0-9-]+\)$/);
+      }
+      expect(shapes.size).toBe(3);
+      expect(new Set(MONSTER_LOOKS.map((l) => MONSTER_PIXELS[l].body)).size).toBe(3);
+      // Every colour the game's stylesheet names is a token.
+      const monsterCss = APP_CSS.slice(APP_CSS.indexOf('/* TPL-007 §16'));
+      expect(monsterCss.length).toBeGreaterThan(1000);
+      expect(monsterCss.match(/#[0-9a-f]{3,6}\b/gi)).toBeNull();
+      expect(reducedMotionReport(APP_CSS)).toMatchObject({ unstilled: [] });
+      expect(reducedMotionReport(APP_CSS).animated).toEqual(expect.arrayContaining(['rkt-monster', 'rkt-monster-hit-a', 'rkt-monster-hit-b', 'rkt-monster-lunge-a', 'rkt-monster-lunge-b', 'rkt-monster-arrive-a', 'rkt-monster-arrive-b', 'rkt-monster-gone', 'rkt-bang-a', 'rkt-bang-b']));
+      expect(APP_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\.rkt-mover-glide \{ transition: none; \}/);
+    });
+
+    it('🔴 the bob lives on the pixels, not the box: a hit, a lunge or an arrival animates the box, and on the same element it replaced the bob for the rest of the game', () => {
+      // Richard, 2026-09-14: "The monsters bounced around on my first try … then after the first question they just slide towards the door".
+      expect(APP_CSS).toMatch(/\.rkt-monster::before \{[^}]*animation: rkt-bob /);
+      expect(APP_CSS).not.toMatch(/\.rkt-monster \{[^}]*animation/);
+      for (const fx of ['rkt-monster-hit-a', 'rkt-monster-lunge-a', 'rkt-monster-arrive-a', 'rkt-monster-gone']) expect(APP_CSS).toMatch(new RegExp(`\\.${fx} \\{ animation: `));
+      // The reduced-motion block stills the element that bobs (the checker reads a class name, so it cannot tell the box from its pixels).
+      expect(APP_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\.rkt-monster::before, \.rkt-monster-hit-a/);
     });
   });
 

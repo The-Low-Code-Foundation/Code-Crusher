@@ -35,15 +35,23 @@ import {
   DELETE_PROFILE_SCRIPT,
   DRAW_HUNT_SCRIPT,
   DRAW_MERGE_SCRIPT,
+  DRAW_MONSTER_SCRIPT,
   ENCODE_SAVE_SCRIPT,
   FINISH_HUNT_SCRIPT,
   FINISH_MERGE_SCRIPT,
+  FINISH_MONSTER_SCRIPT,
   FINISH_RACE_SCRIPT,
   HUNT_HELP_AFTER,
   HUNT_MOVE_SCRIPT,
   HUNT_ROUNDS,
   HUNT_STAR_RULE,
+  LIMIT_FACTOR,
+  MONSTER,
+  MONSTER_LOOKS,
+  MONSTER_MOVE_SCRIPT,
+  MONSTER_STAR_RULE,
   NEW_HUNT_SCRIPT,
+  NEW_MONSTER_SCRIPT,
   MERGE_MODES,
   MERGE_POOL_GROUPS,
   MERGE_STAR_RULE,
@@ -863,6 +871,195 @@ describe('TPL-007 — the engine', () => {
     });
   });
 
+  describe('Monster Gate, the game (§16)', () => {
+    const game = (over: Record<string, unknown> = {}): any => ({ id: 'm1', style: 'gate', timed: false, hearts: MONSTER.hearts, beaten: 0, hp: MONSTER.hp, start: 1, pos: 1, streak: 0, right: 0, answered: 0, event: 'start', fresh: false, healed: false, over: false, won: false, moves: 0, ...over });
+    const move = (g: any, outcome: string, extra: Record<string, unknown> = {}) => runScript(MONSTER_MOVE_SCRIPT, { game: g, action: 'answer', outcome, ...extra });
+    const answers = (g: any, ...outcomes: string[]): any => outcomes.reduce((acc, o) => move(acc, o).game, g);
+    const next = (g: any) => runScript(MONSTER_MOVE_SCRIPT, { game: g, action: 'next' });
+    const draw = (g: any, lang = 'en') => runScript(DRAW_MONSTER_SCRIPT, { game: g, lang });
+
+    it('the rule table is the ruling: three monsters, three hearts, four hits, a heart back after three quick answers', () => {
+      expect(MONSTER).toEqual({ monsters: 3, hearts: 3, hp: 4, bigHit: 2, smallHit: 1, creep: { practice: 1 / 3, challenge: 0.25 }, push: 2, step: 1.5, pushStart: 0.5, healRun: 3 });
+      expect(MONSTER_LOOKS).toEqual(['horns', 'eye', 'spikes']);
+    });
+
+    it('a new game: three hearts, the first monster at full health, a new id; Push it back starts it in the middle', () => {
+      const ids = new Set<string>();
+      for (const [style, timed] of [['gate', false], ['gate', true], ['push', false], ['push', true], ['nonsense', 'yes']] as const) {
+        const out = runScript(NEW_MONSTER_SCRIPT, { style, timed });
+        const g = out.game;
+        const push = style === 'push';
+        expect({ style, g: [g.style, g.timed, g.hearts, g.beaten, g.hp, g.start, g.pos, g.over, out.timeScale, out.id] }).toEqual({ style, g: [push ? 'push' : 'gate', timed === true, 3, 0, 4, 1, push ? 0.5 : 1, false, 1, g.id] });
+        expect(g.id).toMatch(/^m\w+$/);
+        ids.add(g.id);
+      }
+      expect(ids.size).toBe(5);
+    });
+
+    it('🔴 Beat it to the gate: a quick answer is a big hit and a slow one a small hit, each knocks it back; four hits and it runs away, and Next brings the next', () => {
+      const quick = move(game({ start: 0.5, pos: 0.5 }), 'fluent').game;
+      expect([quick.hp, quick.start, quick.pos, quick.event, quick.right, quick.answered]).toEqual([2, 1, 1, 'bigHit', 1, 1]);
+      const slow = move(game(), 'correct').game;
+      expect([slow.hp, slow.event]).toEqual([3, 'hit']);
+      const beaten = answers(game(), 'fluent', 'correct', 'correct');
+      expect([beaten.beaten, beaten.hp, beaten.fresh, beaten.event, beaten.over]).toEqual([1, 4, true, 'beaten', false]);
+      // Known-firing beside it: one hit fewer and it stands.
+      expect(answers(game(), 'fluent', 'correct').beaten).toBe(0);
+      const arrived = next(beaten);
+      expect([arrived.changed, arrived.game.fresh, arrived.game.event, arrived.game.beaten, arrived.game.hp]).toEqual([true, false, 'arrive', 1, 4]);
+      expect(next(arrived.game).changed).toBe(false);
+    });
+
+    it('🔴 ruling 2: a wrong answer, it creeps closer (a third of the way in Practice, a quarter in Challenge), and creeping all the way costs a heart', () => {
+      const p1 = move(game(), 'wrong').game;
+      expect([p1.start, p1.pos, p1.event, p1.hearts, p1.right]).toEqual([0.667, 0.667, 'creep', 3, 0]);
+      expect(answers(game(), 'wrong', 'wrong').hearts).toBe(3);
+      const p3 = answers(game(), 'wrong', 'wrong', 'wrong');
+      expect([p3.start, p3.event, p3.hearts]).toEqual([1, 'bang', 2]);
+      const c = (n: number) => answers(game({ timed: true }), ...Array(n).fill('wrong'));
+      expect([c(1).start, c(2).start, c(3).start, c(3).hearts, c(4).event, c(4).hearts, c(4).start]).toEqual([0.75, 0.5, 0.25, 3, 'bang', 2, 1]);
+      // A right answer knocks a crept monster all the way back.
+      expect(move(c(3), 'correct').game.start).toBe(1);
+    });
+
+    it('🔴 out of time it bangs the gate: a heart gone, and it backs off; the next question’s clock is the walk from where it stands (Challenge, the gate way only)', () => {
+      const t = move(game({ timed: true, start: 0.5, pos: 0.5 }), 'timeout');
+      expect([t.game.hearts, t.game.event, t.game.start, t.timeScale]).toEqual([2, 'bang', 1, 1]);
+      expect([move(game({ timed: true }), 'wrong').timeScale, move(game({ timed: false }), 'wrong').timeScale]).toEqual([0.75, 1]);
+      expect(move(game({ style: 'push', timed: true, pos: 0.5 }), 'wrong', { cpuGain: 0.05 }).timeScale).toBe(1);
+    });
+
+    it('🔴 ruling 7: three quick answers in a row give a heart back, up to three; a slow or wrong answer starts the run again', () => {
+      const hurt = game({ hearts: 2, hp: 99 });
+      const healed = answers(hurt, 'fluent', 'fluent', 'fluent');
+      expect([healed.hearts, healed.healed, healed.streak]).toEqual([3, true, 0]);
+      expect([draw(healed).note, draw(healed, 'fr').note]).toEqual(['A big hit! Three quick answers: a heart back!', 'Un grand coup ! Trois réponses rapides : un cœur de plus !']);
+      expect(answers(hurt, 'fluent', 'correct', 'fluent', 'fluent').hearts).toBe(2);
+      const full = answers(game({ hp: 99 }), 'fluent', 'fluent', 'fluent');
+      expect([full.hearts, full.healed, full.streak]).toEqual([3, false, 0]);
+    });
+
+    it('🔴 three monsters beaten is a win, three hearts gone a loss, and nothing moves after either', () => {
+      const won = answers(game({ beaten: 2, hp: 2 }), 'fluent');
+      expect([won.over, won.won, won.beaten]).toEqual([true, true, 3]);
+      const lost = answers(game({ hearts: 1, timed: true }), 'timeout');
+      expect([lost.over, lost.won, lost.hearts]).toEqual([true, false, 0]);
+      for (const g of [won, lost]) expect([move(g, 'fluent').changed, next(g).changed]).toEqual([false, false]);
+      // Known-firing beside it: one monster or one heart earlier, the same answer ends nothing.
+      expect([answers(game({ beaten: 1, hp: 2 }), 'fluent').over, answers(game({ hearts: 2, timed: true }), 'timeout').over]).toEqual([false, false]);
+      // The game the node was given is never changed in place, and what is not an outcome changes nothing.
+      const before = game();
+      move(before, 'fluent');
+      expect(before.hp).toBe(4);
+      expect([move(game(), '').changed, move(game(), 'maybe').changed, runScript(MONSTER_MOVE_SCRIPT, { action: 'answer', outcome: 'fluent' }).changed]).toEqual([false, false, false]);
+    });
+
+    it('🔴 Push it back: a right answer pushes by twice the race’s gain and every answer it steps one and a half computer steps; into its cave it is beaten, at the gate a heart', () => {
+      const p = (over: Record<string, unknown> = {}) => game({ style: 'push', pos: 0.5, ...over });
+      const pushed = move(p(), 'fluent', { gain: RACE_STEP, cpuGain: 0.06 }).game;
+      expect([pushed.pos, pushed.event]).toEqual([0.66, 'pushed']);
+      const stepped = move(p(), 'wrong', { gain: 0, cpuGain: 0.06 }).game;
+      expect([stepped.pos, stepped.event, stepped.hearts]).toEqual([0.41, 'stepped', 3]);
+      const home = move(p({ pos: 0.9 }), 'fluent', { gain: RACE_STEP, cpuGain: 0.06 }).game;
+      expect([home.beaten, home.fresh, home.event, home.pos]).toEqual([1, true, 'beaten', 0.5]);
+      const gate = move(p({ pos: 0.05 }), 'timeout', { gain: 0, cpuGain: 0.06 }).game;
+      expect([gate.hearts, gate.event, gate.pos]).toEqual([2, 'bang', 0.5]);
+      expect(draw(pushed).pips).toBe('');
+    });
+
+    it('whole games end, and not forever: a child always quick wins both ways, a child always wrong loses both, at the rating’s extremes', () => {
+      for (const style of ['gate', 'push']) {
+        for (const timed of [false, true]) {
+          // The computer rocket's step at its fastest (the strongest child): the hardest push.
+          let quick = runScript(NEW_MONSTER_SCRIPT, { style, timed }).game;
+          let n = 0;
+          while (n < 60 && !quick.over) {
+            quick = move(quick, 'fluent', { gain: RACE_STEP, cpuGain: RACE_STEP * 0.7 }).game;
+            if (quick.fresh) quick = next(quick).game;
+            n++;
+          }
+          expect({ style, timed, won: quick.won, answers: n }).toEqual({ style, timed, won: true, answers: style === 'gate' ? 6 : 15 });
+          // At its slowest (the weakest child): the gentlest step.
+          let wrong = runScript(NEW_MONSTER_SCRIPT, { style, timed }).game;
+          let m = 0;
+          while (m < 80 && !wrong.over) {
+            wrong = move(wrong, 'wrong', { gain: 0, cpuGain: RACE_STEP * 0.35 }).game;
+            m++;
+          }
+          expect({ style, timed, lost: wrong.over && !wrong.won, answers: m }).toEqual({ style, timed, lost: true, answers: style === 'gate' ? (timed ? 12 : 9) : 24 });
+        }
+      }
+    });
+
+    it('the lane is drawn from the game: hearts, which monster, its hits left, its look and its moves, where it stands, and where a Challenge walk starts', () => {
+      const d0 = draw(game());
+      expect([d0.hearts, d0.line, d0.pips, d0.look, d0.monsterClass, d0.laneClass, d0.rest, d0.walkFrom, d0.phase, d0.note]).toEqual(['❤️ ❤️ ❤️', 'Monster 1 of 3', '●●●●', 'horns', 'rkt-monster rkt-monster-horns', 'rkt-lane rkt-lane-gate', 1, 0, 'playing', 'It only moves when you get one wrong.']);
+      const hit = move(game(), 'fluent').game;
+      expect([draw(hit).pips, draw(hit).monsterClass, draw(hit).note]).toEqual(['●●○○', 'rkt-monster rkt-monster-horns rkt-monster-hit-b', 'A big hit!']);
+      const crept = move(game({ timed: true }), 'wrong').game;
+      expect([draw(crept).rest, draw(crept).walkFrom, draw(crept).monsterClass, draw(crept).note]).toEqual([0.75, 0.75, 'rkt-monster rkt-monster-horns rkt-monster-lunge-b', 'It creeps closer.']);
+      const bang = move(game({ hearts: 2, timed: true }), 'timeout').game;
+      expect([draw(bang).hearts, draw(bang).laneClass, draw(bang).rest, draw(bang).note]).toEqual(['❤️ 🤍 🤍', 'rkt-lane rkt-lane-gate rkt-bang-b', 1, 'Bang! It reached the gate: a heart gone.']);
+      const beaten = answers(game({ hp: 2, timed: true }), 'fluent');
+      expect([draw(beaten).line, draw(beaten).look, draw(beaten).pips, draw(beaten).monsterClass, draw(beaten).walkFrom, draw(beaten).rest, draw(beaten).note]).toEqual(['Monster 1 of 3', 'horns', '○○○○', 'rkt-monster rkt-monster-horns rkt-monster-gone', 0, 1, 'It runs away!']);
+      const second = next(beaten).game;
+      expect([draw(second).line, draw(second).look, draw(second).pips, draw(second).monsterClass, draw(second).walkFrom, draw(second).note]).toEqual(['Monster 2 of 3', 'eye', '●●●●', 'rkt-monster rkt-monster-eye rkt-monster-arrive-a', 1, 'Here comes the next one!']);
+      expect(draw(next(answers(game({ beaten: 1, hp: 2 }), 'fluent')).game).look).toBe('spikes');
+      const push = draw(game({ style: 'push', pos: 0.41 }));
+      expect([push.rest, push.walkFrom, push.laneClass, push.pips, push.note]).toEqual([0.41, 0, 'rkt-lane rkt-lane-push', '', 'Push it back into its cave.']);
+      const home = draw(move(game({ style: 'push', pos: 0.9 }), 'fluent', { gain: RACE_STEP, cpuGain: 0.06 }).game);
+      expect([home.rest, home.note, home.monsterClass]).toEqual([1, 'Back into its cave!', 'rkt-monster rkt-monster-horns rkt-monster-gone']);
+      const won = draw({ ...game(), beaten: 3, over: true, won: true, fresh: true });
+      const lost = draw({ ...game(), hearts: 0, over: true, won: false, event: 'bang' });
+      expect([won.phase, won.note, won.look, won.rest, lost.phase, lost.note, lost.rest, lost.hearts]).toEqual(['over', 'All three sent home!', 'spikes', 1, 'over', 'It got in!', 0, '🤍 🤍 🤍']);
+      expect([draw(game(), 'fr').line, draw(game(), 'fr').note, draw(game({ timed: true }), 'fr').note, draw(game({ timed: true })).note]).toEqual(['Monstre 1 sur 3', 'Il n’avance que si tu te trompes.', 'Réponds avant qu’il n’atteigne la porte.', 'Answer before it reaches the gate.']);
+      const empty = runScript(DRAW_MONSTER_SCRIPT, {});
+      expect([empty.hearts, empty.line, empty.note, empty.pips, empty.phase, empty.rest, empty.walkFrom]).toEqual(['❤️ ❤️ ❤️', '', '', '', 'playing', 1, 0]);
+    });
+
+    it('🔴 a finished game pays a landing’s five once, win or lose; the card says the game’s whole take, answers included; a game left unfinished pays nothing', () => {
+      expect(MONSTER_STAR_RULE).toEqual({ finish: STAR_RULE.finish });
+      const tallied = { ...freshModel(), stars: 20, race: { id: 'm7', run: 0, bestRun: 0, rightStars: 9, levelStars: 10 } };
+      const won = { id: 'm7', over: true, won: true, beaten: 3, right: 9 };
+      const first = runScript(FINISH_MONSTER_SCRIPT, { model: tallied, game: won, lang: 'en' });
+      expect([first.paid, first.starsEarned, first.stars, first.starsText, first.why, first.headline, first.line, first.won]).toEqual([true, 5, 25, '+24 ⭐', 'right answers +9 · new level +10 · game finished +5', 'The gate held!', '3 monsters sent home · 9 right', true]);
+      const again = runScript(FINISH_MONSTER_SCRIPT, { model: first.model, game: won, lang: 'en' });
+      expect([again.paid, again.stars, again.starsText]).toEqual([false, 25, '+24 ⭐']);
+      const lost = runScript(FINISH_MONSTER_SCRIPT, { model: { ...freshModel(), race: { id: 'm8', rightStars: 1, levelStars: 0 } }, game: { id: 'm8', over: true, won: false, beaten: 2, right: 1 }, lang: 'fr' });
+      expect([lost.paid, lost.starsText, lost.why, lost.headline, lost.line, lost.won]).toEqual([true, '+6 ⭐', 'bonnes réponses +1 · partie finie +5', 'Le monstre est entré !', 'Tu en as renvoyé 2 sur 3 · 1 bonne réponse', false]);
+      const left = runScript(FINISH_MONSTER_SCRIPT, { model: { ...freshModel(), stars: 3 }, game: { id: 'm9', over: false }, lang: 'en' });
+      expect([left.paid, left.stars, left.starsText, left.why]).toEqual([false, 3, '', '']);
+      // Another game's tally is not this one's.
+      expect(runScript(FINISH_MONSTER_SCRIPT, { model: { ...freshModel(), race: { id: 'r1', rightStars: 7, levelStars: 0 } }, game: { id: 'm10', over: true, won: true, beaten: 3, right: 7 }, lang: 'en' }).starsText).toBe('+5 ⭐');
+      // RKT-011: a take of 24 reaching 25 crosses 15 and offers the pick; 6 reaching 5 crosses none.
+      expect([first.earnedPick, lost.earnedPick]).toEqual([true, false]);
+      // Its id is its own: a hunt paid under the same id does not stop the game paying.
+      expect(runScript(FINISH_MONSTER_SCRIPT, { model: { ...freshModel(), lastHuntId: 'm7' }, game: won, lang: 'en' }).paid).toBe(true);
+      // Sabotage arm: without the game id check, the second Finish pays again.
+      const doctored = FINISH_MONSTER_SCRIPT.replace('model.lastMonsterId !== id', 'true');
+      expect(doctored).not.toBe(FINISH_MONSTER_SCRIPT);
+      expect(runScript(doctored, { model: first.model, game: won, lang: 'en' }).paid).toBe(true);
+    });
+
+    it('the grader says a hit or a push in Monster Gate and the race keeps its rocket words; the picker’s clock takes a scale in (0, 1] and ignores anything else', () => {
+      const q = pick({ level: 'CE2' });
+      const at = (game: string | undefined, typed: string, elapsed: number) => grade(q, typed, { game, elapsedOverride: elapsed });
+      const quickMs = 100;
+      const slowMs = q.fluentMs * 2;
+      expect([at(undefined, q.answer, quickMs).boost, at(undefined, 'nope', quickMs).boost]).toEqual([expect.stringMatching(/full boost$/), 'No boost']);
+      expect([at('gate', q.answer, quickMs).boost, at('gate', q.answer, quickMs).boostPct, at('gate', q.answer, slowMs).boost, at('gate', q.answer, slowMs).boostPct, at('gate', 'nope', quickMs).boost, at('gate', 'nope', quickMs).boostPct]).toEqual([expect.stringMatching(/^⚡ .+ · big hit$/), 100, expect.stringMatching(/ · small hit$/), 50, 'No hit', 0]);
+      expect([at('push', q.answer, slowMs).boost, at('push', 'nope', quickMs).boost, grade(q, '', { game: 'push', timedOut: true, lang: 'fr' }).boost, grade(q, '', { timedOut: true, lang: 'fr' }).boost]).toEqual([expect.stringMatching(/ · push 50%$/), 'No push', 'Pas de poussée', 'Ta fusée ne bouge pas']);
+      const base = pick({ level: 'CE2' });
+      expect(base.limitMs).toBe(base.fluentMs * LIMIT_FACTOR);
+      const scaled = pick({ level: 'CE2', limitScale: 0.25 });
+      expect(scaled.limitMs).toBe(Math.round(scaled.fluentMs * LIMIT_FACTOR * 0.25));
+      for (const junk of [0, -1, 2, 'x', undefined]) {
+        const r = pick({ level: 'CE2', limitScale: junk });
+        expect({ junk, limitMs: r.limitMs }).toEqual({ junk, limitMs: r.fluentMs * LIMIT_FACTOR });
+      }
+    });
+  });
+
   describe('profiles in the store', () => {
     it('create, select, save a model, list, delete — and the cap of six', () => {
       let app: any = undefined;
@@ -1613,6 +1810,10 @@ describe('TPL-007 — the engine', () => {
         'Logic/Hunt move': ['game', 'changed', 'note'],
         'Logic/Draw hunt': ['rows', 'instruction', 'progress', 'note', 'noteKind', 'phase', 'over', 'canShow', 'made', 'helped', 'round'],
         'Logic/Finish hunt': ['paid', 'model', 'starsEarned', 'stars', 'earnedPick', 'won', 'starsText', 'why', 'headline', 'line'],
+        'Logic/New monster game': ['game', 'id', 'timeScale'],
+        'Logic/Monster move': ['game', 'changed', 'event', 'timeScale'],
+        'Logic/Draw monster': ['hearts', 'heartsLeft', 'line', 'note', 'pips', 'look', 'monsterClass', 'laneClass', 'rest', 'walkFrom', 'phase', 'over', 'won', 'beaten', 'right'],
+        'Logic/Finish monster': ['paid', 'model', 'starsEarned', 'stars', 'earnedPick', 'won', 'starsText', 'why', 'headline', 'line'],
         'Logic/Active profile': ['hasProfile', 'profileId', 'name', 'look', 'seed', 'level', 'lang', 'layout', 'sound', 'answerMode', 'mergeMode', 'model', 'due', 'days7', 'answered', 'stars', 'faceOptions', 'paint', 'picks', 'hasPicks', 'nextAt', 'nextPct', 'nextText', 'sets'],
         'Logic/Encode save code': ['code', 'length'],
         'Logic/Decode save code': ['app', 'ok', 'error', 'profileId']

@@ -266,6 +266,12 @@
       "fromProperty": "enabled",
       "toId": "cdOut",
       "toProperty": "running"
+    },
+    {
+      "fromId": "cdAnim",
+      "fromProperty": "currentValue",
+      "toId": "cdOut",
+      "toProperty": "left"
     }
   ]
 }

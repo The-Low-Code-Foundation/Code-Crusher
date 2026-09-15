@@ -325,6 +325,9 @@
       "parameters": {
         "name": "questionAnswer"
       },
+      "metadata": {
+        "comment": "Shared on purpose: only one round is ever on screen (the race page's or Monster Gate's), and each question writes this before it is read."
+      },
       "x": 410,
       "y": 1480
     },

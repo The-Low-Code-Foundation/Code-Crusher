@@ -117,6 +117,16 @@
           "name": "showMeWord",
           "plug": "output",
           "type": "string"
+        },
+        {
+          "name": "limitScale",
+          "plug": "output",
+          "type": "number"
+        },
+        {
+          "name": "game",
+          "plug": "output",
+          "type": "string"
         }
       ],
       "x": 350,
@@ -362,6 +372,11 @@
           "name": "layoutPickNow",
           "plug": "input",
           "type": "signal"
+        },
+        {
+          "name": "clockLeft",
+          "plug": "input",
+          "type": "number"
         }
       ],
       "x": 350,

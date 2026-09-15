@@ -64,6 +64,12 @@
       "toProperty": "in-wordLists"
     },
     {
+      "fromId": "picknextquesIn",
+      "fromProperty": "limitScale",
+      "toId": "picknextquesFn",
+      "toProperty": "in-limitScale"
+    },
+    {
       "fromId": "picknextquesFn",
       "fromProperty": "out-skillId",
       "toId": "picknextquesOut",

@@ -55,7 +55,7 @@
       "path": "Logic/Pick next question",
       "type": "visual",
       "nodeCount": 3,
-      "connectionCount": 31,
+      "connectionCount": 32,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
@@ -63,7 +63,7 @@
       "path": "Logic/Grade answer",
       "type": "visual",
       "nodeCount": 3,
-      "connectionCount": 36,
+      "connectionCount": 37,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
@@ -149,6 +149,38 @@
     },
     "Logic/Finish hunt": {
       "path": "Logic/Finish hunt",
+      "type": "visual",
+      "nodeCount": 3,
+      "connectionCount": 15,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Logic/New monster game": {
+      "path": "Logic/New monster game",
+      "type": "visual",
+      "nodeCount": 3,
+      "connectionCount": 7,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Logic/Monster move": {
+      "path": "Logic/Monster move",
+      "type": "visual",
+      "nodeCount": 3,
+      "connectionCount": 11,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Logic/Draw monster": {
+      "path": "Logic/Draw monster",
+      "type": "visual",
+      "nodeCount": 3,
+      "connectionCount": 18,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Logic/Finish monster": {
+      "path": "Logic/Finish monster",
       "type": "visual",
       "nodeCount": 3,
       "connectionCount": 15,
@@ -295,7 +327,7 @@
       "path": "Logic/Translate words",
       "type": "visual",
       "nodeCount": 3,
-      "connectionCount": 118,
+      "connectionCount": 125,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
@@ -415,7 +447,7 @@
       "path": "Game/Countdown bar",
       "type": "visual",
       "nodeCount": 34,
-      "connectionCount": 44,
+      "connectionCount": 45,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
@@ -495,7 +527,7 @@
       "path": "Race/Round",
       "type": "visual",
       "nodeCount": 17,
-      "connectionCount": 92,
+      "connectionCount": 95,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
@@ -563,6 +595,38 @@
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
+    "Game/Monster": {
+      "path": "Game/Monster",
+      "type": "visual",
+      "nodeCount": 2,
+      "connectionCount": 1,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Monster/Lane": {
+      "path": "Monster/Lane",
+      "type": "visual",
+      "nodeCount": 12,
+      "connectionCount": 14,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Monster/Setup": {
+      "path": "Monster/Setup",
+      "type": "visual",
+      "nodeCount": 22,
+      "connectionCount": 33,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Monster/Play": {
+      "path": "Monster/Play",
+      "type": "visual",
+      "nodeCount": 31,
+      "connectionCount": 121,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
+    },
     "Pages/Profiles": {
       "path": "Pages/Profiles",
       "type": "page",
@@ -574,8 +638,8 @@
     "Pages/Home": {
       "path": "Pages/Home",
       "type": "page",
-      "nodeCount": 31,
-      "connectionCount": 48,
+      "nodeCount": 32,
+      "connectionCount": 49,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
     },
@@ -610,11 +674,19 @@
       "connectionCount": 44,
       "modified": "2026-09-12T00:00:00.000Z",
       "created": "2026-09-12T00:00:00.000Z"
+    },
+    "Pages/Monster": {
+      "path": "Pages/Monster",
+      "type": "page",
+      "nodeCount": 28,
+      "connectionCount": 82,
+      "modified": "2026-09-12T00:00:00.000Z",
+      "created": "2026-09-12T00:00:00.000Z"
     }
   },
   "stats": {
-    "totalComponents": 76,
-    "totalNodes": 757,
-    "totalConnections": 1793
+    "totalComponents": 85,
+    "totalNodes": 865,
+    "totalConnections": 2109
   }
 }

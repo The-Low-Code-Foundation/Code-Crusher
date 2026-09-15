@@ -205,7 +205,10 @@ export const CONTENT_SIZED_TEXTS: Readonly<Record<string, string>> = {
   '/Game/Countdown bar#cdSecs': 'a number of seconds',
   '/Game/Countdown bar#cdSecsLast': 'a number of seconds',
   '/Race/Result#rrGlyph': 'one emoji',
-  '/Merge/Tile#mtWord': 'a number on a square, at most four digits'
+  '/Merge/Tile#mtWord': 'a number on a square, at most four digits',
+  '/Monster/Lane#zlHearts': 'three heart emoji',
+  '/Monster/Lane#zlLine': 'which monster of three: "Monstre 2 sur 3" at most',
+  '/Monster/Lane#zlPips': 'four dots: the hits a monster has left'
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -1072,6 +1075,14 @@ const OPTION_BUTTON: Tpl007Component = {
 };
 delete (OPTION_BUTTON.nodes[1] as Record<string, unknown>).parent;
 
+/**
+ * TPL-007 §16 — Race/Round is placed on two pages now (the race's and Monster Gate's), so the Variables inside its question box and its
+ * clock are shared by name between the two copies (GAM-005's warning). They are shared on purpose, and it is safe: a page is one route, so
+ * only one round is ever on screen; the clock writes all three of its values at every Start before it reads them, and the box writes
+ * its answer before it fires Answered.
+ */
+const SHARED_ROUND = 'Shared on purpose: only one round is ever on screen (the race page\'s or Monster Gate\'s), and each question writes this before it is read.';
+
 /** Put the cursor in the rendered answer field, on the next frame: the row has only just mounted. */
 const FOCUS_ANSWER_SCRIPT = `if (typeof document !== 'undefined') {
   requestAnimationFrame(() => {
@@ -1119,7 +1130,7 @@ const QUESTION_BOX: Tpl007Component = {
     // Values before signals: the answer is written, then Answered fires.
     logic('qbSetTyped', SET_VARIABLE_NODE, 'The typed answer', { name: 'questionAnswer' }),
     logic('qbSetPicked', SET_VARIABLE_NODE, 'The picked answer', { name: 'questionAnswer' }),
-    logic('qbAnswer', VARIABLE_NODE, 'The answer', { name: 'questionAnswer' }),
+    { ...(logic('qbAnswer', VARIABLE_NODE, 'The answer', { name: 'questionAnswer' }) as object), comment: SHARED_ROUND },
     outputs('qbOut', 'The answer', [['answered', 'signal'], ['answer', 'string'], ['text', 'string'], ['layoutSeen', 'string'], ['layoutSeenNow', 'signal'], ['mistakes', 'number'], ['wrongKey', 'string']])
   ],
   connections: [
@@ -1188,8 +1199,8 @@ const COUNTDOWN: Tpl007Component = {
     logic('cdKick', TIMER_NODE, 'A frame after full: then glide', { duration: 40 }),
     logic('cdOne', EXPRESSION_NODE, 'One millisecond', { expression: '1' }),
     // The bar: jump to full (duration 0), then glide to empty over the limit.
-    logic('cdDur', VARIABLE_NODE, 'How long the glide takes', { name: 'countdownDuration' }),
-    logic('cdTarget', VARIABLE_NODE, 'Where the bar is heading', { name: 'countdownTarget' }),
+    { ...(logic('cdDur', VARIABLE_NODE, 'How long the glide takes', { name: 'countdownDuration' }) as object), comment: SHARED_ROUND },
+    { ...(logic('cdTarget', VARIABLE_NODE, 'Where the bar is heading', { name: 'countdownTarget' }) as object), comment: SHARED_ROUND },
     logic('cdSetDur0', SET_VARIABLE_NODE, 'No glide', { name: 'countdownDuration' }),
     logic('cdSetFull', SET_VARIABLE_NODE, 'Full', { name: 'countdownTarget' }),
     logic('cdSetDur', SET_VARIABLE_NODE, 'Glide over the limit', { name: 'countdownDuration' }),
@@ -1199,7 +1210,7 @@ const COUNTDOWN: Tpl007Component = {
     logic('cdLevel', EXPRESSION_NODE, 'Nearly out?', { expression: "v < 30 ? 'low' : 'ok'" }),
     withStates('cdStates', 'Calm or urgent', ['ok', 'low'], { fill: { type: 'color', by: { ok: ROLE.you, low: ROLE.costly } } }),
     // Expired is a value written BEFORE the signal, so the grader reads it right.
-    logic('cdExpired', VARIABLE_NODE, 'Has it run out?', { name: 'countdownExpired' }),
+    { ...(logic('cdExpired', VARIABLE_NODE, 'Has it run out?', { name: 'countdownExpired' }) as object), comment: SHARED_ROUND },
     logic('cdSetExpired', SET_VARIABLE_NODE, 'It ran out', { name: 'countdownExpired' }),
     logic('cdSetFresh', SET_VARIABLE_NODE, 'Not yet', { name: 'countdownExpired' }),
     logic('cdZero', EXPRESSION_NODE, 'Zero', { expression: '0' }),
@@ -1222,7 +1233,7 @@ const COUNTDOWN: Tpl007Component = {
     // (and pulsing) while the child reads the correction says there is still something to hurry for.
     logic('cdSetDurHold', SET_VARIABLE_NODE, 'Stop gliding', { name: 'countdownDuration' }),
     logic('cdSetHold', SET_VARIABLE_NODE, 'Stay where it is', { name: 'countdownTarget' }),
-    outputs('cdOut', 'Time', [['expired', 'signal'], ['isExpired', 'boolean'], ['running', 'boolean']])
+    outputs('cdOut', 'Time', [['expired', 'signal'], ['isExpired', 'boolean'], ['running', 'boolean'], ['left', 'number']])
   ],
   connections: [
     wire('cdIn', 'enabled', 'cdGate', 'condition'),
@@ -1272,7 +1283,9 @@ const COUNTDOWN: Tpl007Component = {
     wire('cdDeadline', 'timerFinished', 'cdSetExpired', 'do'),
     wire('cdSetExpired', 'done', 'cdOut', 'expired'),
     wire('cdExpired', 'value', 'cdOut', 'isExpired'),
-    wire('cdIn', 'enabled', 'cdOut', 'running')
+    wire('cdIn', 'enabled', 'cdOut', 'running'),
+    // TPL-007 §16: the bar itself, out, so Monster Gate walks its monster off this clock and never a second one.
+    wire('cdAnim', 'currentValue', 'cdOut', 'left')
   ]
 };
 
@@ -1788,11 +1801,11 @@ const RACE_SETUP: Tpl007Component = {
 const RACE_ROUND: Tpl007Component = {
   path: 'Race/Round',
   description: 'One question of a race: Ask picks it, the box or the clock answers it, the grader scores it, the banner shows it. Publishes Graded with the gains and the new model, then Next or ShowMe when the banner is dismissed. Abandon stops the clock, so a question left behind never grades.',
-  inputs: [port('ask', 'signal'), port('abandon', 'signal'), port('raceId', 'string'), port('forB', 'boolean'), port('level', 'string'), port('lang', 'string'), port('layout', 'string'), port('mode', 'string'), port('answerMode', 'string'), port('model', 'object'), port('curriculum', 'array'), port('wordLists', 'array'), port('timed', 'boolean'), port('soundOn', 'boolean'), port('placeholder', 'string'), port('checkWord', 'string'), port('fluentWord', 'string'), port('correctWord', 'string'), port('wrongWord', 'string'), port('timeUpWord', 'string'), port('nextWord', 'string'), port('showMeWord', 'string')],
-  outputs: [port('graded', 'signal'), port('correct', 'boolean'), port('gain', 'number'), port('cpuGain', 'number'), port('model', 'object'), port('outcome', 'string'), port('teach', 'string'), port('next', 'signal'), port('showMe', 'signal'), port('isTyping', 'boolean'), port('nextKey', 'string'), port('missCount', 'number'), port('worked', 'string'), port('prompt', 'string'), port('layoutSeen', 'string'), port('layoutSeenNow', 'signal'), port('layoutPick', 'string'), port('layoutPickNow', 'signal')],
+  inputs: [port('ask', 'signal'), port('abandon', 'signal'), port('raceId', 'string'), port('forB', 'boolean'), port('level', 'string'), port('lang', 'string'), port('layout', 'string'), port('mode', 'string'), port('answerMode', 'string'), port('model', 'object'), port('curriculum', 'array'), port('wordLists', 'array'), port('timed', 'boolean'), port('soundOn', 'boolean'), port('placeholder', 'string'), port('checkWord', 'string'), port('fluentWord', 'string'), port('correctWord', 'string'), port('wrongWord', 'string'), port('timeUpWord', 'string'), port('nextWord', 'string'), port('showMeWord', 'string'), port('limitScale', 'number', 'TPL-007 §16: the clock as a share of the skill’s; the race sends none'), port('game', 'string', 'TPL-007 §16: gate or push, so the verdict says a hit or a push; the race sends none')],
+  outputs: [port('graded', 'signal'), port('correct', 'boolean'), port('gain', 'number'), port('cpuGain', 'number'), port('model', 'object'), port('outcome', 'string'), port('teach', 'string'), port('next', 'signal'), port('showMe', 'signal'), port('isTyping', 'boolean'), port('nextKey', 'string'), port('missCount', 'number'), port('worked', 'string'), port('prompt', 'string'), port('layoutSeen', 'string'), port('layoutSeenNow', 'signal'), port('layoutPick', 'string'), port('layoutPickNow', 'signal'), port('clockLeft', 'number')],
   instantiates: [C.questionBox, C.countdown, C.banner, C.keyboard, logicName('Logic/Pick next question'), logicName('Logic/Grade answer'), C.sounds],
   nodes: [
-    inputs('rdIn', 'The profile and the words', [['ask', 'signal'], ['abandon', 'signal'], ['raceId', 'string'], ['forB', 'boolean'], ['level', 'string'], ['lang', 'string'], ['layout', 'string'], ['mode', 'string'], ['answerMode', 'string'], ['model', 'object'], ['curriculum', 'array'], ['wordLists', 'array'], ['timed', 'boolean'], ['soundOn', 'boolean'], ['placeholder', 'string'], ['checkWord', 'string'], ['fluentWord', 'string'], ['correctWord', 'string'], ['wrongWord', 'string'], ['timeUpWord', 'string'], ['nextWord', 'string'], ['showMeWord', 'string']]),
+    inputs('rdIn', 'The profile and the words', [['ask', 'signal'], ['abandon', 'signal'], ['raceId', 'string'], ['forB', 'boolean'], ['level', 'string'], ['lang', 'string'], ['layout', 'string'], ['mode', 'string'], ['answerMode', 'string'], ['model', 'object'], ['curriculum', 'array'], ['wordLists', 'array'], ['timed', 'boolean'], ['soundOn', 'boolean'], ['placeholder', 'string'], ['checkWord', 'string'], ['fluentWord', 'string'], ['correctWord', 'string'], ['wrongWord', 'string'], ['timeUpWord', 'string'], ['nextWord', 'string'], ['showMeWord', 'string'], ['limitScale', 'number'], ['game', 'string']]),
     group('rdWrap', 'The round', undefined, column({ alignItems: 'center', rowGap: 'var(--space-3)' }), ['rdClock', 'rdBox', 'rdBanner', 'rdKeys']),
     place('rdClock', C.countdown, 'The clock', 'rdWrap'),
     place('rdBox', C.questionBox, 'The question', 'rdWrap'),
@@ -1812,7 +1825,7 @@ const RACE_ROUND: Tpl007Component = {
     // RKT-004: Show me only after a wrong or timed-out answer, on a skill that has a card. It showed after "Fast and correct!" too.
     logic('rdCanTeach', EXPRESSION_NODE, 'Something to teach?', { expression: "correct !== true && ((teach || '') + '').length > 0" }),
     gate('rdRight', 'Right or wrong?'),
-    outputs('rdOut', 'The verdict', [['graded', 'signal'], ['correct', 'boolean'], ['gain', 'number'], ['cpuGain', 'number'], ['model', 'object'], ['outcome', 'string'], ['teach', 'string'], ['next', 'signal'], ['showMe', 'signal'], ['isTyping', 'boolean'], ['nextKey', 'string'], ['missCount', 'number'], ['worked', 'string'], ['prompt', 'string'], ['layoutSeen', 'string'], ['layoutSeenNow', 'signal'], ['layoutPick', 'string'], ['layoutPickNow', 'signal']])
+    outputs('rdOut', 'The verdict', [['graded', 'signal'], ['correct', 'boolean'], ['gain', 'number'], ['cpuGain', 'number'], ['model', 'object'], ['outcome', 'string'], ['teach', 'string'], ['next', 'signal'], ['showMe', 'signal'], ['isTyping', 'boolean'], ['nextKey', 'string'], ['missCount', 'number'], ['worked', 'string'], ['prompt', 'string'], ['layoutSeen', 'string'], ['layoutSeenNow', 'signal'], ['layoutPick', 'string'], ['layoutPickNow', 'signal'], ['clockLeft', 'number']])
   ],
   connections: [
     // Ask: nudge the picker.
@@ -1826,6 +1839,8 @@ const RACE_ROUND: Tpl007Component = {
     wire('rdIn', 'mode', 'rdPick', 'mode'),
     wire('rdIn', 'answerMode', 'rdPick', 'answerMode'),
     wire('rdIn', 'wordLists', 'rdPick', 'wordLists'),
+    // TPL-007 §16: a monster that crept closer arrives sooner. The race wires no scale, and the picker hears none.
+    wire('rdIn', 'limitScale', 'rdPick', 'limitScale'),
     // The question, shown.
     wire('rdPick', 'prompt', 'rdBox', 'prompt'),
     wire('rdPick', 'kind', 'rdBox', 'kind'),
@@ -1870,6 +1885,8 @@ const RACE_ROUND: Tpl007Component = {
     // RKT-010: the race this answer belongs to, and whether it is player two's (whose answers pay no stars into this profile, D63).
     wire('rdIn', 'raceId', 'rdGrade', 'raceId'),
     wire('rdIn', 'forB', 'rdGrade', 'forB'),
+    // TPL-007 §16: Monster Gate says a hit or a push. The race wires no Game, and the grader keeps the rocket's words.
+    wire('rdIn', 'game', 'rdGrade', 'game'),
     wire('rdBox', 'answer', 'rdGrade', 'typed'),
     wire('rdClock', 'isExpired', 'rdGrade', 'timedOut'),
     wire('rdBox', 'answered', 'rdGrade', 'run'),
@@ -1919,7 +1936,9 @@ const RACE_ROUND: Tpl007Component = {
     wire('rdNextKey', 'result', 'rdOut', 'nextKey'),
     wire('rdGrade', 'missCount', 'rdOut', 'missCount'),
     wire('rdPick', 'worked', 'rdOut', 'worked'),
-    wire('rdPick', 'prompt', 'rdOut', 'prompt')
+    wire('rdPick', 'prompt', 'rdOut', 'prompt'),
+    // TPL-007 §16: the bar's own position, for the monster's walk.
+    wire('rdClock', 'left', 'rdOut', 'clockLeft')
   ]
 };
 
@@ -2434,6 +2453,73 @@ const HANGAR_SHELF_PART: Tpl007Component = {
 
 // ── App and the pages ───────────────────────────────────────────────────────
 
+/**
+ * TPL-007 §16, ruling 5 — the three monsters, in the order they come: a shape and a colour each, 13 × 13 pixels. Each is drawn by ONE
+ * box-shadow on a 5 px square (`::before` on Game/Monster's box), so a monster is a stylesheet rule, not an image, and every colour is a
+ * token. K is ink, W the card, Y sunshine, B the body.
+ */
+export const MONSTER_PIXELS: Readonly<Record<(typeof MONSTER_LOOKS)[number], { body: string; rows: string[] }>> = {
+  horns: {
+    body: 'var(--destructive)',
+    rows: ['.K.........K.', 'KBK.......KBK', 'KBBK.....KBBK', '.KBBKKKKKBBK.', '.KBBBBBBBBBK.', 'KBBWWBBBWWBBK', 'KBBKWBBBKWBBK', 'KBBBBBBBBBBBK', 'KBBKKKKKKKBBK', 'KBBKWKWKWKBBK', '.KBBBBBBBBBK.', '..KBK...KBK..', '..KKK...KKK..']
+  },
+  eye: {
+    body: 'var(--rocket-paint-purple)',
+    rows: ['......K......', '.....KYK.....', '......K......', '...KKKKKKK...', '..KBBBBBBBK..', '.KBBKKKKKBBK.', '.KBKWWWWWKBK.', 'KBBKWKKWWKBBK', 'KBBKWKKWWKBBK', 'KBBBKKKKKBBBK', 'KBBBBBBBBBBBK', '.KBBKBBBKBBK.', '.KKK.KKK.KKK.']
+  },
+  spikes: {
+    body: 'var(--rocket-paint-orange)',
+    rows: ['..K..K..K..K.', '.KBKKBKKBKKBK', '.KBBBBBBBBBBK', 'KBBBBBBBBBBBK', 'KBWWKBBBWWKBK', 'KBWKKBBBWKKBK', 'KBBBBBBBBBBBK', 'KBKWKWKWKWKBK', 'KBBKKKKKKKBBK', '.KBBBBBBBBBK.', '.KBK.KBK.KBK.', '.KK..KK..KK..', '.............']
+  }
+};
+
+/** One pixel of a monster, in CSS px. Game/Monster's box is 13 of them square. */
+const MONSTER_PX = 5;
+
+function monsterShadow(look: (typeof MONSTER_LOOKS)[number]): string {
+  const { body, rows } = MONSTER_PIXELS[look];
+  const colour: Record<string, string> = { K: 'var(--foreground)', B: body, W: 'var(--surface)', Y: 'var(--accent)' };
+  const out: string[] = [];
+  rows.forEach((line, y) => [...line].forEach((ch, x) => colour[ch] && out.push(`${x * MONSTER_PX}px ${y * MONSTER_PX}px 0 0 ${colour[ch]}`)));
+  return out.join(', ');
+}
+
+/** Monster Gate's lane and monsters: what a node port cannot draw. Spliced into APP_CSS before its reduced-motion block, which stills every animation here. */
+const MONSTER_CSS = `/* TPL-007 §16 Monster Gate. The lane: a sunshine gate with tomato bands on the left, the ground along the bottom, and (Push it back) the cave on the right. */
+.rkt-lane { position: relative; background-image: linear-gradient(to top, var(--border-subtle) 0, var(--border-subtle) 21px, var(--foreground) 21px, var(--foreground) 24px, transparent 24px); }
+.rkt-lane::before { content: ''; position: absolute; left: 12px; bottom: 21px; width: 62px; height: 104px; box-sizing: border-box; border: 3px solid var(--foreground); border-radius: 31px 31px 4px 4px; background: linear-gradient(var(--primary), var(--primary)) 0 30px / 100% 7px no-repeat, linear-gradient(var(--primary), var(--primary)) 0 66px / 100% 7px no-repeat, repeating-linear-gradient(90deg, var(--accent) 0, var(--accent) 12px, var(--foreground) 12px, var(--foreground) 14px); transform-origin: 50% 100%; }
+.rkt-lane-push::after { content: ''; position: absolute; right: -10px; bottom: 21px; width: 70px; height: 86px; background: var(--foreground); border-radius: 44px 0 0 0; }
+/* A bang shakes the gate. Two names, so the next bang shakes it again. */
+@keyframes rkt-bang-a { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-7deg); } 60% { transform: rotate(5deg); } }
+@keyframes rkt-bang-b { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-7deg); } 60% { transform: rotate(5deg); } }
+.rkt-bang-a::before { animation: rkt-bang-a 420ms ease-out both; }
+.rkt-bang-b::before { animation: rkt-bang-b 420ms ease-out both; }
+/* The walk is the round's own clock, written on the mover's width every frame; between answers the mover glides to where the monster rests. */
+.rkt-mover-glide { transition: width 450ms cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+/* Near the gate the mover is narrower than the monster, which then overhangs it to the left: it must never be squeezed instead. */
+.rkt-mover > * { flex-shrink: 0 !important; }
+/* A monster: its pixels in one box-shadow on a 5 px square. It bobs while it waits; a hit knocks it back, a lunge is a step closer, a beaten one runs off, and the next one walks in. */
+@keyframes rkt-bob { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
+.rkt-monster { position: relative; }
+/* 🔴 The bob is on the pixels (::before), never the box. A hit, a lunge and an arrival animate the box, and an animation on the same element
+   replaced the bob for the rest of the game (Richard, 2026-09-14: "after the first question they just slide towards the door"). */
+.rkt-monster::before { content: ''; position: absolute; left: 0; top: 0; width: ${MONSTER_PX}px; height: ${MONSTER_PX}px; animation: rkt-bob 560ms steps(2, jump-none) infinite; }
+${MONSTER_LOOKS.map((look) => `.rkt-monster-${look}::before { box-shadow: ${monsterShadow(look)}; }`).join('\n')}
+@keyframes rkt-monster-hit-a { 0% { transform: translateX(0); filter: brightness(1.9); } 35% { transform: translateX(16px) rotate(9deg); } 70% { transform: translateX(-4px) rotate(-3deg); filter: none; } 100% { transform: translateX(0); } }
+@keyframes rkt-monster-hit-b { 0% { transform: translateX(0); filter: brightness(1.9); } 35% { transform: translateX(16px) rotate(9deg); } 70% { transform: translateX(-4px) rotate(-3deg); filter: none; } 100% { transform: translateX(0); } }
+@keyframes rkt-monster-lunge-a { 0%, 100% { transform: translateX(0); } 40% { transform: translateX(-12px) scale(1.08); } }
+@keyframes rkt-monster-lunge-b { 0%, 100% { transform: translateX(0); } 40% { transform: translateX(-12px) scale(1.08); } }
+@keyframes rkt-monster-arrive-a { 0% { transform: translateX(48px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+@keyframes rkt-monster-arrive-b { 0% { transform: translateX(48px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+@keyframes rkt-monster-gone { 0% { transform: translateX(0); opacity: 1; } 30% { transform: translateY(-10px) scaleX(-1); opacity: 1; } 100% { transform: translateX(90px) scaleX(-1); opacity: 0; } }
+.rkt-monster-hit-a { animation: rkt-monster-hit-a 420ms ease-out both; }
+.rkt-monster-hit-b { animation: rkt-monster-hit-b 420ms ease-out both; }
+.rkt-monster-lunge-a { animation: rkt-monster-lunge-a 380ms ease-in-out both; }
+.rkt-monster-lunge-b { animation: rkt-monster-lunge-b 380ms ease-in-out both; }
+.rkt-monster-arrive-a { animation: rkt-monster-arrive-a 520ms ease-out both; }
+.rkt-monster-arrive-b { animation: rkt-monster-arrive-b 520ms ease-out both; }
+.rkt-monster-gone { animation: rkt-monster-gone 760ms ease-in both; }`;
+
 export const APP_CSS = `/* Rocket School — the few things a node port cannot say. */
 html, body { background: var(--background); }
 .pressable { cursor: pointer; }
@@ -2471,11 +2557,15 @@ html, body { background: var(--background); }
 @keyframes rkt-shake-b { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 .rkt-shake-a { animation: rkt-shake-a 320ms ease-in-out both; }
 .rkt-shake-b { animation: rkt-shake-b 320ms ease-in-out both; }
+${MONSTER_CSS}
 @media (prefers-reduced-motion: reduce) {
   .pressable, .game-card { transition: none; }
   .game-card:hover, .pressable:active { transform: none; }
   .rkt-result, .rkt-result-glyph, .rkt-clock-last, .rkt-stars, .rkt-wear-a, .rkt-wear-b, .rkt-join-a, .rkt-join-b, .rkt-land-a, .rkt-land-b, .rkt-shake-a, .rkt-shake-b { animation: none; }
   .rkt-merge-board { transition: none; }
+  .rkt-monster::before, .rkt-monster-hit-a, .rkt-monster-hit-b, .rkt-monster-lunge-a, .rkt-monster-lunge-b, .rkt-monster-arrive-a, .rkt-monster-arrive-b, .rkt-bang-a::before, .rkt-bang-b::before { animation: none; }
+  .rkt-monster-gone { animation: none; opacity: 0.35; }
+  .rkt-mover-glide { transition: none; }
 }`;
 
 export const APP_NODES = [
@@ -2603,7 +2693,7 @@ const GAMES: ReadonlyArray<{ id: string; glyph: string; title: string; blurb: st
   // Richard, 2026-09-14: the hangar is not a game, so it is not a card here. It is Home's bar to the next pick, and the player menu.
   { id: 'Merge', glyph: '🔟', title: 'gameMerge', blurb: 'gameMergeBlurb', target: C.pageMerge },
   { id: 'Hunt', glyph: '🔍', title: 'gameHunt', blurb: 'gameHuntBlurb', target: C.pageHunt },
-  { id: 'Monster', glyph: '👾', title: 'gameMonster', blurb: 'gameMonsterBlurb' }
+  { id: 'Monster', glyph: '👾', title: 'gameMonster', blurb: 'gameMonsterBlurb', target: C.pageMonster }
 ];
 
 const PAGE_HOME: Tpl007Component = {
@@ -2632,6 +2722,8 @@ const PAGE_HOME: Tpl007Component = {
     logic('hmGoRace', NAVIGATE_NODE, 'To the race', { router: ROUTER, target: C.pageRace }),
     logic('hmGoMerge', NAVIGATE_NODE, 'To Make Ten Merge', { router: ROUTER, target: C.pageMerge }),
     logic('hmGoHunt', NAVIGATE_NODE, 'To Number Hunt', { router: ROUTER, target: C.pageHunt }),
+    // 🔴 Home's 32nd node: a page holds 32, so this is the last navigate that fits.
+    logic('hmGoMonster', NAVIGATE_NODE, 'To Monster Gate', { router: ROUTER, target: C.pageMonster }),
     logic('hmGoHangar', NAVIGATE_NODE, 'To the hangar', { router: ROUTER, target: C.pageHangar }),
     logic('hmDueText', EXPRESSION_NODE, 'As text', { expression: "'' + n" }),
     logic('hmDaysText', EXPRESSION_NODE, 'As text', { expression: "'' + n" }),
@@ -2662,6 +2754,7 @@ const PAGE_HOME: Tpl007Component = {
     wire('hmRace', 'chosen', 'hmGoRace', 'navigate'),
     wire('hmMerge', 'chosen', 'hmGoMerge', 'navigate'),
     wire('hmHunt', 'chosen', 'hmGoHunt', 'navigate'),
+    wire('hmMonster', 'chosen', 'hmGoMonster', 'navigate'),
     // RKT-011: the hangar, from the bar to the next pick (and from the player menu, through headerWires).
     wire('hmMe', 'nextText', 'hmNext', 'text'),
     wire('hmMe', 'nextPct', 'hmNext', 'percent'),
@@ -3363,6 +3456,414 @@ const PAGE_HUNT: Tpl007Component = {
   ]
 };
 
+// ── Monster Gate (TPL-007 §2.2 D, §16) ─────────────────────────────────────
+
+/** One monster. What it looks like and what it is doing are the class Logic/Draw monster writes; the stylesheet draws it (MONSTER_PIXELS). */
+const MONSTER: Tpl007Component = {
+  path: 'Game/Monster',
+  description: 'One Monster Gate monster, drawn by the stylesheet: Monster Class names its look (rkt-monster-horns, -eye or -spikes, a shape and a colour each, pixel art in one box-shadow) and what it is doing (a hit, a lunge closer, running away, arriving). 65 px square.',
+  inputs: [port('monsterClass', 'string')],
+  nodes: [
+    inputs('zmIn', 'Which monster, doing what', [['monsterClass', 'string']]),
+    group('zmBody', 'The monster', undefined, { sizeMode: 'explicit', width: px(65), height: px(65), cssClassName: 'rkt-monster rkt-monster-horns' })
+  ],
+  connections: [wire('zmIn', 'monsterClass', 'zmBody', 'cssClassName')]
+};
+
+/**
+ * Where the monster stands, as the mover's width (a percentage of the lane between the gate and the far side). While Walking in a
+ * Challenge question of the gate way (Walk From > 0), it is Walk From × Left: the round's own clock bar, 100 full to 0 empty, so the
+ * monster reaches the gate exactly when the question times out. Otherwise it is Rest, and the mover glides there.
+ */
+const MONSTER_WALK_SCRIPT = `var from = Number(Inputs.walkFrom) || 0;
+var left = Number(Inputs.left);
+var walking = Inputs.walking === true && from > 0 && left >= 0 && left <= 100;
+var at = walking ? from * left / 100 : Number(Inputs.rest);
+if (!(at >= 0)) at = 1;
+Outputs.width = Math.round(Math.min(1, at) * 1000) / 10;
+Outputs.moverClass = walking ? 'rkt-mover' : 'rkt-mover rkt-mover-glide';`;
+
+const MONSTER_LANE: Tpl007Component = {
+  path: 'Monster/Lane',
+  description: 'Monster Gate\'s lane: the hearts, which monster of three and its hits left, over the lane; the Lane Class draws the gate (left), the ground and, in Push it back, the cave (right). The monster stands at Rest (0 the gate, 1 the far side), gliding there between answers, or, while Walking, walks from Walk From to the gate as the round\'s clock (Left, 100 to 0) empties. The note under the lane says what just happened.',
+  inputs: [port('hearts', 'string'), port('line', 'string'), port('note', 'string'), port('pips', 'string'), port('monsterClass', 'string'), port('laneClass', 'string'), port('rest', 'number'), port('walkFrom', 'number'), port('walking', 'boolean'), port('left', 'number')],
+  instantiates: [C.monster],
+  nodes: [
+    inputs('zlIn', 'The game, drawn', [['hearts', 'string'], ['line', 'string'], ['note', 'string'], ['pips', 'string'], ['monsterClass', 'string'], ['laneClass', 'string'], ['rest', 'number'], ['walkFrom', 'number'], ['walking', 'boolean'], ['left', 'number']]),
+    group('zlCard', 'The lane, and what is said over and under it', undefined, column({ alignItems: 'stretch', rowGap: 'var(--space-2)', maxWidth: px(640) }), ['zlTop', 'zlLane', 'zlNote']),
+    group('zlTop', 'The hearts, which monster, and its hits left', 'zlCard', row({ width: pct(100), sizeMode: 'contentHeight', justifyContent: 'space-between' }), ['zlHearts', 'zlLine', 'zlPips']),
+    text('zlHearts', 'The hearts', 'zlTop', '❤️ ❤️ ❤️', { fontSize: 'var(--text-xl)', lineHeight: 'var(--leading-tight)', ...WORD }),
+    text('zlLine', 'Which monster of three', 'zlTop', '', { ...T_META, fontWeight: 'var(--font-bold)', color: ROLE.ink, ...WORD }),
+    text('zlPips', 'The hits it has left', 'zlTop', '', { ...T_BODY, fontWeight: 'var(--font-bold)', color: ROLE.costly, lineHeight: 'var(--leading-tight)', ...WORD }),
+    // The gate is drawn in the lane's left padding (APP_CSS `.rkt-lane::before`), and at Rest 0 the monster stands just right of it.
+    // 🔴 A COLUMN, not a row (build 1, the door's `wired-dimension-becomes-grow`): a wired percentage width on a row's own axis is
+    // flex-grow, so the mover would never have moved. Across a column, the percentage is a width; the mover sits along the bottom.
+    group('zlLane', 'The lane: the gate, the ground, and the cave', 'zlCard', { width: pct(100), height: px(150), sizeMode: 'explicit', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start', backgroundColor: 'var(--muted)', borderRadius: 'var(--radius-xl)', borderStyle: 'solid', borderWidth: 'var(--border-1)', borderColor: 'var(--foreground)', clip: true, paddingLeft: px(150), paddingRight: 'var(--space-4)', paddingBottom: 'var(--space-6)', cssClassName: 'rkt-lane rkt-lane-gate' }, ['zlMover']),
+    // The mover's width is where the monster stands, and the monster sits at its right end (overhanging it at 0).
+    group('zlMover', 'Where the monster stands', 'zlLane', { width: pct(100), height: px(65), sizeMode: 'explicit', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end', cssClassName: 'rkt-mover rkt-mover-glide' }, ['zlMonster']),
+    place('zlMonster', C.monster, 'The monster', 'zlMover'),
+    text('zlNote', 'What just happened', 'zlCard', '', { ...T_BODY, fontWeight: 'var(--font-bold)', color: ROLE.ink, textAlignX: 'center' }),
+    logic('zlWalk', FUNCTION_NODE, 'Where the monster stands now: walking off the clock, or resting', { functionScript: MONSTER_WALK_SCRIPT }),
+    logic('zlHasPips', EXPRESSION_NODE, 'Hits to count?', { expression: "((p || '') + '').length > 0" })
+  ],
+  connections: [
+    wire('zlIn', 'hearts', 'zlHearts', 'text'),
+    wire('zlIn', 'line', 'zlLine', 'text'),
+    wire('zlIn', 'pips', 'zlPips', 'text'),
+    wire('zlIn', 'pips', 'zlHasPips', 'p'),
+    wire('zlHasPips', 'result', 'zlPips', 'mounted'),
+    wire('zlIn', 'note', 'zlNote', 'text'),
+    wire('zlIn', 'laneClass', 'zlLane', 'cssClassName'),
+    wire('zlIn', 'monsterClass', 'zlMonster', 'monsterClass'),
+    wire('zlIn', 'walking', 'zlWalk', 'in-walking'),
+    wire('zlIn', 'walkFrom', 'zlWalk', 'in-walkFrom'),
+    wire('zlIn', 'left', 'zlWalk', 'in-left'),
+    wire('zlIn', 'rest', 'zlWalk', 'in-rest'),
+    // The width is a percentage: a bare number keeps the port's unit (Game/Feedback banner's meter).
+    wire('zlWalk', 'out-width', 'zlMover', 'width'),
+    wire('zlWalk', 'out-moverClass', 'zlMover', 'cssClassName')
+  ]
+};
+
+const MONSTER_SETUP: Tpl007Component = {
+  path: 'Monster/Setup',
+  description: 'Before a Monster Gate game: the way to play (Beat it to the gate, or Push it back) and the pace (Practice or Challenge), the chosen pair\'s rule in one line, and Start. Opens on Beat it to the gate and Practice (§16 ruling 3), written once, so coming back keeps the child\'s choices. Publishes Start with Style and Timed.',
+  inputs: [port('mounted', 'boolean'), port('gateWord', 'string'), port('pushWord', 'string'), port('practiceWord', 'string'), port('challengeWord', 'string'), port('startWord', 'string'), port('gatePracticeWord', 'string'), port('gateChallengeWord', 'string'), port('pushPracticeWord', 'string'), port('pushChallengeWord', 'string')],
+  outputs: [port('start', 'signal'), port('style', 'string'), port('timed', 'boolean')],
+  instantiates: [C.choiceRow],
+  nodes: [
+    inputs('zsIn', 'The words', [['mounted', 'boolean'], ['gateWord', 'string'], ['pushWord', 'string'], ['practiceWord', 'string'], ['challengeWord', 'string'], ['startWord', 'string'], ['gatePracticeWord', 'string'], ['gateChallengeWord', 'string'], ['pushPracticeWord', 'string'], ['pushChallengeWord', 'string']]),
+    group('zsCard', 'The setup', undefined, { ...CARD, rowGap: 'var(--space-5)', paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)', paddingLeft: 'var(--space-6)', paddingRight: 'var(--space-6)', maxWidth: px(560) }, ['zsStyle', 'zsTimed', 'zsRule', 'zsStart']),
+    place('zsStyle', C.choiceRow, 'The way to play', 'zsCard'),
+    place('zsTimed', C.choiceRow, 'Practice or challenge', 'zsCard'),
+    text('zsRule', 'What the chosen way and pace do', 'zsCard', '', T_META),
+    place('zsStart', BUTTON_NODE, 'Start', 'zsCard', { ...BTN_PRIMARY, label: 'Start', fontSize: 'var(--text-lg)' }),
+    logic('zsStyleItems', FUNCTION_NODE, 'The two ways, in words', { functionScript: "Outputs.items = [{ label: Inputs.gate, value: 'gate' }, { label: Inputs.push, value: 'push' }];" }),
+    logic('zsTimedItems', FUNCTION_NODE, 'Practice or challenge, in words', { functionScript: "Outputs.items = [{ label: Inputs.practice, value: 'practice' }, { label: Inputs.challenge, value: 'challenge' }];" }),
+    logic('zsStyleVar', VARIABLE_NODE, 'The way to play', { name: 'monsterStyle' }),
+    logic('zsSetStyle', SET_VARIABLE_NODE, 'Choose a way', { name: 'monsterStyle' }),
+    logic('zsTimedVar', VARIABLE_NODE, 'Practice or challenge?', { name: 'monsterTimed' }),
+    logic('zsSetTimed', SET_VARIABLE_NODE, 'Choose the pace', { name: 'monsterTimed' }),
+    logic('zsIsTimed', EXPRESSION_NODE, 'Challenge?', { expression: "timed === 'challenge'" }),
+    logic('zsRuleText', EXPRESSION_NODE, 'The chosen pair’s rule, in words', { expression: "style === 'push' ? (timed === 'challenge' ? pushChallenge : pushPractice) : (timed === 'challenge' ? gateChallenge : gatePractice)" }),
+    logic('zsShown', EXPRESSION_NODE, 'Shown unless told not to', { expression: 'm !== false' }),
+    // Ruling 3: the setup opens on Practice. The defaults are written once (RKT-006: a remount wrote them over the child's choices).
+    logic('zsDefStyle', EXPRESSION_NODE, 'gate', { expression: "'gate'" }),
+    logic('zsDefTimed', EXPRESSION_NODE, 'practice', { expression: "'practice'" }),
+    logic('zsInitStyle', SET_VARIABLE_NODE, 'Start on Beat it to the gate', { name: 'monsterStyle' }),
+    logic('zsInitTimed', SET_VARIABLE_NODE, 'Start on Practice', { name: 'monsterTimed' }),
+    withStates('zsSeeded', 'Defaults written yet?', ['fresh', 'seeded'], { seeded: { type: 'boolean', by: { fresh: false, seeded: true } } }),
+    gate('zsFirst', 'The first time the setup shows?'),
+    outputs('zsOut', 'Go', [['start', 'signal'], ['style', 'string'], ['timed', 'boolean']])
+  ],
+  connections: [
+    wire('zsIn', 'mounted', 'zsShown', 'm'),
+    wire('zsShown', 'result', 'zsCard', 'mounted'),
+    wire('zsDefStyle', 'result', 'zsInitStyle', 'value'),
+    wire('zsSeeded', 'seeded', 'zsFirst', 'condition'),
+    wire('zsCard', 'didMount', 'zsFirst', 'eval'),
+    wire('zsFirst', 'onfalse', 'zsInitStyle', 'do'),
+    wire('zsDefTimed', 'result', 'zsInitTimed', 'value'),
+    wire('zsInitStyle', 'done', 'zsInitTimed', 'do'),
+    wire('zsInitTimed', 'done', 'zsSeeded', 'to-seeded'),
+    wire('zsIn', 'gateWord', 'zsStyleItems', 'in-gate'),
+    wire('zsIn', 'pushWord', 'zsStyleItems', 'in-push'),
+    wire('zsIn', 'practiceWord', 'zsTimedItems', 'in-practice'),
+    wire('zsIn', 'challengeWord', 'zsTimedItems', 'in-challenge'),
+    wire('zsStyleItems', 'out-items', 'zsStyle', 'items'),
+    wire('zsTimedItems', 'out-items', 'zsTimed', 'items'),
+    wire('zsStyleVar', 'value', 'zsStyle', 'value'),
+    wire('zsStyle', 'value', 'zsSetStyle', 'value'),
+    wire('zsStyle', 'changed', 'zsSetStyle', 'do'),
+    wire('zsTimedVar', 'value', 'zsTimed', 'value'),
+    wire('zsTimed', 'value', 'zsSetTimed', 'value'),
+    wire('zsTimed', 'changed', 'zsSetTimed', 'do'),
+    wire('zsStyleVar', 'value', 'zsRuleText', 'style'),
+    wire('zsTimedVar', 'value', 'zsRuleText', 'timed'),
+    wire('zsIn', 'gatePracticeWord', 'zsRuleText', 'gatePractice'),
+    wire('zsIn', 'gateChallengeWord', 'zsRuleText', 'gateChallenge'),
+    wire('zsIn', 'pushPracticeWord', 'zsRuleText', 'pushPractice'),
+    wire('zsIn', 'pushChallengeWord', 'zsRuleText', 'pushChallenge'),
+    wire('zsRuleText', 'result', 'zsRule', 'text'),
+    wire('zsIn', 'startWord', 'zsStart', 'label'),
+    wire('zsTimedVar', 'value', 'zsIsTimed', 'timed'),
+    wire('zsIsTimed', 'result', 'zsOut', 'timed'),
+    wire('zsStyleVar', 'value', 'zsOut', 'style'),
+    wire('zsStart', 'onClick', 'zsOut', 'start')
+  ]
+};
+
+const MONSTER_PLAY_INPUTS: Array<[string, string]> = [
+  ['start', 'signal'], ['style', 'string'], ['timed', 'boolean'], ['level', 'string'], ['lang', 'string'], ['layout', 'string'], ['answerMode', 'string'], ['model', 'object'], ['curriculum', 'array'], ['wordLists', 'array'], ['soundOn', 'boolean'], ['mounted', 'boolean'],
+  ['placeholder', 'string'], ['checkWord', 'string'], ['fluentWord', 'string'], ['correctWord', 'string'], ['wrongWord', 'string'], ['timeUpWord', 'string'], ['nextWord', 'string'], ['showMeWord', 'string'],
+  ['teachCards', 'array'], ['anExampleWord', 'string'], ['gotItWord', 'string'], ['restartWord', 'string'], ['changeWord', 'string'], ['againWord', 'string'], ['pickWord', 'string'], ['hangarWord', 'string']
+];
+const MONSTER_PLAY_OUTPUTS: Array<[string, string]> = [['model', 'object'], ['graded', 'signal'], ['changeGame', 'signal'], ['hangar', 'signal'], ['cheer', 'signal'], ['sigh', 'signal']];
+
+/** The game: the lane over the race's question, one move per graded answer, and the end card after Next once it is over. */
+const MONSTER_PLAY: Tpl007Component = {
+  path: 'Monster/Play',
+  description: 'Monster Gate itself (§2.2 D, ruled in §16): three monsters come at the gate one at a time, and three hearts keep it. The questions are the race\'s: Race/Round asks, grades (the answers pay stars and move the learner model as a race\'s do, under the game\'s id) and shows the verdict, and Logic/Monster move (answer) turns each graded answer into a hit, a creep closer, a push, a step, a heart gone or a monster beaten; Next runs Logic/Monster move (next) and asks again. In Beat it to the gate with Challenge, the monster walks off the round\'s own clock. Show me how opens the Teach card in the round\'s place. When the game is over, Logic/Finish monster pays it once and Next brings Race/Result. Restart starts a new game; Change the game hands back to setup. The whole game is one Variable (monsterGame, global by name: one game per page). Publishes Model and Graded (store the model), ChangeGame, Hangar, Cheer and Sigh.',
+  inputs: MONSTER_PLAY_INPUTS.map(([n, t]) => port(n, t)),
+  outputs: MONSTER_PLAY_OUTPUTS.map(([n, t]) => port(n, t)),
+  instantiates: [C.monsterLane, C.raceRound, C.teachCard, C.raceResult, logicName('Logic/New monster game'), logicName('Logic/Monster move'), logicName('Logic/Draw monster'), logicName('Logic/Finish monster'), logicName('Logic/Teach card')],
+  nodes: [
+    inputs('zpIn', 'The game, the player and the words', MONSTER_PLAY_INPUTS),
+    group('zpWrap', 'The game', undefined, column({ alignItems: 'center', rowGap: 'var(--space-3)' }), ['zpControls', 'zpLane', 'zpRoundSlot', 'zpTeach', 'zpResult']),
+    // RKT-006's controls, above the lane and away from the answer and Next.
+    group('zpControls', 'Restart, or change the game', 'zpWrap', row({ width: pct(100), sizeMode: 'contentHeight', justifyContent: 'flex-end', columnGap: 'var(--space-2)' }), ['zpRestart', 'zpChange']),
+    place('zpRestart', BUTTON_NODE, 'Restart', 'zpControls', { ...BTN_OUTLINE, label: 'Restart', fontSize: 'var(--text-sm)' }),
+    place('zpChange', BUTTON_NODE, 'Change the game', 'zpControls', { ...BTN_OUTLINE, label: 'Change the game', fontSize: 'var(--text-sm)' }),
+    place('zpLane', C.monsterLane, 'The lane', 'zpWrap'),
+    // The round, the Teach card and the end card take turns in one slot under the lane, as they do under the race's track.
+    group('zpRoundSlot', 'While playing', 'zpWrap', column({ alignItems: 'center' }), ['zpRound']),
+    place('zpRound', C.raceRound, 'This question', 'zpRoundSlot', { mode: 'maths' }),
+    place('zpTeach', C.teachCard, 'Show me how', 'zpWrap'),
+    place('zpResult', C.raceResult, 'How it ended', 'zpWrap'),
+    logic('zpNew', logicName('Logic/New monster game'), 'A new game'),
+    // The one move rule, placed once per action with the action as a parameter: a wire carrying an action is whatever published last.
+    logic('zpAnswer', logicName('Logic/Monster move'), 'An answer, graded', { action: 'answer' }),
+    logic('zpArrive', logicName('Logic/Monster move'), 'The next monster', { action: 'next' }),
+    logic('zpGame', VARIABLE_NODE, 'The game as it stands', { name: 'monsterGame' }),
+    logic('zpSetGame', SET_VARIABLE_NODE, 'The game after a move', { name: 'monsterGame' }),
+    logic('zpDraw', logicName('Logic/Draw monster'), 'The game, drawn'),
+    // `playing` FIRST (D55): the round's slot shows before the first question is asked.
+    withStates('zpPhase', 'Playing, the end card, or a Teach card', ['playing', 'over', 'teaching'], {
+      playing: { type: 'boolean', by: { playing: true, over: false, teaching: false } },
+      over: { type: 'boolean', by: { playing: false, over: true, teaching: false } },
+      teaching: { type: 'boolean', by: { playing: false, over: false, teaching: true } },
+      controls: { type: 'boolean', by: { playing: true, over: false, teaching: true } }
+    }),
+    watch('zpIsOver', 'Game over?'),
+    logic('zpFinish', logicName('Logic/Finish monster'), 'Pay the game, once'),
+    gate('zpGoOn', 'Another question, or the end card?'),
+    gate('zpCheer', 'The gate held, or it got in?'),
+    logic('zpTeachPick', logicName('Logic/Teach card'), 'The card for the skill just missed'),
+    logic('zpStep', EXPRESSION_NODE, 'Which step: less each miss in a row', { expression: 'min(2, max(0, misses - 1))' }),
+    // The walk starts once the question is up and its clock has refilled (the bar jumps full, then glides a frame later), and stops the
+    // moment the answer is graded, so between answers the monster glides to where it rests.
+    logic('zpWalking', VARIABLE_NODE, 'Walking?', { name: 'monsterWalking' }),
+    logic('zpWalkOn', SET_VARIABLE_NODE, 'It walks', { name: 'monsterWalking' }),
+    logic('zpWalkOff', SET_VARIABLE_NODE, 'It stops', { name: 'monsterWalking' }),
+    logic('zpWalkDelay', TIMER_NODE, 'Once the clock has refilled', { duration: 150 }),
+    logic('zpTrue', EXPRESSION_NODE, 'True', { expression: 'true' }),
+    logic('zpFalse', EXPRESSION_NODE, 'False', { expression: 'false' }),
+    logic('zpShown', EXPRESSION_NODE, 'Only while playing', { expression: 'm === true' }),
+    outputs('zpOut', 'How it went', MONSTER_PLAY_OUTPUTS)
+  ],
+  connections: [
+    wire('zpIn', 'mounted', 'zpShown', 'm'),
+    wire('zpShown', 'result', 'zpWrap', 'mounted'),
+    wire('zpTrue', 'result', 'zpWalkOn', 'value'),
+    wire('zpFalse', 'result', 'zpWalkOff', 'value'),
+    wire('zpWrap', 'didMount', 'zpWalkOff', 'do'),
+    // A new game: Start, Restart, and the end card's New game. Its id and clock scale are values the round holds before the ask.
+    wire('zpIn', 'start', 'zpPhase', 'to-playing'),
+    wire('zpIn', 'start', 'zpNew', 'run'),
+    wire('zpRestart', 'onClick', 'zpPhase', 'to-playing'),
+    wire('zpRestart', 'onClick', 'zpNew', 'run'),
+    wire('zpRestart', 'onClick', 'zpWalkOff', 'do'),
+    wire('zpRestart', 'onClick', 'zpWalkDelay', 'stop'),
+    wire('zpResult', 'again', 'zpPhase', 'to-playing'),
+    wire('zpResult', 'again', 'zpNew', 'run'),
+    wire('zpIn', 'style', 'zpNew', 'style'),
+    wire('zpIn', 'timed', 'zpNew', 'timed'),
+    wire('zpNew', 'game', 'zpSetGame', 'value'),
+    wire('zpNew', 'done', 'zpSetGame', 'do'),
+    wire('zpNew', 'id', 'zpRound', 'raceId'),
+    wire('zpNew', 'timeScale', 'zpRound', 'limitScale'),
+    wire('zpNew', 'done', 'zpRound', 'ask'),
+    wire('zpNew', 'done', 'zpWalkDelay', 'restart'),
+    // The round gets the player and the words, and is told which game it grades for.
+    ...(['level', 'lang', 'layout', 'answerMode', 'model', 'curriculum', 'wordLists', 'timed', 'soundOn', 'placeholder', 'checkWord', 'fluentWord', 'correctWord', 'wrongWord', 'timeUpWord', 'nextWord', 'showMeWord'] as const).map((p) => wire('zpIn', p, 'zpRound', p)),
+    wire('zpIn', 'style', 'zpRound', 'game'),
+    // A graded answer: the walk stops, and the move turns the verdict into the game after it.
+    wire('zpRound', 'graded', 'zpWalkDelay', 'stop'),
+    wire('zpRound', 'graded', 'zpWalkOff', 'do'),
+    wire('zpGame', 'value', 'zpAnswer', 'game'),
+    wire('zpRound', 'outcome', 'zpAnswer', 'outcome'),
+    wire('zpRound', 'gain', 'zpAnswer', 'gain'),
+    wire('zpRound', 'cpuGain', 'zpAnswer', 'cpuGain'),
+    wire('zpRound', 'graded', 'zpAnswer', 'run'),
+    wire('zpAnswer', 'game', 'zpSetGame', 'value'),
+    wire('zpAnswer', 'done', 'zpSetGame', 'do'),
+    wire('zpAnswer', 'timeScale', 'zpRound', 'limitScale'),
+    wire('zpRound', 'model', 'zpOut', 'model'),
+    wire('zpRound', 'graded', 'zpOut', 'graded'),
+    // Next: the next monster arrives (when one was beaten), then another question, or, once the game is over, the end card.
+    wire('zpGame', 'value', 'zpArrive', 'game'),
+    wire('zpRound', 'next', 'zpArrive', 'run'),
+    wire('zpArrive', 'game', 'zpSetGame', 'value'),
+    wire('zpArrive', 'done', 'zpSetGame', 'do'),
+    wire('zpDraw', 'over', 'zpGoOn', 'condition'),
+    wire('zpRound', 'next', 'zpGoOn', 'eval'),
+    wire('zpGoOn', 'onfalse', 'zpRound', 'ask'),
+    wire('zpGoOn', 'onfalse', 'zpWalkDelay', 'restart'),
+    wire('zpGoOn', 'ontrue', 'zpPhase', 'to-over'),
+    wire('zpWalkDelay', 'timerFinished', 'zpWalkOn', 'do'),
+    // The lane, drawn from the game, and walked off the round's clock.
+    wire('zpGame', 'value', 'zpDraw', 'game'),
+    wire('zpIn', 'lang', 'zpDraw', 'lang'),
+    ...(['hearts', 'line', 'note', 'pips', 'monsterClass', 'laneClass', 'rest', 'walkFrom'] as const).map((p) => wire('zpDraw', p, 'zpLane', p)),
+    wire('zpWalking', 'value', 'zpLane', 'walking'),
+    wire('zpRound', 'clockLeft', 'zpLane', 'left'),
+    // The slot under the lane, and the controls.
+    wire('zpPhase', 'playing', 'zpRoundSlot', 'mounted'),
+    wire('zpPhase', 'over', 'zpResult', 'mounted'),
+    wire('zpPhase', 'teaching', 'zpTeach', 'mounted'),
+    wire('zpPhase', 'controls', 'zpControls', 'mounted'),
+    wire('zpIn', 'restartWord', 'zpRestart', 'label'),
+    wire('zpIn', 'changeWord', 'zpChange', 'label'),
+    wire('zpChange', 'onClick', 'zpRound', 'abandon'),
+    wire('zpChange', 'onClick', 'zpWalkOff', 'do'),
+    wire('zpChange', 'onClick', 'zpWalkDelay', 'stop'),
+    wire('zpChange', 'onClick', 'zpOut', 'changeGame'),
+    // RKT-004: Show me how puts the card in the round's place; Got it asks through the gate Next uses, so an ended game still ends.
+    wire('zpRound', 'showMe', 'zpPhase', 'to-teaching'),
+    wire('zpTeach', 'gotIt', 'zpPhase', 'to-playing'),
+    wire('zpTeach', 'gotIt', 'zpGoOn', 'eval'),
+    wire('zpIn', 'teachCards', 'zpTeachPick', 'cards'),
+    wire('zpIn', 'lang', 'zpTeachPick', 'lang'),
+    wire('zpRound', 'teach', 'zpTeachPick', 'teachId'),
+    wire('zpRound', 'missCount', 'zpStep', 'misses'),
+    wire('zpStep', 'result', 'zpTeachPick', 'step'),
+    wire('zpTeachPick', 'title', 'zpTeach', 'title'),
+    wire('zpTeachPick', 'text', 'zpTeach', 'text'),
+    wire('zpTeachPick', 'example', 'zpTeach', 'example'),
+    wire('zpRound', 'prompt', 'zpTeach', 'prompt'),
+    wire('zpRound', 'worked', 'zpTeach', 'worked'),
+    wire('zpIn', 'anExampleWord', 'zpTeach', 'anExampleWord'),
+    wire('zpIn', 'gotItWord', 'zpTeach', 'gotItWord'),
+    // 🔴 A game is paid only when it is over, and once (the script keeps its id), from the round's model: the store's may not have the last answer yet.
+    wire('zpDraw', 'over', 'zpIsOver', 'condition'),
+    wire('zpIsOver', 'ontrue', 'zpFinish', 'run'),
+    wire('zpGame', 'value', 'zpFinish', 'game'),
+    wire('zpRound', 'model', 'zpFinish', 'model'),
+    wire('zpIn', 'lang', 'zpFinish', 'lang'),
+    wire('zpFinish', 'model', 'zpOut', 'model'),
+    wire('zpFinish', 'done', 'zpOut', 'graded'),
+    wire('zpFinish', 'won', 'zpCheer', 'condition'),
+    wire('zpFinish', 'done', 'zpCheer', 'eval'),
+    wire('zpCheer', 'ontrue', 'zpOut', 'cheer'),
+    wire('zpCheer', 'onfalse', 'zpOut', 'sigh'),
+    // The end card is Race/Result: the take and why, New game (focused), the hangar when a pick was earned, and Change the game.
+    wire('zpFinish', 'won', 'zpResult', 'won'),
+    wire('zpFinish', 'headline', 'zpResult', 'headline'),
+    wire('zpFinish', 'line', 'zpResult', 'line'),
+    wire('zpFinish', 'starsText', 'zpResult', 'stars'),
+    wire('zpFinish', 'why', 'zpResult', 'why'),
+    wire('zpFinish', 'earnedPick', 'zpResult', 'hasPick'),
+    wire('zpIn', 'againWord', 'zpResult', 'againWord'),
+    wire('zpIn', 'changeWord', 'zpResult', 'otherWord'),
+    wire('zpIn', 'pickWord', 'zpResult', 'pickWord'),
+    wire('zpIn', 'hangarWord', 'zpResult', 'hangarWord'),
+    wire('zpResult', 'other', 'zpOut', 'changeGame'),
+    wire('zpResult', 'hangar', 'zpOut', 'hangar')
+  ]
+};
+
+/** TPL-007 §16 — Monster Gate's page: the bar, the title, the setup, and the game. */
+const PAGE_MONSTER: Tpl007Component = {
+  path: 'Pages/Monster',
+  description: 'Monster Gate (TPL-007 §2.2 D, §16): the setup, then the game and its end card (both in Monster/Play), with the model saved after every answer and at the finish. While playing, the page\'s bar gives its row to the game\'s controls, as the race\'s does.',
+  instantiates: [C.header, C.monsterSetup, C.monsterPlay, C.store, C.sounds, logicName('Logic/Active profile'), logicName('Logic/Translate words'), logicName('Logic/Save model'), C.words, C.curriculum, C.wordLists, C.teachCards],
+  nodes: [
+    { id: 'zgPage', type: 'Page', label: 'Monster', parameters: { title: 'Monster Gate', urlPath: 'monster' }, children: ['zgOuter'] },
+    group('zgOuter', 'The ground', 'zgPage', column({ alignItems: 'center' }), ['zgWrap']),
+    group('zgWrap', 'The screen', 'zgOuter', column({ alignItems: 'stretch', rowGap: 'var(--space-4)', paddingTop: 'var(--space-4)', paddingBottom: 'var(--space-6)', paddingLeft: 'var(--space-4)', paddingRight: 'var(--space-4)', maxWidth: px(960) }), ['zgHeader', 'zgTitle', 'zgSetup', 'zgPlay']),
+    place('zgHeader', C.header, 'The bar', 'zgWrap', { showHome: true, showHangar: true }),
+    text('zgTitle', 'Monster Gate', 'zgWrap', '', T_SECTION),
+    place('zgSetup', C.monsterSetup, 'Before the game', 'zgWrap'),
+    place('zgPlay', C.monsterPlay, 'The game', 'zgWrap'),
+    ...pageCommon('zg').nodes,
+    logic('zgSave', logicName('Logic/Save model'), 'Remember what was learned'),
+    logic('zgNoOne', EXPRESSION_NODE, 'Nobody signed in?', { expression: 'has === false' }),
+    gate('zgGuard', 'Send them to the profiles?'),
+    logic('zgGoProfiles', NAVIGATE_NODE, 'To the profiles', { router: ROUTER, target: C.pageProfiles }),
+    logic('zgGoHome', NAVIGATE_NODE, 'Home', { router: ROUTER, target: C.pageHome }),
+    logic('zgGoHangar', NAVIGATE_NODE, 'To the hangar', { router: ROUTER, target: C.pageHangar }),
+    logic('zgPlaying', VARIABLE_NODE, 'Playing?', { name: 'monsterPlaying' }),
+    logic('zgSetPlaying', SET_VARIABLE_NODE, 'Playing now', { name: 'monsterPlaying' }),
+    logic('zgSetDone', SET_VARIABLE_NODE, 'Not playing', { name: 'monsterPlaying' }),
+    logic('zgInitDone', SET_VARIABLE_NODE, 'Not playing yet (on load)', { name: 'monsterPlaying' }),
+    logic('zgTrue', EXPRESSION_NODE, 'True', { expression: 'true' }),
+    logic('zgFalse', EXPRESSION_NODE, 'False', { expression: 'false' }),
+    logic('zgNotPlaying', EXPRESSION_NODE, 'Setting up?', { expression: '!playing' }),
+    logic('zgSounds', C.sounds, 'The fanfare'),
+    logic('zgTeachCards', C.teachCards, 'The Teach cards')
+  ],
+  connections: [
+    ...pageCommon('zg').connections,
+    // Not playing until Start: the Variable is written on mount, not left undefined.
+    wire('zgFalse', 'result', 'zgInitDone', 'value'),
+    wire('zgPage', 'didMount', 'zgInitDone', 'do'),
+    wire('zgMe', 'hasProfile', 'zgNoOne', 'has'),
+    wire('zgNoOne', 'result', 'zgGuard', 'condition'),
+    wire('zgPage', 'didMount', 'zgGuard', 'eval'),
+    wire('zgGuard', 'ontrue', 'zgGoProfiles', 'navigate'),
+    // The bar, what its menu writes (RKT-008), and its way to the hangar.
+    ...headerWires('zg'),
+    wire('zgHeader', 'home', 'zgGoHome', 'navigate'),
+    wire('zgT', 'gameMonster', 'zgTitle', 'text'),
+    // The setup's words.
+    wire('zgT', 'monsterGate', 'zgSetup', 'gateWord'),
+    wire('zgT', 'monsterPush', 'zgSetup', 'pushWord'),
+    wire('zgT', 'practice', 'zgSetup', 'practiceWord'),
+    wire('zgT', 'challenge', 'zgSetup', 'challengeWord'),
+    wire('zgT', 'monsterGatePractice', 'zgSetup', 'gatePracticeWord'),
+    wire('zgT', 'monsterGateChallenge', 'zgSetup', 'gateChallengeWord'),
+    wire('zgT', 'monsterPushPractice', 'zgSetup', 'pushPracticeWord'),
+    wire('zgT', 'monsterPushChallenge', 'zgSetup', 'pushChallengeWord'),
+    wire('zgT', 'start', 'zgSetup', 'startWord'),
+    wire('zgNotPlaying', 'result', 'zgSetup', 'mounted'),
+    wire('zgNotPlaying', 'result', 'zgTitle', 'mounted'),
+    // RKT-006's finding, kept: while playing, the page's bar gives its row to the game's own controls.
+    wire('zgPlaying', 'value', 'zgHeader', 'hideBar'),
+    wire('zgPlaying', 'value', 'zgNotPlaying', 'playing'),
+    // Start: playing, then the game starts.
+    wire('zgTrue', 'result', 'zgSetPlaying', 'value'),
+    wire('zgSetup', 'start', 'zgSetPlaying', 'do'),
+    wire('zgSetPlaying', 'done', 'zgPlay', 'start'),
+    wire('zgPlaying', 'value', 'zgPlay', 'mounted'),
+    wire('zgSetup', 'style', 'zgPlay', 'style'),
+    wire('zgSetup', 'timed', 'zgPlay', 'timed'),
+    // The game gets the player and the words.
+    ...(['level', 'lang', 'layout', 'answerMode', 'model'] as const).map((field) => wire('zgMe', field, 'zgPlay', field)),
+    wire('zgMe', 'sound', 'zgPlay', 'soundOn'),
+    wire('zgCurriculum', 'skills', 'zgPlay', 'curriculum'),
+    wire('zgWordLists', 'lists', 'zgPlay', 'wordLists'),
+    wire('zgTeachCards', 'cards', 'zgPlay', 'teachCards'),
+    wire('zgT', 'typeAnswer', 'zgPlay', 'placeholder'),
+    wire('zgT', 'check', 'zgPlay', 'checkWord'),
+    wire('zgT', 'fluent', 'zgPlay', 'fluentWord'),
+    wire('zgT', 'correct', 'zgPlay', 'correctWord'),
+    wire('zgT', 'wrong', 'zgPlay', 'wrongWord'),
+    wire('zgT', 'timeUp', 'zgPlay', 'timeUpWord'),
+    wire('zgT', 'next', 'zgPlay', 'nextWord'),
+    wire('zgT', 'showMe', 'zgPlay', 'showMeWord'),
+    wire('zgT', 'anExample', 'zgPlay', 'anExampleWord'),
+    wire('zgT', 'gotIt', 'zgPlay', 'gotItWord'),
+    wire('zgT', 'restart', 'zgPlay', 'restartWord'),
+    wire('zgT', 'monsterChange', 'zgPlay', 'changeWord'),
+    wire('zgT', 'newGame', 'zgPlay', 'againWord'),
+    wire('zgT', 'earnedPick', 'zgPlay', 'pickWord'),
+    wire('zgT', 'toHangar', 'zgPlay', 'hangarWord'),
+    // Every graded answer, and the finish: the model into the store.
+    wire('zgStore', 'app', 'zgSave', 'app'),
+    wire('zgMe', 'profileId', 'zgSave', 'profileId'),
+    wire('zgPlay', 'model', 'zgSave', 'model'),
+    wire('zgPlay', 'graded', 'zgSave', 'run'),
+    wire('zgSave', 'app', 'zgStore', 'app'),
+    wire('zgSave', 'done', 'zgStore', 'write'),
+    wire('zgPlay', 'hangar', 'zgGoHangar', 'navigate'),
+    wire('zgFalse', 'result', 'zgSetDone', 'value'),
+    wire('zgPlay', 'changeGame', 'zgSetDone', 'do'),
+    wire('zgMe', 'sound', 'zgSounds', 'enabled'),
+    wire('zgPlay', 'cheer', 'zgSounds', 'win'),
+    wire('zgPlay', 'sigh', 'zgSounds', 'lose')
+  ]
+};
+
 /** Every component, in the order the plan creates them — a component before anything that places it. */
 export const TPL007_COMPONENTS: ReadonlyArray<Tpl007Component> = [
   ...DATA_COMPONENTS,
@@ -3399,16 +3900,21 @@ export const TPL007_COMPONENTS: ReadonlyArray<Tpl007Component> = [
   HUNT_TILE,
   HUNT_ROW,
   HUNT_PLAY,
+  MONSTER,
+  MONSTER_LANE,
+  MONSTER_SETUP,
+  MONSTER_PLAY,
   PAGE_PROFILES,
   PAGE_HOME,
   PAGE_RACE,
   PAGE_HANGAR,
   PAGE_MERGE,
-  PAGE_HUNT
+  PAGE_HUNT,
+  PAGE_MONSTER
 ];
 
 /** The library modules the door must find installed before authoring. */
 export const REQUIRED_MODULES = ['game-kit', 'keyboard-shortcuts'] as const;
 
 /** The pages, for the gate and the start page. */
-export const PAGES = [C.pageProfiles, C.pageHome, C.pageRace, C.pageHangar, C.pageMerge, C.pageHunt] as const;
+export const PAGES = [C.pageProfiles, C.pageHome, C.pageRace, C.pageHangar, C.pageMerge, C.pageHunt, C.pageMonster] as const;

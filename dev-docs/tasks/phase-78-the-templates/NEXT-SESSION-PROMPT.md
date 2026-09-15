@@ -1,5 +1,18 @@
 # Phase 78 — next session
 
+> ### 🟢 2026-09-14 (night, session b7cd9341) — TPL-007 MONSTER GATE, THE FOURTH GAME: BUILT, GATED 326/326, DRIVEN ALL PASS
+>
+> Richard asked for options first: a playable mockup of three versions (<https://claude.ai/artifact/NkzcsuKFD1KX7JHEn3Q2rB>), then ruled
+> ([TPL-007 §16.1](TPL-007-THE-MATHS-AND-TYPING-GAME.md)): A *and* B as a setup choice, a wrong answer creeps closer, opens on Practice,
+> 3 monsters in 3 shapes × 3 colours, solo, a heart back after 3 quick answers. Built through the plan door (§16.2); every rule is `MONSTER`.
+> Gates: engine 190, three suites **326/326**, typecheck 0. `drive-tpl007-monster.js` (new) gate/walk/push/screen **ALL PASS**; race
+> regression `drive-rkt003-stage.js` 10 cells + `drive-rkt007-boost.js --arm defi` 4 cells **ALL PASS**. Served on 8782.
+> 🔴 The door's `wired-dimension-becomes-grow` caught a lane whose monster would never have moved (a wired % width on a row's axis).
+> 🔴 **Peer commit `9d77c9427` swept §16 half-done** (scripts + words whole, components partly); the rest is **uncommitted**.
+> Richard's first play: the bob stopped after the first question (an event animation replaced it on the same box). Reproduced RED
+> (`bobAfter`), moved to `::before`, build 3 `monster2` gates 327/327, gate + walk arms ALL PASS (§16.5).
+> **NEXT:** Richard plays it (§16.4: three look questions, and whether to publish). Not run: the other P87 drives, hunt/merge drives, `test:ci`.
+
 > ### 🟢 2026-09-14 (s4) — TPL-008 TODO LIST: LIGHT/DARK BUILT (R10) AND REPUBLISHED — gates 24/24 + 18/18, drives 14/14 + 10/10 + theme 9/9, live 16/16
 >
 > **s4:** follows the system, a moon/sun at the top right overrides it, the choice is remembered ([§3b](TPL-008-THE-TODO-LIST.md)).

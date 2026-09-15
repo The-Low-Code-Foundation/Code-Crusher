@@ -107,6 +107,12 @@
     },
     {
       "fromId": "gradeanswerIn",
+      "fromProperty": "game",
+      "toId": "gradeanswerFn",
+      "toProperty": "in-game"
+    },
+    {
+      "fromId": "gradeanswerIn",
       "fromProperty": "run",
       "toId": "gradeanswerFn",
       "toProperty": "run"

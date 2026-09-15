@@ -710,3 +710,110 @@ Mocked first, three ways to play it, each playable, with phone mocks and seven c
 5. **Three different shapes in three different colours.**
 6. **Solo first** (D63 still grades player two into player one's model).
 7. **A heart back after three quick answers in a row**, up to three.
+
+### 16.2 What was built
+
+- **The game:** Home's 👾 card opens `Pages/Monster`: a setup, then the game. The setup offers the two ways and the two paces, opens on
+  *Beat it to the gate* and *Practice*, writes those once (RKT-006), and says the chosen pair's rule in one line. The game is the race's
+  question under a lane: the hearts, "Monster 2 of 3" and its hits left over it; the gate (left), the ground and, in Push it back, the cave
+  (right); the monster between them; what just happened under it. Restart and Change the game sit above (the page's bar steps aside, as
+  the race's does). Show me how opens the Teach card in the round's place. The end is Race/Result after Next: "The gate held!" or "The
+  monster got in!", how many were sent home, the take and why, the 🎁 line, New game (focused), the hangar, Change the game.
+- **Rules (`MONSTER` in `tpl007Scripts.ts`, one table):** 3 monsters, 3 hearts, 4 hits; a quick answer hits 2, a slow one 1, and knocks it
+  back. A wrong answer creeps it closer by a third (Practice) or a quarter (Challenge); creeping all the way, or running out of time, bangs
+  the gate for a heart. Push it back: a right answer pushes by 2 × the race's gain, every answer steps it 1.5 × the computer rocket's
+  step (read off the rating), into its cave it is beaten, at the gate a heart and back to the middle. 3 quick in a row: a heart back.
+- **The walk is the clock.** In Beat it to the gate with Challenge, the monster walks from where it stands to the gate off the round's own
+  countdown bar (`Game/Countdown bar` now publishes `left`, Race/Round passes it out as `clockLeft`), and a monster that crept closer gets
+  a shorter clock (`Logic/Pick next question` takes `limitScale`, Race/Round passes it). The race wires neither, so its clock is as it was.
+- **The verdict's boost line** says a hit (big / small, meter 100 / 50) or a push in Monster Gate (`Logic/Grade answer` takes `game`); the
+  race sends none and keeps "full boost" / "Your rocket stays put".
+- **Parts:** `Game/Monster` (one box; the stylesheet draws the monster: `MONSTER_PIXELS`, three 13 × 13 maps — horns in berry, one eye in
+  purple, spikes in orange — each ONE box-shadow in tokens), `Monster/Lane` (the mover's width is where it stands; a Function walks it off
+  the clock or glides it to rest), `Monster/Setup`, `Monster/Play`, `Pages/Monster`; `Logic/New monster game`, `Logic/Monster move` (placed
+  twice, action `answer` on a graded round and `next` on Next), `Logic/Draw monster`, `Logic/Finish monster`.
+- **Graph shape, Make Ten's and Hunt's:** one Variable (`monsterGame`) is the whole game; Draw writes the lane from it; a reactive
+  Condition on "over" runs Finish once, from the round's latest model. The answers pay stars and move the model as a race's do, under
+  the game's id; Finish adds a landing's five, win or lose, once per id (`lastMonsterId`).
+- **Home is at 32 of 32 nodes** with the Monster navigate. Every game card is enabled.
+- **Not built:** two players (ruling 6), a sound per hit, a best score, a swipe.
+
+### 16.3 Gates, and readings
+
+- **Engine:** 12 new (190 in the suite, ENG1_EXIT=0): the rule table, a new game per way and pace, hits and knock-back, the creep (a third /
+  a quarter, and creeping all the way is a heart), the timeout and the clock scale, the heart back (and none when full), win and loss and
+  nothing after, the push and the step, whole games at the rating's extremes (a quick child wins in 6 / 15 answers, an always-wrong child
+  loses in 9 / 12 / 24), the drawn lane in both languages, the finish (once, win or lose, the card's whole take, its own id, a sabotage arm),
+  the grader's hit / push words beside the race's unchanged ones, the picker's scale.
+- **Template:** 9 new (326 across the three suites, GATES1_EXIT=0): Home's card; every id the door kept; the round hearing a scale and a
+  game while the race wires neither; the move placed twice with its action as a parameter; one Variable; paid only when over, from the
+  round's model; the walk off the clock (the Lane's script evaluated); the setup's defaults written once and its rule; the three pixel maps,
+  tokens only, every animation stilled for reduced motion. TC1/TC2_EXIT=0 (the typecheck includes `tests/`).
+- 🔴 **Build 1 raised `wired-dimension-becomes-grow` on the lane:** the mover's wired % width sat on a ROW's own axis, where a % is
+  flex-grow — the monster would never have moved. The lane is a column now. The same build raised `raw-spacing-literal` (two paddings) and
+  GAM-005 (`variable-in-repeated-component`) on the Countdown bar's three Variables and the Question box's answer: Race/Round is now on
+  two pages. Read in the source before marking them: a page is one route, the clock writes all three at every Start and the box writes its
+  answer before Answered, so they carry `SHARED_ROUND`. Build 2: GEN2_EXIT=0, only the two expected warning codes.
+- **Deploy** (`monster1`, production engine): DEPLOY1_EXIT=0. **`drive-tpl007-monster.js`, every arm ALL PASS:**
+  - gate: FR 390×844 14/14, EN 1366×768 13/13 (opened, defaults, started, creep, bang, hit, runs, won, paid, pickLine, focus, endInView)
+  - walk: EN 1366×768 4/4 (walks, timeout) · push: FR 1024×768 6/6 (cave, pushed, stepped) · screen: all six cells (sideways, fold,
+    laneFits, verdict)
+- **Screenshots looked at:** the setup's pills and rule; the horned monster at the far side and a third closer after a wrong answer;
+  "Bang ! … un cœur en moins" with a heart gone; Challenge mid-walk with the bar at about half and the monster about half way, and at 0
+  "Time's up." / "No hit"; the cave and a push; the phone's end card "La porte a tenu !", +11 ⭐, the 🎁 line, all three buttons on screen.
+- 🟡 **Seen in the pictures, not graded, for Richard:** a fast answer's verdict still shows the race's 🚀 glyph (the line beside it says
+  "big hit" / "poussée à fond"); on a laptop the lane is capped at 640 px, narrower than the question card; in Push it back (no hit dots)
+  "Monstre 1 sur 3" sits at the right instead of the middle.
+- **Race regression on the same build** (Race/Round, the Countdown bar, the picker and the grader were edited): `drive-rkt003-stage.js`
+  ALL PASS across 10 cells (STAGE1_EXIT=0); `drive-rkt007-boost.js --arm defi` ALL PASS across 4 cells (BOOST1_EXIT=0).
+- **Not run:** P87's other drives, `drive-tpl007-hunt/merge.js`, `test:ci`, `test:main`. Not published (the live site is §15's build).
+- **Served for Richard:** <http://127.0.0.1:8782/> (`drive-deployed.js monster1 --hold`, session `b7cd9341`'s scratchpad).
+- 🔴 **A peer's commit `9d77c9427` (22:15) swept this work half-done:** `tpl007Scripts.ts` and `tpl007Curriculum.ts` are in it whole, the
+  components only partly (its message says "in progress"). The rest of §16 (components, gates, drive, artefact, this section) is uncommitted
+  on top, so HEAD alone is a half-built Monster Gate.
+
+### 16.4 For Richard
+
+- Play it: the rule table is one constant (`MONSTER`), so "too hard" or "too easy" is a one-line change.
+- The 🚀 on a fast verdict, the lane's 640 px cap on a laptop, and where "Monster 1 of 3" sits in Push it back: change or keep?
+- Publish to nodegx.io (§15.3's hash-copy commands, with `drive-tpl007-monster.js https://nodegx.io --path /templates/rocket-school/`)?
+
+### 16.5 Richard's first play: the bob stops after the first question (2026-09-14)
+
+> "The monsters bounced around on my first try as they approached the door, but then after the first question they just slide towards
+> the door" — Richard, 2026-09-14
+
+- **Cause, read in the stylesheet:** the bob (`rkt-bob`) was the animation of the monster's box, and a hit, a lunge and an arrival are
+  animations of the same box. The first answer's class replaced the bob, and the class stays until the next event, so it never came back.
+  No clause graded motion; every screenshot is a still.
+- **Reproduced before the fix** on the build he played (`monster1`): the drive gained `bobStart` (known-firing: `rkt-bob` running before any
+  answer) and `bobAfter` (still running after a wrong answer and after a hit). EN 1366×768: bobStart ok, **bobAfter RED** — "no running
+  rkt-bob after a wrong answer (… rkt-monster-lunge-b)" (BOBCTL1_EXIT=1).
+- **Fix:** the bob moves to the pixels (`.rkt-monster::before`), which no event animates; the reduced-motion block stills `::before`
+  (🔴 the reduced-motion checker reads a class name, so it could not tell the box from its pixels: a template gate names the selector).
+- **Build 3** (`monster2`): GEN3_EXIT=0 with only the two expected warning codes, gates **327/327** (GATES3_EXIT=0, one new template gate),
+  DEPLOY2_EXIT=0. `drive-tpl007-monster.js --arm gate` ALL PASS: FR 390×844 16/16, EN 1366×768 15/15 (**bobAfter green** after a wrong
+  answer and after a hit); `--arm walk` 4/4. Push and screen arms not re-run (only the stylesheet's bob moved). Served on 8782 again.
+
+### 16.6 Published with Monster Gate (2026-09-15)
+
+> "publish to nodegx homepage please" — Richard
+
+- §15.3's steps, from build 3: a copy of `templates/rocket-school` with `navigationPathType: "hash"` (`diff -rq` names only
+  `nodegx.project.json`), built with the shipped `nodegx-deploy.cjs --base-url /templates/rocket-school/` (HASHDEPLOY_EXIT=0, production
+  engine, the index reads `navigationPathType":"hash`) into a site-shaped stub, and **driven there first** under the path:
+  `drive-tpl007-monster.js --arm gate --only 1366x768` 15/15 (HASHLOCAL_EXIT=0).
+- **Before the push:** live Rocket School was §15's build (`index-003f93c…`, the local site's too); homepage md5 `ddb6ed6c…` local = live.
+  `ops/deploy.sh` mirrors `site/` with `--delete`, so a dry run (`rsync -n --delete --itemize-changes`, the script's excludes) was read
+  first: **no deletions**, attribute differences only.
+- **Deployed** (`ops/deploy.sh 49.12.102.195`, OPSDEPLOY_EXIT=0): neighbours 200 before and after, service active, nodegx.io in Caddy's
+  config, remote index.html md5 = local; **homepage md5 unchanged** (`ddb6ed6c…` local and live); the live build is `index-7410d1d5…`.
+- 🔴 **The first live chain read NOT REACHED in every cell, Hunt included** ("no New player button"; LIVEGATE/WALK/PUSH/HUNT_EXIT=1), and
+  its log was written at 07:26, hours after it was started. **Measured before believing it:** the index, script and engine answer 200, and
+  one probe in the drive's own Chrome saw "Who is playing? … New player" at 3, 8 and 15 s with 0 console errors. The page renders; the
+  chain most likely ran across the laptop sleeping. Re-run with timestamps in the log.
+- 🔴 **That reading was wrong, and so was the second chain's cause.** Re-run awake (07:27:44–07:28:20): NOT REACHED again, every cell, in
+  36 s. A timed probe saw "New player" 1.7 s after navigating, so not the load either. **The chains passed the path as `$P`
+  (`P='--path /templates/rocket-school/'`), and zsh does not split an unquoted variable:** the drive got ONE argument, `arg('--path')` found
+  nothing, BASE stayed `/`, and every cell looked for "New player" on the nodegx.io homepage. Measured: `node -e … $P` reads
+  `bad option: --path /templates/rocket-school/`. Neither the site nor the drives were at fault; the third chain passes the path literally.

@@ -64,6 +64,12 @@
       "toProperty": "wordLists"
     },
     {
+      "fromId": "rdIn",
+      "fromProperty": "limitScale",
+      "toId": "rdPick",
+      "toProperty": "limitScale"
+    },
+    {
       "fromId": "rdPick",
       "fromProperty": "prompt",
       "toId": "rdBox",
@@ -290,6 +296,12 @@
       "fromProperty": "forB",
       "toId": "rdGrade",
       "toProperty": "forB"
+    },
+    {
+      "fromId": "rdIn",
+      "fromProperty": "game",
+      "toId": "rdGrade",
+      "toProperty": "game"
     },
     {
       "fromId": "rdBox",
@@ -554,6 +566,12 @@
       "fromProperty": "prompt",
       "toId": "rdOut",
       "toProperty": "prompt"
+    },
+    {
+      "fromId": "rdClock",
+      "fromProperty": "left",
+      "toId": "rdOut",
+      "toProperty": "clockLeft"
     }
   ]
 }

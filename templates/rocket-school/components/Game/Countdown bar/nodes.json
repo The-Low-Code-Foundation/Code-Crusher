@@ -147,6 +147,9 @@
       "parameters": {
         "name": "countdownDuration"
       },
+      "metadata": {
+        "comment": "Shared on purpose: only one round is ever on screen (the race page's or Monster Gate's), and each question writes this before it is read."
+      },
       "x": 410,
       "y": 1360
     },
@@ -156,6 +159,9 @@
       "label": "Where the bar is heading",
       "parameters": {
         "name": "countdownTarget"
+      },
+      "metadata": {
+        "comment": "Shared on purpose: only one round is ever on screen (the race page's or Monster Gate's), and each question writes this before it is read."
       },
       "x": 410,
       "y": 1480
@@ -251,6 +257,9 @@
       "label": "Has it run out?",
       "parameters": {
         "name": "countdownExpired"
+      },
+      "metadata": {
+        "comment": "Shared on purpose: only one round is ever on screen (the race page's or Monster Gate's), and each question writes this before it is read."
       },
       "x": 410,
       "y": 2320
@@ -438,6 +447,11 @@
           "name": "running",
           "plug": "input",
           "type": "boolean"
+        },
+        {
+          "name": "left",
+          "plug": "input",
+          "type": "number"
         }
       ],
       "x": 410,

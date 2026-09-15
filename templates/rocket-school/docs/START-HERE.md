@@ -55,6 +55,8 @@ sounds. It is already here — nothing to install. **Do not delete it.** Faces a
 Profiles, Home, the **Rocket Race** (maths or typing, one player against the computer or two
 taking turns, practice or timed challenge), **Make Ten Merge** (slide with the arrows or the
 buttons; two tiles join only when they make 10, 20, 30…), **Number Hunt** (five grids of
-numbers; tap the ones that make the target, and find every way) and the Hangar. Monster Gate,
-the Teach cards page, Progress with the save code, and the question-set editor are the next
-pages; the parts they share are already in `Game/` and `Logic/`.
+numbers; tap the ones that make the target, and find every way), **Monster Gate** (three monsters
+at your gate, three hearts: beat each one to the gate with right answers, or push it back into its
+cave; every number of its rules is `MONSTER` in one script) and the Hangar. The Teach cards page,
+Progress with the save code, and the question-set editor are the next pages; the parts they share
+are already in `Game/` and `Logic/`.

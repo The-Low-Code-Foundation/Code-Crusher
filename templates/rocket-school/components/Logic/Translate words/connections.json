@@ -401,6 +401,48 @@
     },
     {
       "fromId": "translateworFn",
+      "fromProperty": "out-monsterChange",
+      "toId": "translateworOut",
+      "toProperty": "monsterChange"
+    },
+    {
+      "fromId": "translateworFn",
+      "fromProperty": "out-monsterGate",
+      "toId": "translateworOut",
+      "toProperty": "monsterGate"
+    },
+    {
+      "fromId": "translateworFn",
+      "fromProperty": "out-monsterGateChallenge",
+      "toId": "translateworOut",
+      "toProperty": "monsterGateChallenge"
+    },
+    {
+      "fromId": "translateworFn",
+      "fromProperty": "out-monsterGatePractice",
+      "toId": "translateworOut",
+      "toProperty": "monsterGatePractice"
+    },
+    {
+      "fromId": "translateworFn",
+      "fromProperty": "out-monsterPush",
+      "toId": "translateworOut",
+      "toProperty": "monsterPush"
+    },
+    {
+      "fromId": "translateworFn",
+      "fromProperty": "out-monsterPushChallenge",
+      "toId": "translateworOut",
+      "toProperty": "monsterPushChallenge"
+    },
+    {
+      "fromId": "translateworFn",
+      "fromProperty": "out-monsterPushPractice",
+      "toId": "translateworOut",
+      "toProperty": "monsterPushPractice"
+    },
+    {
+      "fromId": "translateworFn",
       "fromProperty": "out-moves",
       "toId": "translateworOut",
       "toProperty": "moves"

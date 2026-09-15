@@ -87,15 +87,15 @@ failure this file's first house rule exists to prevent.
 | **D51** | ✅ fixed 09-12 — repo-side, found by TPL-006 | — | harness/repo | (was: `typecheck:mcp` red for a day with nobody looking) |
 | **D52** | 🔴 open (09-12, TPL-006 AC7 re-measure) — **the rest of D44's "remaining 4", and it is a BUILT-IN node type** | **GAM-024** (P88) | tooling (`deploy-from-disk` devtool only) | anyone who reads that census as a publication gate on a template with a `For Each` |
 | **D53** | 🔴 open (09-12, TPL-007 drive) — **a kit React node as a component's ROOT renders NOTHING when the component is placed** | **GAM-014** (P88) | product (viewer / door) | every kit author whose visual node is the whole component — three of this template's parts were invisible with 0 console errors |
-| **D54** | 🔴 open (09-12, TPL-007 drive) — an `Expression` treats EVERY identifier in its text as an input port, so `String(n)` and `Math.min` throw "String is not a function" | **GAM-002** (P88) | product (Expression node / docs) | anyone who writes ordinary JavaScript in an Expression; the catalog names `min`/`round`/`random` and says nothing about the shadowing |
-| **D55** | 🔴 open (09-12, TPL-007 drive) — an `Expression` whose inputs have never received a value NEVER evaluates, so a guard like `m !== false` on an optional port leaves the part hidden | **GAM-001** (P88) | product (Expression node / doctrine) | every component with an optional `mounted` input — the placement contract P1 recommends one |
+| **D54** | 🟢 fixed, uncommitted (P88 GAM-002 s11, 2026-09-14) — an `Expression` treated EVERY identifier in its text as an input port, so `String(n)` threw "String is not a function" (`Math.min` never did). JavaScript's globals and keywords are no longer ports, graded by 4 reverted arms; census 386 Expressions, 0 wires lose a port | **GAM-002** (P88) | product (Expression node / docs) | anyone who writes ordinary JavaScript in an Expression; the catalog names `min`/`round`/`random` and says nothing about the shadowing |
+| **D55** | 🟢 fixed, uncommitted (P88 GAM-001 s11, 2026-09-14) — an `Expression` whose inputs had never received a value never evaluated, and its `null` seed hid a part guarded `m !== false`. It now evaluates at load over unset inputs, with an `Evaluate At Load` opt-out; 4 reverted arms; census 14 visibility changes by name. Rocket School drive owed | **GAM-001** (P88) | product (Expression node / doctrine) | every component with an optional `mounted` input — the placement contract P1 recommends one |
 | **D56** | 🔴 open (09-12, TPL-007 build) — `apply_plan` raises `page-cannot-scroll` on every page of the very plan whose `scroll: "page"` it is about to apply; the artefact has `bodyScroll: true` | **GAM-021** (P88) | product (validator ordering) | every plan author, who reads three warnings about a setting they set |
 | **D57** | 🟢 built 09-14 (GAM-005: doctrine + `variable-in-repeated-component` warning, uncommitted; AC5/AC7 owed) — was 🔴 open (09-12, TPL-007 drive) — a `Variable` is GLOBAL by name, so two instances of one component that holds a Variable share it: the race page's two `Feedback banner`s opened together, and four `Choice row`s shared one pick | **GAM-005** (P88) | doctrine (interface playbook) | every component author who reaches for a Variable to hold local state — the doctrine never says a Variable is not local |
 | **D58** | 🔴 open (09-13, P87 RKT-001) — nothing warns that a sentence in a content-sized Text will never wrap; the template's `text()` helper overrode Text's wrapping default and no door said so | **GAM-020** (P88) | product (validator / render_report) | every template and agent that writes a Text helper |
 | **D59** | 🔴 open (09-13, P87 RKT-003) — a `Button` has no Focus input, so a verdict cannot hand the keyboard to its Next button; the template focuses it from a Function by its label | **GAM-010** (P88) | product (node library) | every game or form that wants Enter, Enter — the keyboard-only child, and anyone who cannot use a pointer |
 | **D60** | 🔴 open (09-13, P87 RKT-005) — a Text Input has no `inputmode`/`enterkeyhint` port and cannot be typed into at the caret while focused | **GAM-011** (P88) | product (node library) | every numeric, phone, email or PIN field on a tablet, and any on-screen pad |
 | **D61** | 🟢 built 09-14 (GAM-009 s9, uncommitted: typing writes the start value, and a same-value remount announces nothing; driven on a minimal page; Rocket School's clause and the `rsNameKeep` removal owed) — was 🔴 open (09-13, P87 RKT-006) — a Text Input that remounts shows its Start Value, not what the person typed | **GAM-009** (P88) | product (node library) | every form split across steps, tabs or a collapsible section |
-| **D62** | 🔴 open (09-13, P87 RKT-007) — an Expression wired into a size port raises "not a size" before it has ever evaluated | **GAM-003** (P88) | product (runtime) | every progress bar, meter or chart bar computed with an Expression |
+| **D62** | 🟢 fixed, uncommitted (P88 GAM-003 s11, 2026-09-14) — an Expression wired into a size port raised "not a size" before it had ever evaluated. A `null` or `NaN` size is now empty, silently (R3), and `"tall"` is still refused; reverted arm 4 red; the countdown control is explained by the first update's consolidation. Browser drive owed | **GAM-003** (P88) | product (runtime) | every progress bar, meter or chart bar computed with an Expression |
 | **D63** | 🔴 open (09-13, P87 RKT-010) — player two's answers are graded into player one's learner model | **P87** — no task yet, beside RKT-008 | template | every sibling who plays a two-player race |
 | **D64** | 🟡 reserved loudly (09-14, P88 GAM-007 s8, uncommitted): the door warns `reserved-row-field`, and `Collection.set` raises `collection/reserved-field-name`. The field still reads as the member until GAM-025 (R8's "data wins later") — a Static Data row field named like a Model member (`on`, `get`, `data`…) reads as that member | **GAM-007** (P88), then **GAM-025** | product (runtime model) | any data row with a field called `on`, `get`, `set`, `fill` or `data` |
 | **D65** | 🔴 open (09-13, P87 RKT-011) — a kit React node reading a wired px port with `Number()` draws its default; fixed inside game-kit only | **GAM-015** (P88) | product (kit bridge / node-kit docs) | every kit author whose size works typed and fails wired |
@@ -2526,6 +2526,14 @@ functions and says nothing about the shadowing. Belongs in the node's `docs` and
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** ⚠️ **`Math` is already on the ignore list** (`expression.ts:718`) and a dotted name counts only its first part, so `Math.min` should work. `String`, `Number`, `JSON`, `Date` and `parseInt` are not on it. P30 NDA-012 filed this and declined to fix it, because widening the list changes existing Expressions' ports. Owner **GAM-002**.
 
+**Fixed 2026-09-14 (P88 GAM-002 session 11, uncommitted):** R4 ruled that globals and keywords stop being ports. A lexer
+in `expression-ports.ts` (copied byte-identical into `nodegx-export`) replaced the regex. At HEAD the spec was RED on 17
+rows with "String is not a function", "parseInt is not a function" and a `typeof` compile failure. It is green after,
+and 4 reverted arms each redden exactly their rows. The census covered 386 Expressions and the 517 wires into them: 0
+wires lose their port, so no migration is owed. The same census found two published catalog examples that used
+`Number(…)` and threw at HEAD. Rocket School's `'' + n` still works and is the peer's to change. Left: the editor drive
+and the bundles.
+
 ## D55 — 🔴 An Expression with no delivered input never evaluates
 
 **Measured 2026-09-12**, the same drive. `Game/Stat`, `Game/Choice row` and `Game/Face` each guarded
@@ -2541,6 +2549,13 @@ Either the doctrine says how to default an optional port, or the Expression eval
 its unset inputs `undefined`. Owner `NONE`.
 
 **Re-read 2026-09-14 (P88 scoping, HEAD `eb12ebe99`, read from source, nothing run):** ⚠️ **the result is not `undefined`.** An Expression that has never run reads `null`, `connectInput` hands that `null` to Mounted, and Mounted turns it into `false`. An unwired Mounted defaults to `true`. **This is the same cause as D62**, and the two share one ruling. Rocket School's `Game/Countdown bar#cdShown` stays hidden only because of this `null`. P30 NDA-017/NDA-004 made the Expression wait on purpose. Owner **GAM-001**.
+
+**Fixed 2026-09-14 (P88 GAM-001 session 11, uncommitted):** R3's B. An Expression now evaluates at load over unset
+inputs, unless its new `Evaluate At Load` checkbox (ticked by default) is unticked. A throw, a compile failure or a `NaN`
+over those inputs leaves it abstaining, so NDA-004's guard and `node/nan-input` hold. At HEAD, Group's real Mounted setter
+was handed `null` for an unset `m !== false`; after, the part mounts. 4 reverted arms. The census lists 14 first-frame
+visibility changes where an input can be unset: 4 in Rocket School, 10 in test projects. `cdShown` is unchanged
+(`enabled === true` evaluates `false`). Rocket School's drive and workarounds are owed.
 
 ## D56 — 🔴 `apply_plan` warns `page-cannot-scroll` on the plan whose own `scroll: "page"` it is applying
 
@@ -2688,6 +2703,13 @@ cells in build 1, and 8 of 8 again in build 2 with `round((s || 0) * 48)`, so a 
 **Workaround in the template:** no Expression before the size. The grader publishes `boostPct`, which a Function output reads
 `undefined` until it runs, so nothing is seeded. It goes through Component Inputs into a fill whose width is `100 %`. The template
 gate pins that the fill's Width has exactly one source.
+
+**Fixed 2026-09-14 (P88 GAM-003 session 11, uncommitted):** R3 ruled a `null` or `NaN` size empty, silently. The units
+setter now clears on a bare `NaN`, `{value: null}` and `{value: NaN}`, and raises nothing. At HEAD the spec reproduced
+this exact message through the real wiring and Group's real Width setter. It also found that a computed `NaN` arrives bare,
+not merged. The unexplained control is explained: a value the Expression produces during the first update replaces the
+queued `null` seed before Width drains, measured by GAM-001's reverted arm G4. FLD-004's `NaN` row was changed as ruled;
+`"tall"` and `Infinity` are still refused. Browser drive and the Rocket School meter owed.
 
 **Where it bites:** every progress bar, meter or chart bar computed with an Expression. The error reads like a wiring mistake
 the author did not make. **Cheapest door:** have `connectInput` treat `null` from an output that has never produced a value like
