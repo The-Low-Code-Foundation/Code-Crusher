@@ -1028,7 +1028,12 @@ const BOARD_STATES = {
   'value-hit-cls': 'game-board game-board-hit',
   // Out of hearts: it holds, rather than flashing, so the restart is legible.
   'value-dead-edge': LEGEND.costly,
-  'value-dead-cls': 'game-board game-board-dead'
+  'value-dead-cls': 'game-board game-board-dead',
+  // 🔴 FALSE, for the app people already have (2026-09-15). With transitions on, a token colour
+  // tweens through an invalid `#0aNaNNaNNaN` and never arrives (D49), so the edge never turns. P88
+  // GAM-006 fixed the runtime after v0.2.4, and this template installs from the community shelf into
+  // v0.2.4. Leave it false until every version the shelf reaches carries GAM-006.
+  useTransitions: false
 };
 
 const BANNER_STATES = {
@@ -1057,7 +1062,10 @@ const BANNER_STATES = {
   'value-won-title': 'Out, with all five behind you.',
   'value-won-line': 'That is the lot. Move to start another run.',
   'value-won-shown': true,
-  'value-won-tone': LEGEND.exit
+  'value-won-tone': LEGEND.exit,
+  // False for the same reason as `BOARD_STATES`: `tone` is a colour, and on v0.2.4's runtime it
+  // never arrives with transitions on (D49).
+  useTransitions: false
 };
 
 // ── Game/Hud and Game/Teach — the presentation, off the page ────────────────

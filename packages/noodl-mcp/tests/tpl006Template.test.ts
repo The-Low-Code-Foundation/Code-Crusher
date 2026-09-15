@@ -526,10 +526,25 @@ describe('TPL-006 §3 — the writes are sequenced, not raced', () => {
     expect(portType).toBe('*');
   });
 
-  // The gate that pinned every States node here to `useTransitions: false` (D49) is removed with the
-  // workaround. A token colour with transitions on is now graded where it broke, in the runtime:
-  // `noodl-viewer-react/tests/gam-006-states-token-colour.test.ts`, and in a deployed page by
-  // `scripts/devtools/drive-gam006-colour.js story` (P88 GAM-006 §8, session 5).
+  /**
+   * 🔴 Pinned again on 2026-09-15, and the reason is WHICH RUNTIME, not whether D49 is fixed.
+   *
+   * GAM-006 fixed a token colour under transitions in the runtime, but after v0.2.4. The template is
+   * published to the community shelf, and the shelf installs into the app people already have, whose
+   * runtime still swallows the colour. So every States node here keeps transitions off until the
+   * oldest editor the shelf reaches carries GAM-006 — and this gate stops a tidy-up restoring the
+   * default before then.
+   */
+  it('every States node in the template has transitions OFF, because v0.2.4’s runtime does not publish colours with them on', () => {
+    const found: Array<[string, unknown]> = [];
+    for (const c of componentsOf()) {
+      for (const n of nodesOf(c.name)) {
+        if (n.type === 'States') found.push([`${c.name}::${n.id}`, n.parameters?.useTransitions]);
+      }
+    }
+    expect(found.length).toBeGreaterThanOrEqual(2);
+    for (const [where, value] of found) expect([where, value]).toEqual([where, false]);
+  });
 });
 
 // ── §4 The prose wraps ──────────────────────────────────────────────────────

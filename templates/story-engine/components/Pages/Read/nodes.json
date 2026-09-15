@@ -626,7 +626,8 @@
         "value-lost-note": "",
         "value-lost-panel": "lost",
         "value-stuck-note": "Every choice here needs something you are not carrying, so there is no way on. That is usually a \"requires\" that nothing \"gives\".",
-        "value-stuck-panel": "stuck"
+        "value-stuck-panel": "stuck",
+        "useTransitions": false
       },
       "x": 530,
       "y": 880

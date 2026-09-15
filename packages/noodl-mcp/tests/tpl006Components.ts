@@ -798,10 +798,12 @@ const PASSAGE_STATES = {
   'value-stuck-rule': MEANING.broken,
   'value-stuck-eyebrow': 'No way on from here',
   'value-stuck-tone': MEANING.broken,
-  // `useTransitions` is left at its default, true. It was pinned false while D49 stood: a token colour
-  // tweened through an invalid `#0aNaNNaNNaN` and never arrived. P88 GAM-006 fixed that in the runtime,
-  // and its session 5 drove this node with transitions on in a deployed page: the eyebrow colour and the
-  // rule glide and land on their tokens. So the workaround is removed.
+  // 🔴 FALSE AGAIN (2026-09-15), for the app people already have rather than for HEAD. With
+  // transitions on, a token colour tweens through an invalid `#0aNaNNaNNaN` and never arrives (D49).
+  // P88 GAM-006 fixed that in the runtime (`062dfd9c0`, `82a7d3775`), but both landed AFTER v0.2.4 —
+  // and this template is published to the community shelf, which installs it into v0.2.4. Restore
+  // the default only once every version the shelf can reach carries GAM-006.
+  useTransitions: false
 };
 
 const PASSAGE: Tpl006Component = {
@@ -1198,8 +1200,9 @@ const MODE_STATES = {
   'value-stuck-note':
     'Every choice here needs something you are not carrying, so there is no way on. That is usually a "requires" that nothing "gives".',
   'value-stuck-panel': 'stuck',
-  // Every value here is a string, which transitions never delayed. It was pinned false only so the two
-  // States nodes agreed while D49 stood; both are back at the default now (P88 GAM-006).
+  // Every value here is a string, which transitions never delayed, so this one is belt-and-braces:
+  // false so the two States nodes agree while the shelf still reaches runtimes without GAM-006.
+  useTransitions: false
 };
 
 /**
