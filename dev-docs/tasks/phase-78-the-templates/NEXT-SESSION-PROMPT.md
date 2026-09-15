@@ -1,5 +1,24 @@
 # Phase 78 — next session
 
+> ### 🟢 2026-09-15 — T3 RULED AND DONE: FOUR TEMPLATES ARE ON THE COMMUNITY SHELF
+>
+> Richard wanted a visitor who likes a demo on nodegx.io to download NodeGX and find it in the launcher's **Templates** tab. Ruled:
+> the community shelf (not zips — the launcher cannot import one), a new category **`game`**, and the **backend** todo list.
+> - **nodegx-community `ade0d28`** — `0028` widens the shelf's AND the submissions queue's category constraint; deployed, migration
+>   applied, neighbours 200 before/after. **Editor `85b59aaff`** labels it "Game" (0.2.4 draws the raw slug).
+> - **`3206e12e5`** pins `useTransitions: false` again in Story engine and Pixel dungeon, with a gate in each spec: the shelf installs
+>   into v0.2.4, which lacks GAM-006, and `1cf0a81d2` had removed the workaround. tpl005 + tpl006 119/119.
+> - **Committed on Richard's word:** P88 session 11 as one commit `89e533625` (GAM-001/002/003; the per-task hunk split was NOT done)
+>   and Monster Gate `b91b0a0a5`. Gates re-run first: 21 + 28 + 80 + 283. Pushed. `library/prefabs/form-fields` left uncommitted.
+> - **Published** with `publish-templates-to-shelf.sh` (`ca5c98770`), drafts first: `rocket-school`, `pixel-dungeon`, `story-engine`
+>   (game), `todo-list` (data-app). **Verified on the live shelf:** 5 rows, right categories and file counts, and every bundle
+>   downloaded and diffed against `templates/<dir>` — 0 missing, 0 extra, 0 differing.
+> - ⚠️ **Not driven in a real 0.2.4 install.** The 0.2.4 compatibility reading is from code and git (and the live Monster Gate demo ran
+>   on an engine without GAM-001/003). And 0.2.4's community route does NOT carry `needsBackend`, so the todo list installs without the
+>   automatic backend setup — a product defect worth filing.
+> - 🔴 **After ANY change to these four templates, republish** (the script refuses a moved file count — update its expected counts in
+>   the same commit), or the shelf drifts from the demos. The nodegx.io homepage now says every demo is a template.
+>
 > ### 🟢 2026-09-14 (night, session b7cd9341) — TPL-007 MONSTER GATE, THE FOURTH GAME: BUILT, GATED 326/326, DRIVEN ALL PASS
 >
 > Richard asked for options first: a playable mockup of three versions (<https://claude.ai/artifact/NkzcsuKFD1KX7JHEn3Q2rB>), then ruled
